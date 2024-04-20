@@ -1,0 +1,7 @@
+[workspace]
+members = [
+    "adventures",
+    "adventures-py"]
+
+[workspace.package]
+version = "0.0.1"
