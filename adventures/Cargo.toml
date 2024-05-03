@@ -49,7 +49,7 @@ env_logger = { version = "0.11.2", optional = true }
 
 # LANCE
 arrow-array = "50.0"
-lancedb = { version = "0.4.12", default-features = false }
+lancedb = { version = "0.4.18", default-features = false }
 
 [dev-dependencies]
 tempfile = "3"

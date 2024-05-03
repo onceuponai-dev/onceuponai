@@ -20,6 +20,7 @@ use clap::{arg, Command};
 use derive_more::{Display, Error};
 use futures::TryStreamExt;
 use lancedb::connect;
+use lancedb::query::{ExecutableQuery, QueryBase};
 use num_traits::Zero;
 use once_cell::sync::OnceCell;
 use serde::{Deserialize, Serialize};
@@ -318,9 +319,10 @@ async fn find_context(prompt: String) -> Result<String> {
 
     let tbl = LANCEDB_TABLE.get().unwrap().lock().await;
     let batches = tbl
-        .search(&emb)
+        .query()
+        .nearest_to(emb)?
         .limit(2)
-        .execute_stream()
+        .execute()
         .await
         .unwrap()
         .try_collect::<Vec<_>>()
@@ -448,9 +450,10 @@ async fn test_lancedb() -> Result<()> {
 
     let tbl = db.open_table("fantasy_vectors").execute().await.unwrap();
     let batches = tbl
-        .search(&iii)
+        .query()
+        .nearest_to(iii)?
         .limit(2)
-        .execute_stream()
+        .execute()
         .await
         .unwrap()
         .try_collect::<Vec<_>>()
