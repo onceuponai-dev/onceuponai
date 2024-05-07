@@ -11,6 +11,9 @@ use candle_transformers::models::quantized_llama as model;
 use model::ModelWeights;
 use tokenizers::{PaddingParams, Tokenizer};
 
+pub const E5_MODEL_REPO: &str = "intfloat/e5-small-v2";
+pub const GEMMA_2B_REPO_ID: &str = "google/gemma-2b-it";
+
 pub struct GemmaModel {
     pub model: Model,
     pub device: Device,
@@ -89,11 +92,10 @@ pub struct E5Model {
 }
 
 impl E5Model {
-    pub fn load() -> Result<E5Model> {
-        let base_repo_id = "intfloat/e5-small-v2";
-        let weights = hf_hub_get(base_repo_id, "model.safetensors", None, None)?;
-        let tokenizer = hf_hub_get(base_repo_id, "tokenizer.json", None, None)?;
-        let candle_config = hf_hub_get(base_repo_id, "config.json", None, None)?;
+    pub fn load(e5_model_repo: &str) -> Result<E5Model> {
+        let weights = hf_hub_get(e5_model_repo, "model.safetensors", None, None)?;
+        let tokenizer = hf_hub_get(e5_model_repo, "tokenizer.json", None, None)?;
+        let candle_config = hf_hub_get(e5_model_repo, "config.json", None, None)?;
         let candle_config: BertConfig = serde_json::from_slice(&candle_config)?;
 
         let device = &Device::Cpu;
@@ -156,15 +158,15 @@ pub struct QuantizedModel {
 }
 
 impl QuantizedModel {
-    pub fn load() -> Result<QuantizedModel> {
+    pub fn load(
+        model_repo: &str,
+        model_file: &str,
+        tokenizer_repo: &str,
+    ) -> Result<QuantizedModel> {
         //let base_repo_id = ("TheBloke/CodeLlama-7B-GGUF", "codellama-7b.Q4_0.gguf");
-        let base_repo_id = (
-            "TheBloke/Mistral-7B-Instruct-v0.2-GGUF",
-            "mistral-7b-instruct-v0.2.Q4_K_S.gguf",
-        );
+        let base_repo_id = (model_repo, model_file);
         //let base_repo_id = ("MaziyarPanahi/gemma-2b-it-GGUF", "gemma-2b-it.Q4_K_M.gguf");
         //let tokenizer_repo = "hf-internal-testing/llama-tokenizer";
-        let tokenizer_repo = "mistralai/Mistral-7B-Instruct-v0.2";
         //let tokenizer_repo = "google/gemma-2b-it";
 
         let model_path = hf_hub_get_path(base_repo_id.0, base_repo_id.1, None, None)?;

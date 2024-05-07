@@ -1,11 +1,24 @@
 use anyhow::{anyhow, Result};
+use std::io::{self, Result as IoResult};
 use std::{fs, path::PathBuf};
 
 #[cfg(feature = "wasm")]
 use wasm_bindgen::prelude::*;
 
+pub trait OptionToResult<T> {
+    fn ok_or_err(self, name: &str) -> Result<T>;
+}
+
+impl<T> OptionToResult<T> for Option<T> {
+    fn ok_or_err(self, name: &str) -> Result<T> {
+        self.ok_or(anyhow!("{:?} - value not found", name))
+    }
+}
+
 pub trait ResultExt<T, E> {
     fn map_anyhow_err(self) -> Result<T>;
+
+    fn map_io_err(self) -> IoResult<T>;
 
     #[cfg(feature = "wasm")]
     fn map_jsv_err(self) -> Result<T, JsValue>;
@@ -17,6 +30,10 @@ pub trait ResultExt<T, E> {
 impl<T, E: std::fmt::Debug> ResultExt<T, E> for Result<T, E> {
     fn map_anyhow_err(self) -> Result<T> {
         self.map_err(|e| anyhow!("{:?}", e))
+    }
+
+    fn map_io_err(self) -> IoResult<T> {
+        self.map_err(|e| io::Error::new(io::ErrorKind::Other, format!("{e:?}")))
     }
 
     #[cfg(feature = "wasm")]

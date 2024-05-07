@@ -1,5 +1,5 @@
 extern crate adventures as adventures_rs;
-use adventures_rs::E5Model;
+use adventures_rs::{E5Model, E5_MODEL_REPO};
 use pyo3::prelude::*;
 
 #[pymodule]
@@ -13,8 +13,13 @@ fn adventures(_py: Python, m: &PyModule) -> PyResult<()> {
     #[pymethods]
     impl Adventures {
         #[new]
-        pub fn new() -> Self {
-            let model = E5Model::load().unwrap();
+        pub fn new(e5_model_repo: Option<String>) -> Self {
+            let e5_model_repo = if let Some(repo) = e5_model_repo {
+                repo
+            } else {
+                E5_MODEL_REPO.to_string()
+            };
+            let model = E5Model::load(&e5_model_repo).unwrap();
             Self { model }
         }
 
@@ -26,7 +31,7 @@ fn adventures(_py: Python, m: &PyModule) -> PyResult<()> {
 
     impl Default for Adventures {
         fn default() -> Self {
-            Self::new()
+            Self::new(Some(E5_MODEL_REPO.to_string()))
         }
     }
 
