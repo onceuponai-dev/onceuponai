@@ -36,13 +36,13 @@ use tokio::sync::Mutex;
 const INDEX_HTML: &str = include_str!("../public/index.html");
 
 fn cli() -> Command {
-    Command::new("gemma")
-        .about("gemma")
+    Command::new("adventures")
+        .about("adventures")
         .subcommand_required(true)
         .arg_required_else_help(true)
         .subcommand(
             Command::new("serve")
-                .about("serve gemma")
+                .about("serve rag")
                 .args(vec![
                     arg!(--host <HOST> "host")
                         .required(false)
@@ -66,40 +66,63 @@ fn cli() -> Command {
                         .required(false)
                         .help("number of workers")
                         .default_value(""),
-                    arg!(--use-quantized <USEQUANTIZED> "use_quantized")
+                    arg!(--quantized <QUANTIZED> "quantized")
                         .required(false)
                         .help("use quantized model")
                         .default_value("true")
                         .value_parser(clap::value_parser!(bool)),
-                    arg!(--model-repo <MODELREPO> "model_repo")
+                    arg!(--modelrepo <MODELREPO> "modelrepo")
                         .required(false)
                         .help("hf model repo")
                         .default_value("TheBloke/Mistral-7B-Instruct-v0.2-GGUF"),
-                    arg!(--model-file <MODELFILE> "model_file")
+                    arg!(--modelfile <MODELFILE> "modelfile")
                         .required(false)
                         .help("model file")
                         .default_value("mistral-7b-instruct-v0.2.Q4_K_S.gguf"),
-                    arg!(--tokenizer-repo <TOKENIZERREPO> "tokenizer_repo")
+                    arg!(--tokenizerrepo <TOKENIZERREPO> "tokenizerrepo")
                         .required(false)
                         .help("tokenizer repo")
                         .default_value("mistralai/Mistral-7B-Instruct-v0.2"),
-                    arg!(--lancedb-uri <LANCEDBURI> "lancedb_uri")
+                    arg!(--lancedburi <LANCEDBURI> "lancedburi")
                         .required(false)
                         .help("lancedb uri")
                         .default_value("/tmp/fantasy-lancedb"),
-                    arg!(--lancedb-table <LANCEDBTABLE> "lancedb_table")
+                    arg!(--lancedbtable <LANCEDBTABLE> "lancedbtable")
                         .required(false)
                         .help("lancedb table")
                         .default_value("fantasy_vectors"),
-                    arg!(--e5-model-repo <E5MODELREPO> "e5_model_repo")
+                    arg!(--e5modelrepo <E5MODELREPO> "e5_modelrepo")
                         .required(false)
                         .help("hf e5 model repo")
                         .default_value("intfloat/e5-small-v2"),
-                    arg!(--prompt-template <PROMPTTEMPLACE> "prompt_template")
+                    arg!(--prompttemplate <PROMPTTEMPLACE> "prompttemplate")
                         .required(false)
                         .help("prompt template")
                         .default_value("You are a seller in a fantasy store. Use the following pieces of context to answer the question at the end. If you don't know the answer, just say that you don't know, don't try to make up an answer. Context: {context}.
 Question: {question}"),
+                ])
+                .arg_required_else_help(true),
+        )
+        .subcommand(
+            Command::new("vectorize")
+                .about("vectorize")
+                .args(vec![
+                    arg!(--loglevel <LOGLEVEL>)
+                        .required(false)
+                        .help("log level")
+                        .default_value("error"),
+                   arg!(--lancedburi <LANCEDBURI> "lancedburi")
+                        .required(false)
+                        .help("lancedb uri")
+                        .default_value("/tmp/fantasylancedb"),
+                    arg!(--lancedbtable <LANCEDBTABLE> "lancedbtable")
+                        .required(false)
+                        .help("lancedb table")
+                        .default_value("fantasy_vectors"),
+                    arg!(--e5modelrepo <E5MODELREPO> "e5modelrepo")
+                        .required(false)
+                        .help("hf e5 model repo")
+                        .default_value("intfloat/e5-small-v2"),
                 ])
                 .arg_required_else_help(true),
         )
@@ -115,35 +138,35 @@ pub(crate) async fn commands() -> Result<()> {
             let log_level = sub_sub_matches.get_one::<String>("loglevel");
             let workers = sub_sub_matches.get_one::<usize>("workers");
             let use_quantized = sub_sub_matches
-                .get_one::<bool>("use_quantized")
+                .get_one::<bool>("quantized")
                 .expect("required");
 
             let model_repo = sub_sub_matches
-                .get_one::<String>("model_repo")
+                .get_one::<String>("modelrepo")
                 .expect("required");
 
             let model_file = sub_sub_matches
-                .get_one::<String>("model_file")
+                .get_one::<String>("modelfile")
                 .expect("required");
 
             let tokenizer_repo = sub_sub_matches
-                .get_one::<String>("tokenizer_repo")
+                .get_one::<String>("tokenizerrepo")
                 .expect("required");
 
             let lancedb_uri = sub_sub_matches
-                .get_one::<String>("lancedb_uri")
+                .get_one::<String>("lancedburi")
                 .expect("required");
 
             let lancedb_table = sub_sub_matches
-                .get_one::<String>("lancedb_table")
+                .get_one::<String>("lancedbtable")
                 .expect("required");
 
             let e5_model_repo = sub_sub_matches
-                .get_one::<String>("e5_model_repo")
+                .get_one::<String>("e5modelrepo")
                 .expect("required");
 
             let prompt_template = sub_sub_matches
-                .get_one::<String>("prompt_template")
+                .get_one::<String>("prompttemplate")
                 .expect("required");
 
             // let hftoken = sub_sub_matches
@@ -170,6 +193,24 @@ pub(crate) async fn commands() -> Result<()> {
             )
             .await?
         }
+        Some(("vectorize", sub_sub_matches)) => {
+            let log_level = sub_sub_matches.get_one::<String>("loglevel");
+
+            let lancedb_uri = sub_sub_matches
+                .get_one::<String>("lancedb_uri")
+                .expect("required");
+
+            let lancedb_table = sub_sub_matches
+                .get_one::<String>("lancedb_table")
+                .expect("required");
+
+            let e5_model_repo = sub_sub_matches
+                .get_one::<String>("e5_model_repo")
+                .expect("required");
+
+            vectorize(log_level, lancedb_uri, lancedb_table, e5_model_repo).await?
+        }
+
         _ => unreachable!(),
     }
 
@@ -426,6 +467,16 @@ pub async fn embeddings(
     let model = E5_MODEL.get().ok_or_err("QUANTIZED_MODEL")?.lock().await;
     let embeddings_data = model.forward(embeddings_request.input.clone())?;
     Ok(web::Json(embeddings_data))
+}
+
+#[allow(clippy::too_many_arguments)]
+pub(crate) async fn vectorize(
+    log_level: Option<&String>,
+    lancedb_uri: &str,
+    lancedb_table: &str,
+    e5_model_repo: &str,
+) -> std::io::Result<()> {
+    todo!()
 }
 
 #[allow(clippy::too_many_arguments)]
