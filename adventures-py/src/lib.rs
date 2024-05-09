@@ -19,7 +19,7 @@ fn adventures(_py: Python, m: &PyModule) -> PyResult<()> {
             } else {
                 E5_MODEL_REPO.to_string()
             };
-            let model = E5Model::load(&e5_model_repo).unwrap();
+            let model = E5Model::load(&e5_model_repo, "cpu").unwrap();
             Self { model }
         }
 

@@ -9,11 +9,19 @@ use candle_transformers::models::bert::{BertModel, Config as BertConfig};
 use candle_transformers::models::gemma::{Config, Model};
 use candle_transformers::models::quantized_llama as model;
 use model::ModelWeights;
-use tokenizers::{PaddingParams, Tokenizer};
+use tokenizers::{tokenizer, PaddingParams, Tokenizer};
 
 pub const E5_MODEL_REPO: &str = "intfloat/e5-small-v2";
 pub const GEMMA_2B_REPO_ID: &str = "google/gemma-2b-it";
 
+fn parse_device(device_type: &str) -> Result<Device> {
+    let device = if device_type == "cpu" {
+        Device::Cpu
+    } else {
+        Device::new_cuda(0).unwrap()
+    };
+    Ok(device)
+}
 pub struct GemmaModel {
     pub model: Model,
     pub device: Device,
@@ -34,6 +42,7 @@ impl GemmaModel {
         repeat_penalty: f32,
         repeat_last_n: usize,
         hf_token: Option<String>,
+        device_type: &str,
     ) -> Result<GemmaModel> {
         let paths = hf_hub_get_multiple(
             base_repo_id,
@@ -42,7 +51,7 @@ impl GemmaModel {
             hf_token.clone(),
         )?;
 
-        let device = &Device::Cpu;
+        let device = parse_device(device_type)?;
         // let device = &Device::new_cuda(0).unwrap();
         let dtype = if device.is_cuda() {
             DType::BF16
@@ -52,7 +61,7 @@ impl GemmaModel {
 
         //let device = &Device::new_cuda(0)?;
 
-        let vb = unsafe { VarBuilder::from_mmaped_safetensors(&paths, dtype, device)? };
+        let vb = unsafe { VarBuilder::from_mmaped_safetensors(&paths, dtype, &device)? };
         let tokenizer = hf_hub_get(
             base_repo_id,
             "tokenizer.json",
@@ -76,7 +85,7 @@ impl GemmaModel {
             logits_processor,
             repeat_penalty,
             repeat_last_n,
-            device: device.clone(),
+            device,
         })
     }
 }
@@ -89,16 +98,17 @@ pub struct E5Model {
     pub model: BertModel,
     pub tokenizer: Tokenizer,
     pub normalize_embeddings: Option<bool>,
+    pub device: Device,
 }
 
 impl E5Model {
-    pub fn load(e5_model_repo: &str) -> Result<E5Model> {
+    pub fn load(e5_model_repo: &str, device_type: &str) -> Result<E5Model> {
         let weights = hf_hub_get(e5_model_repo, "model.safetensors", None, None)?;
         let tokenizer = hf_hub_get(e5_model_repo, "tokenizer.json", None, None)?;
         let candle_config = hf_hub_get(e5_model_repo, "config.json", None, None)?;
         let candle_config: BertConfig = serde_json::from_slice(&candle_config)?;
 
-        let device = &Device::Cpu;
+        let device = parse_device(device_type)?;
         let mut tokenizer = Tokenizer::from_bytes(&tokenizer).map_anyhow_err()?;
 
         if let Some(pp) = tokenizer.get_padding_mut() {
@@ -111,17 +121,18 @@ impl E5Model {
             tokenizer.with_padding(Some(pp));
         }
 
-        let vb = VarBuilder::from_buffered_safetensors(weights, DType::F32, device)?;
+        let vb = VarBuilder::from_buffered_safetensors(weights, DType::F32, &device)?;
         let model = BertModel::load(vb, &candle_config)?;
         Ok(E5Model {
             model,
             tokenizer,
             normalize_embeddings: Some(true),
+            device,
         })
     }
 
     pub fn forward(&self, input: Vec<String>) -> Result<Vec<Vec<f32>>> {
-        let device = &Device::Cpu;
+        let device = &self.device;
         let tokens = self
             .tokenizer
             .encode_batch(input.clone(), true)
@@ -162,6 +173,7 @@ impl QuantizedModel {
         model_repo: &str,
         model_file: &str,
         tokenizer_repo: &str,
+        device_type: &str,
     ) -> Result<QuantizedModel> {
         //let base_repo_id = ("TheBloke/CodeLlama-7B-GGUF", "codellama-7b.Q4_0.gguf");
         let base_repo_id = (model_repo, model_file);
@@ -169,11 +181,19 @@ impl QuantizedModel {
         //let tokenizer_repo = "hf-internal-testing/llama-tokenizer";
         //let tokenizer_repo = "google/gemma-2b-it";
 
-        let model_path = hf_hub_get_path(base_repo_id.0, base_repo_id.1, None, None)?;
-        let tokenizer = hf_hub_get(tokenizer_repo, "tokenizer.json", None, None)?;
+        let model_path = if model_file.starts_with("file://") {
+            std::path::PathBuf::from(model_file.replace("file://", ""))
+        } else {
+            hf_hub_get_path(base_repo_id.0, base_repo_id.1, None, None)?
+        };
 
-        //let device = Device::Cpu;
-        let device = Device::new_cuda(0).unwrap();
+        let tokenizer = if tokenizer_repo.starts_with("file://") {
+            std::fs::read(tokenizer_repo.replace("file://", ""))?
+        } else {
+            hf_hub_get(tokenizer_repo, "tokenizer.json", None, None)?
+        };
+
+        let device = parse_device(device_type)?;
         let mut tokenizer = Tokenizer::from_bytes(&tokenizer).map_anyhow_err()?;
 
         let mut file = std::fs::File::open(&model_path)?;

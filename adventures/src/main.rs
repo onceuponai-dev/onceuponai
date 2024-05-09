@@ -100,6 +100,11 @@ fn cli() -> Command {
                         .help("prompt template")
                         .default_value("You are a seller in a fantasy store. Use the following pieces of context to answer the question at the end. If you don't know the answer, just say that you don't know, don't try to make up an answer. Context: {context}.
 Question: {question}"),
+                    arg!(--device <DEVICE> "device")
+                        .required(false)
+                        .help("device: cpu or gpu")
+                        .default_value("cpu"),
+
                 ])
                 .arg_required_else_help(true),
         )
@@ -123,6 +128,11 @@ Question: {question}"),
                         .required(false)
                         .help("hf e5 model repo")
                         .default_value("intfloat/e5-small-v2"),
+                    arg!(--device <DEVICE> "device")
+                        .required(false)
+                        .help("device: cpu or gpu")
+                        .default_value("cpu"),
+
                 ])
                 .arg_required_else_help(true),
         )
@@ -169,6 +179,10 @@ pub(crate) async fn commands() -> Result<()> {
                 .get_one::<String>("prompttemplate")
                 .expect("required");
 
+            let device = sub_sub_matches
+                .get_one::<String>("device")
+                .expect("required");
+
             // let hftoken = sub_sub_matches
             //     .get_one::<String>("hftoken")
             //     .expect("required")
@@ -190,6 +204,7 @@ pub(crate) async fn commands() -> Result<()> {
                 lancedb_table,
                 e5_model_repo,
                 prompt_template,
+                device,
             )
             .await?
         }
@@ -331,10 +346,13 @@ pub async fn chat(
 pub async fn chat_quantized(
     request: web::Query<PromptRequest>,
 ) -> Result<impl Responder, Box<dyn Error>> {
+    /*
     let context = find_context(request.prompt.to_string()).await.unwrap();
     let prompt = build_prompt(request.prompt.to_string(), context)
         .await
         .unwrap();
+    */
+    let prompt = request.prompt.to_string();
 
     let mut model = QUANTIZED_MODEL
         .get()
@@ -494,6 +512,7 @@ pub(crate) async fn serve(
     lancedb_table: &str,
     e5_model_repo: &str,
     prompt_template: &str,
+    device: &str,
 ) -> std::io::Result<()> {
     if let Some(v) = log_level {
         env_logger::init_from_env(env_logger::Env::new().default_filter_or(v));
@@ -511,6 +530,7 @@ pub(crate) async fn serve(
             1.1,
             64,
             hf_token,
+            device,
         )
         .unwrap();
 
@@ -537,15 +557,13 @@ pub(crate) async fn serve(
             .set(Arc::new(Mutex::new(prompt_template)))
             .is_ok();
     } else {
-        let model = QuantizedModel::load(model_repo, model_file, tokenizer_repo).map_io_err()?;
+        let model =
+            QuantizedModel::load(model_repo, model_file, tokenizer_repo, device).map_io_err()?;
         let _ = QUANTIZED_MODEL.set(Arc::new(Mutex::new(model)));
 
         let prompt_template = format!(
             r#"
-        <start_of_turn>user
         [INST]{}[/INST]
-        <end_of_turn>
-        <start_of_turn>model
         "#,
             prompt_template
         );
@@ -555,23 +573,24 @@ pub(crate) async fn serve(
             .is_ok();
     }
 
-    let e5_model = E5Model::load(e5_model_repo).unwrap();
+    let e5_model = E5Model::load(e5_model_repo, device).unwrap();
     let _ = E5_MODEL.set(Arc::new(Mutex::new(e5_model))).is_ok();
 
+    /*
     let db = connect(lancedb_uri).execute().await.map_io_err()?;
 
     let tbl = db.open_table(lancedb_table).execute().await.map_io_err()?;
 
     let _ = LANCEDB_TABLE.set(Arc::new(Mutex::new(tbl))).is_ok();
+    */
 
     println!("Server running on http://{host}:{port}");
     let mut server = HttpServer::new(move || {
         let mut app = App::new()
             .wrap(Logger::default())
             .route("/health", web::get().to(health))
-            .route("/embeddings", web::post().to(embeddings))
-            //.route("/", web::get().to(index))
-            .service(fs::Files::new("/", "./public").show_files_listing());
+            .route("/embeddings", web::post().to(embeddings));
+        //.route("/", web::get().to(index))
 
         if !use_quantized {
             app = app
@@ -581,7 +600,7 @@ pub(crate) async fn serve(
             app = app.route("/chat", web::get().to(chat_quantized));
         }
 
-        app
+        app.service(fs::Files::new("/", "./public").show_files_listing())
     });
 
     if let Some(num_workers) = workers {
@@ -598,7 +617,7 @@ async fn test_lancedb() -> Result<()> {
     let uri = "/tmp/fantasy-lancedb";
     let db = connect(uri).execute().await.unwrap();
 
-    let e5_model = E5Model::load(E5_MODEL_REPO).unwrap();
+    let e5_model = E5Model::load(E5_MODEL_REPO, "cpu").unwrap();
     let ii = e5_model.forward(vec!["Adventure with a dragon".to_string()])?;
     let iii = ii.last().unwrap().clone();
 
