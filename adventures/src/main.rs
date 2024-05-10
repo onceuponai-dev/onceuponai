@@ -346,13 +346,10 @@ pub async fn chat(
 pub async fn chat_quantized(
     request: web::Query<PromptRequest>,
 ) -> Result<impl Responder, Box<dyn Error>> {
-    /*
     let context = find_context(request.prompt.to_string()).await.unwrap();
     let prompt = build_prompt(request.prompt.to_string(), context)
         .await
         .unwrap();
-    */
-    let prompt = request.prompt.to_string();
 
     let mut model = QUANTIZED_MODEL
         .get()
@@ -367,7 +364,7 @@ pub async fn chat_quantized(
         .get_ids()
         .to_vec();
 
-    let sample_len: usize = 1000;
+    let sample_len: usize = 2000;
     let seed: u64 = 299792458;
     let temperature: Option<f64> = Some(0.8);
     let top_p: Option<f64> = None;
@@ -476,6 +473,7 @@ async fn build_prompt(prompt: String, context: String) -> Result<String> {
     let prompt = prompt_template
         .replace("{context}", &context)
         .replace("{question}", &prompt);
+    println!("\x1b[93m{}\x1b[0m", prompt);
     Ok(prompt)
 }
 
@@ -576,13 +574,9 @@ pub(crate) async fn serve(
     let e5_model = E5Model::load(e5_model_repo, device).unwrap();
     let _ = E5_MODEL.set(Arc::new(Mutex::new(e5_model))).is_ok();
 
-    /*
     let db = connect(lancedb_uri).execute().await.map_io_err()?;
-
     let tbl = db.open_table(lancedb_table).execute().await.map_io_err()?;
-
     let _ = LANCEDB_TABLE.set(Arc::new(Mutex::new(tbl))).is_ok();
-    */
 
     println!("Server running on http://{host}:{port}");
     let mut server = HttpServer::new(move || {
