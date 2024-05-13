@@ -3,10 +3,12 @@ use crate::common::{hf_hub_get, hf_hub_get_path, OptionToResult, ResultExt};
 use actix_web::{HttpResponse, Responder};
 use anyhow::Result;
 use async_stream::stream;
+use bytes::Bytes;
 use candle_core::quantized::{ggml_file, gguf_file};
 use candle_core::{Device, Tensor};
 use candle_transformers::generation::LogitsProcessor;
 use candle_transformers::models::quantized_llama as model;
+use futures::lock::MutexGuard;
 use model::ModelWeights;
 use once_cell::sync::OnceCell;
 use std::sync::Arc;
@@ -54,44 +56,26 @@ pub async fn chat(
         .map_err(anyhow::Error::msg)?;
 
     print!("{t} ");
+    let prompt_tokens_len = prompt_tokens.len();
 
     let stream_tasks = stream! {
         let mut previous_text = String::new();
         for index in 0..sample_len {
-            let input = Tensor::new(&[next_token], &model.device)?.unsqueeze(0)?;
-            let logits = model.model.forward(&input, prompt_tokens.len() + index)?;
-            let logits = logits.squeeze(0)?;
-            let logits = if repeat_penalty == 1. {
-                logits
+
+            if let Some(res) = model.loop_process(next_token, prompt_tokens_len, index, repeat_penalty, repeat_last_n, &mut all_tokens, &mut logits_processor, eos_token).await? {
+                let current_text = res.0;
+                next_token = res.1;
+
+
+                let text = current_text.split_at(previous_text.len()).1.to_string();
+                previous_text = current_text;
+                print!("{text}");
+
+                let byte = bytes::Bytes::from(text);
+                yield Ok::<bytes::Bytes, Box<dyn std::error::Error>>(byte);
             } else {
-                let start_at = all_tokens.len().saturating_sub(repeat_last_n);
-                candle_transformers::utils::apply_repeat_penalty(
-                    &logits,
-                    repeat_penalty,
-                    &all_tokens[start_at..],
-                )?
-            };
-            next_token = logits_processor.sample(&logits)?;
-            all_tokens.push(next_token);
-
-            tokio::task::yield_now().await;
-
-            if next_token == eos_token {
                 break;
-            };
-
-            let current_text = model
-                .tokenizer
-                .decode(&all_tokens, true)
-                .map_err(anyhow::Error::msg)?;
-
-
-            let text = current_text.split_at(previous_text.len()).1.to_string();
-            previous_text = current_text;
-            print!("{text}");
-
-            let byte = bytes::Bytes::from(text);
-            yield Ok::<bytes::Bytes, Box<dyn std::error::Error>>(byte);
+            }
         }
 
     };
@@ -108,6 +92,48 @@ pub struct QuantizedModel {
 }
 
 impl QuantizedModel {
+    #[allow(clippy::too_many_arguments)]
+    pub async fn loop_process(
+        &mut self,
+        next_token: u32,
+        prompt_tokens_len: usize,
+        index: usize,
+        repeat_penalty: f32,
+        repeat_last_n: usize,
+        all_tokens: &mut Vec<u32>,
+        logits_processor: &mut LogitsProcessor,
+        eos_token: u32,
+    ) -> Result<Option<(String, u32)>> {
+        let input = Tensor::new(&[next_token], &self.device)?.unsqueeze(0)?;
+        let logits = self.model.forward(&input, prompt_tokens_len + index)?;
+        let logits = logits.squeeze(0)?;
+        let logits = if repeat_penalty == 1. {
+            logits
+        } else {
+            let start_at = all_tokens.len().saturating_sub(repeat_last_n);
+            candle_transformers::utils::apply_repeat_penalty(
+                &logits,
+                repeat_penalty,
+                &all_tokens[start_at..],
+            )?
+        };
+        let next_token = logits_processor.sample(&logits)?;
+        all_tokens.push(next_token);
+
+        tokio::task::yield_now().await;
+
+        if next_token == eos_token {
+            return Ok(None);
+        };
+
+        let current_text = self
+            .tokenizer
+            .decode(all_tokens, true)
+            .map_err(anyhow::Error::msg)?;
+
+        Ok(Some((current_text, next_token)))
+    }
+
     pub fn init(
         model_repo: &str,
         model_file: &str,
