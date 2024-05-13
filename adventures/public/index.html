@@ -54,7 +54,7 @@
             }
 
             async function callApi(message, el) {
-                const response = await fetch(`${apiUrl}?prompt=${message}&sampleLen=1000`, {
+                const response = await fetch(`${apiUrl}?prompt=${message}&sampleLen=2000`, {
                     method: 'GET',
                     headers: {
                         'Content-Type': 'application/json'

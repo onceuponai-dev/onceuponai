@@ -1,5 +1,5 @@
 extern crate adventures as adventures_rs;
-use adventures_rs::{E5Model, E5_MODEL_REPO};
+use adventures_rs::llm::e5::{E5Model, E5_MODEL_REPO};
 use pyo3::prelude::*;
 
 #[pymodule]

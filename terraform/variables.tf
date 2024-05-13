@@ -12,6 +12,12 @@ variable "lancedb_storage" {
   type = any
 }
 
+variable "bot" {
+  type = any
+  sensitive = true
+}
+
+
 variable "tags" {
   type = any
 }
