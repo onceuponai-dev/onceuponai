@@ -16,6 +16,7 @@ fn parse_device(device_type: &str) -> Result<Device> {
 
 pub struct LLMState {
     pub eos_token: u32,
+    pub use_quantized: bool,
 }
 
 pub enum LLMModel {

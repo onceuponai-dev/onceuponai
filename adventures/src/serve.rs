@@ -32,14 +32,14 @@ pub async fn health() -> impl Responder {
 
 pub async fn chat(
     request: web::Query<PromptRequest>,
-    gemma_state: web::Data<LLMState>,
+    llm_state: web::Data<LLMState>,
 ) -> Result<impl Responder, Box<dyn Error>> {
     let context = find_context(request.prompt.to_string()).await.unwrap();
     let prompt = build_prompt(request.prompt.to_string(), context)
         .await
         .unwrap();
 
-    crate::llm::gemma::chat(&prompt, request.sample_len, gemma_state.eos_token).await
+    crate::llm::gemma::chat(&prompt, request.sample_len, llm_state.eos_token).await
 }
 
 pub async fn chat_quantized(
@@ -64,10 +64,10 @@ pub async fn embeddings(
 #[allow(dead_code)]
 #[allow(clippy::too_many_arguments)]
 pub(crate) async fn vectorize(
-    log_level: Option<&String>,
-    lancedb_uri: &str,
-    lancedb_table: &str,
-    e5_model_repo: &str,
+    _log_level: Option<&String>,
+    _lancedb_uri: &str,
+    _lancedb_table: &str,
+    _e5_model_repo: &str,
 ) -> std::io::Result<()> {
     todo!()
 }
@@ -149,7 +149,10 @@ pub(crate) async fn serve(
             .route("/health", web::get().to(health))
             .route("/embeddings", web::post().to(embeddings))
             .route("/bot", web::post().to(bot))
-            .app_data(web::Data::new(LLMState { eos_token }))
+            .app_data(web::Data::new(LLMState {
+                eos_token,
+                use_quantized,
+            }))
             .app_data(web::Data::new(AuthState {
                 auth_token: Arc::clone(&authtoken),
             }));
