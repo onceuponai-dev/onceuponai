@@ -76,6 +76,7 @@ pub async fn bot(
     request: web::Json<BotIncommingMessage>,
     req: HttpRequest,
     auth_state: web::Data<AuthState>,
+    llm_state: web::Data<LLMState>,
 ) -> Result<impl Responder, Box<dyn Error>> {
     log::error!("BODY: {request:?}");
     let headers = req.headers();
@@ -88,8 +89,14 @@ pub async fn bot(
     let is_valid = validate_jwt(&token).await?;
     log::error!("IS VALID: {is_valid:?}");
     if is_valid {
+        let mut incomming_message = request.0;
+        let prompt = incomming_message.text;
+        let context = find_context(prompt.to_string()).await.unwrap();
+        let prompt = build_prompt(prompt, context).await.unwrap();
+        incomming_message.text = prompt;
+
         let access_token = auth_state.auth_token.read().await.access_token.to_string();
-        crate::bot::bot_reply(&request.0, &access_token).await?;
+        crate::bot::bot_reply(&incomming_message, &access_token, &llm_state).await?;
     }
 
     Ok(HttpResponse::Ok())

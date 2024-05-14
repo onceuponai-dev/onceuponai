@@ -15,6 +15,60 @@ use tokio::sync::Mutex;
 
 static QUANTIZED_MODEL: OnceCell<Arc<Mutex<QuantizedModel>>> = OnceCell::new();
 
+pub async fn chat_bot(prompt: &str, sample_len: usize, eos_token: u32) -> Result<String> {
+    let mut model = QUANTIZED_MODEL
+        .get()
+        .ok_or_err("QUANTIZED_MODEL")?
+        .lock()
+        .await;
+
+    let prompt_tokens = model
+        .tokenizer
+        .encode(prompt, true)
+        .map_err(anyhow::Error::msg)?
+        .get_ids()
+        .to_vec();
+
+    let seed: u64 = 299792458;
+    let temperature: Option<f64> = Some(0.8);
+    let top_p: Option<f64> = None;
+    let repeat_penalty: f32 = 1.1;
+    let repeat_last_n: usize = 64;
+
+    let mut all_tokens = vec![];
+    let mut logits_processor = LogitsProcessor::new(seed, temperature, top_p);
+
+    let input = Tensor::new(prompt_tokens.as_slice(), &model.device)?.unsqueeze(0)?;
+    let logits = model.model.forward(&input, 0)?;
+    let logits = logits.squeeze(0)?;
+    let next_token = logits_processor.sample(&logits)?;
+
+    all_tokens.push(next_token);
+    let prompt_tokens_len = prompt_tokens.len();
+
+    let mut previous_text = String::new();
+    for index in 0..sample_len {
+        if let Some(current_text) = model
+            .loop_process(
+                prompt_tokens_len,
+                index,
+                repeat_penalty,
+                repeat_last_n,
+                &mut all_tokens,
+                &mut logits_processor,
+                eos_token,
+            )
+            .await?
+        {
+            previous_text = current_text;
+        } else {
+            break;
+        }
+    }
+
+    Ok(previous_text)
+}
+
 pub async fn chat(
     prompt: &str,
     sample_len: usize,

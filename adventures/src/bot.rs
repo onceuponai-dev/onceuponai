@@ -1,3 +1,4 @@
+use crate::llm::{quantized::chat_bot, LLMState};
 use anyhow::Result;
 use serde::{Deserialize, Serialize};
 
@@ -13,7 +14,7 @@ pub struct BotIncommingMessage {
     from: Option<BotExtMessage>,
     conversation: Option<BotExtMessage>,
     recipient: Option<BotExtMessage>,
-    text: String,
+    pub text: String,
 }
 
 #[derive(Deserialize, Serialize, Debug, Clone)]
@@ -36,13 +37,19 @@ pub struct BotReplyMessage {
     reply_to_id: String,
 }
 
-pub async fn bot_reply(incomming_message: &BotIncommingMessage, access_token: &str) -> Result<()> {
+pub async fn bot_reply(
+    incomming_message: &BotIncommingMessage,
+    access_token: &str,
+    llm_state: &LLMState,
+) -> Result<()> {
+    let text = chat_bot(&incomming_message.text, 2000, llm_state.eos_token).await?;
+
     let reply_message = BotReplyMessage {
         r#type: "message".to_string(),
         from: incomming_message.recipient.clone(),
         conversation: incomming_message.conversation.clone(),
         recipient: incomming_message.from.clone(),
-        text: "hello from bot".to_string(),
+        text,
         reply_to_id: incomming_message.id.clone(),
     };
 
