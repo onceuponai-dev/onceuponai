@@ -22,29 +22,13 @@ pub async fn chat_bot(prompt: &str, sample_len: usize, eos_token: u32) -> Result
         .lock()
         .await;
 
-    let prompt_tokens = model
-        .tokenizer
-        .encode(prompt, true)
-        .map_err(anyhow::Error::msg)?
-        .get_ids()
-        .to_vec();
-
-    let seed: u64 = 299792458;
-    let temperature: Option<f64> = Some(0.8);
-    let top_p: Option<f64> = None;
     let repeat_penalty: f32 = 1.1;
     let repeat_last_n: usize = 64;
 
-    let mut all_tokens = vec![];
-    let mut logits_processor = LogitsProcessor::new(seed, temperature, top_p);
-
-    let input = Tensor::new(prompt_tokens.as_slice(), &model.device)?.unsqueeze(0)?;
-    let logits = model.model.forward(&input, 0)?;
-    let logits = logits.squeeze(0)?;
-    let next_token = logits_processor.sample(&logits)?;
-
-    all_tokens.push(next_token);
-    let prompt_tokens_len = prompt_tokens.len();
+    let prep = model.prepare(prompt).await?;
+    let prompt_tokens_len = prep.0;
+    let mut all_tokens = prep.1;
+    let mut logits_processor = prep.2;
 
     let mut previous_text = String::new();
     for index in 0..sample_len {
@@ -80,29 +64,13 @@ pub async fn chat(
         .lock()
         .await;
 
-    let prompt_tokens = model
-        .tokenizer
-        .encode(prompt, true)
-        .map_err(anyhow::Error::msg)?
-        .get_ids()
-        .to_vec();
-
-    let seed: u64 = 299792458;
-    let temperature: Option<f64> = Some(0.8);
-    let top_p: Option<f64> = None;
     let repeat_penalty: f32 = 1.1;
     let repeat_last_n: usize = 64;
 
-    let mut all_tokens = vec![];
-    let mut logits_processor = LogitsProcessor::new(seed, temperature, top_p);
-
-    let input = Tensor::new(prompt_tokens.as_slice(), &model.device)?.unsqueeze(0)?;
-    let logits = model.model.forward(&input, 0)?;
-    let logits = logits.squeeze(0)?;
-    let next_token = logits_processor.sample(&logits)?;
-
-    all_tokens.push(next_token);
-    let prompt_tokens_len = prompt_tokens.len();
+    let prep = model.prepare(prompt).await?;
+    let prompt_tokens_len = prep.0;
+    let mut all_tokens = prep.1;
+    let mut logits_processor = prep.2;
 
     let stream_tasks = stream! {
         let mut previous_text = String::new();
@@ -132,6 +100,32 @@ pub struct QuantizedModel {
 }
 
 impl QuantizedModel {
+    pub async fn prepare(&mut self, prompt: &str) -> Result<(usize, Vec<u32>, LogitsProcessor)> {
+        let prompt_tokens = self
+            .tokenizer
+            .encode(prompt, true)
+            .map_err(anyhow::Error::msg)?
+            .get_ids()
+            .to_vec();
+
+        let seed: u64 = 299792458;
+        let temperature: Option<f64> = Some(0.8);
+        let top_p: Option<f64> = None;
+
+        let mut all_tokens = vec![];
+        let mut logits_processor = LogitsProcessor::new(seed, temperature, top_p);
+
+        let input = Tensor::new(prompt_tokens.as_slice(), &self.device)?.unsqueeze(0)?;
+        let logits = self.model.forward(&input, 0)?;
+        let logits = logits.squeeze(0)?;
+        let next_token = logits_processor.sample(&logits)?;
+
+        all_tokens.push(next_token);
+        let prompt_tokens_len = prompt_tokens.len();
+
+        Ok((prompt_tokens_len, all_tokens, logits_processor))
+    }
+
     #[allow(clippy::too_many_arguments)]
     pub async fn loop_process(
         &mut self,
