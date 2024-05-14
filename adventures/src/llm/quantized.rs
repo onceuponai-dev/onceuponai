@@ -65,8 +65,6 @@ pub async fn chat(
             if let Some(res) = model.loop_process(next_token, prompt_tokens_len, index, repeat_penalty, repeat_last_n, &mut all_tokens, &mut logits_processor, eos_token).await? {
                 let current_text = res.0;
                 next_token = res.1;
-
-
                 let text = current_text.split_at(previous_text.len()).1.to_string();
                 previous_text = current_text;
                 print!("{text}");

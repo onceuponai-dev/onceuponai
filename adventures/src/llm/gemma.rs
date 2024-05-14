@@ -32,36 +32,15 @@ pub async fn chat(
         .to_vec();
 
     let stream_tasks = stream! {
-
         for index in 0..sample_len {
-            let context_size = if index > 0 { 1 } else { tokens.len() };
-            let start_pos = tokens.len().saturating_sub(context_size);
-            let ctxt = &tokens[start_pos..];
-            let input = Tensor::new(ctxt, &model.device)?.unsqueeze(0)?;
-            let logits = model.model.forward(&input, start_pos)?;
-            let logits = logits.squeeze(0)?.squeeze(0)?.to_dtype(DType::F32)?;
-            let logits = if model.repeat_penalty == 1. {
-                logits
-            } else {
-                let start_at = tokens.len().saturating_sub(model.repeat_last_n);
-                candle_transformers::utils::apply_repeat_penalty(
-                    &logits,
-                    model.repeat_penalty,
-                    &tokens[start_at..],
-                )?
-            };
-
-            let next_token = model.logits_processor.sample(&logits)?;
-            tokens.push(next_token);
-            if next_token == eos_token {
+            if let Some(text) = model.loop_process(tokens.len(), index, &mut tokens, eos_token).await? {
+                let byte = bytes::Bytes::from(text);
+                yield Ok::<bytes::Bytes, Box<dyn std::error::Error>>(byte);
+            }
+            else
+            {
                 break;
             }
-
-            tokio::task::yield_now().await;
-            let tt = &model.tokenizer.decode(&[next_token], true).map_err(anyhow::Error::msg)?;
-            println!("{tt}");
-            let byte = bytes::Bytes::from(tt.clone());
-            yield Ok::<bytes::Bytes, Box<dyn std::error::Error>>(byte);
         }
 
     };
@@ -81,6 +60,46 @@ pub struct GemmaModel {
 }
 
 impl GemmaModel {
+    #[allow(clippy::too_many_arguments)]
+    pub async fn loop_process(
+        &mut self,
+        tokens_len: usize,
+        index: usize,
+        tokens: &mut Vec<u32>,
+        eos_token: u32,
+    ) -> Result<Option<String>> {
+        let context_size = if index > 0 { 1 } else { tokens_len };
+        let start_pos = tokens_len.saturating_sub(context_size);
+        let ctxt = &tokens[start_pos..];
+        let input = Tensor::new(ctxt, &self.device)?.unsqueeze(0)?;
+        let logits = self.model.forward(&input, start_pos)?;
+        let logits = logits.squeeze(0)?.squeeze(0)?.to_dtype(DType::F32)?;
+        let logits = if self.repeat_penalty == 1. {
+            logits
+        } else {
+            let start_at = tokens.len().saturating_sub(self.repeat_last_n);
+            candle_transformers::utils::apply_repeat_penalty(
+                &logits,
+                self.repeat_penalty,
+                &tokens[start_at..],
+            )?
+        };
+
+        let next_token = self.logits_processor.sample(&logits)?;
+        tokens.push(next_token);
+        if next_token == eos_token {
+            return Ok(None);
+        }
+
+        tokio::task::yield_now().await;
+        let text = &self
+            .tokenizer
+            .decode(&[next_token], true)
+            .map_err(anyhow::Error::msg)?;
+        println!("{text}");
+        Ok(Some(text.to_string()))
+    }
+
     pub fn init(hf_token: &str, device_type: &str) -> Result<u32> {
         let model = GemmaModel::load(
             GEMMA_2B_REPO_ID,
