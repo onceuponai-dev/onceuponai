@@ -3,12 +3,10 @@ use crate::common::{hf_hub_get, hf_hub_get_path, OptionToResult, ResultExt};
 use actix_web::{HttpResponse, Responder};
 use anyhow::Result;
 use async_stream::stream;
-use bytes::Bytes;
 use candle_core::quantized::{ggml_file, gguf_file};
 use candle_core::{Device, Tensor};
 use candle_transformers::generation::LogitsProcessor;
 use candle_transformers::models::quantized_llama as model;
-use futures::lock::MutexGuard;
 use model::ModelWeights;
 use once_cell::sync::OnceCell;
 use std::sync::Arc;
@@ -91,7 +89,7 @@ impl QuantizedModel {
         logits_processor: &mut LogitsProcessor,
         eos_token: u32,
     ) -> Result<Option<String>> {
-        let next_token = all_tokens.last().expect("Wrong ALL_TOKENS").clone();
+        let next_token = *all_tokens.last().expect("Wrong ALL_TOKENS");
         let input = Tensor::new(&[next_token], &self.device)?.unsqueeze(0)?;
         let logits = self.model.forward(&input, prompt_tokens_len + index)?;
         let logits = logits.squeeze(0)?;
