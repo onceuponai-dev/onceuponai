@@ -47,28 +47,18 @@ pub async fn chat(
     let input = Tensor::new(prompt_tokens.as_slice(), &model.device)?.unsqueeze(0)?;
     let logits = model.model.forward(&input, 0)?;
     let logits = logits.squeeze(0)?;
-    let mut next_token = logits_processor.sample(&logits)?;
+    let next_token = logits_processor.sample(&logits)?;
 
     all_tokens.push(next_token);
-    let t = model
-        .tokenizer
-        .decode(&[next_token], true)
-        .map_err(anyhow::Error::msg)?;
-
-    print!("{t} ");
     let prompt_tokens_len = prompt_tokens.len();
 
     let stream_tasks = stream! {
         let mut previous_text = String::new();
         for index in 0..sample_len {
 
-            if let Some(res) = model.loop_process(next_token, prompt_tokens_len, index, repeat_penalty, repeat_last_n, &mut all_tokens, &mut logits_processor, eos_token).await? {
-                let current_text = res.0;
-                next_token = res.1;
+            if let Some(current_text) = model.loop_process(prompt_tokens_len, index, repeat_penalty, repeat_last_n, &mut all_tokens, &mut logits_processor, eos_token).await? {
                 let text = current_text.split_at(previous_text.len()).1.to_string();
                 previous_text = current_text;
-                print!("{text}");
-
                 let byte = bytes::Bytes::from(text);
                 yield Ok::<bytes::Bytes, Box<dyn std::error::Error>>(byte);
             } else {
@@ -93,7 +83,6 @@ impl QuantizedModel {
     #[allow(clippy::too_many_arguments)]
     pub async fn loop_process(
         &mut self,
-        next_token: u32,
         prompt_tokens_len: usize,
         index: usize,
         repeat_penalty: f32,
@@ -101,7 +90,8 @@ impl QuantizedModel {
         all_tokens: &mut Vec<u32>,
         logits_processor: &mut LogitsProcessor,
         eos_token: u32,
-    ) -> Result<Option<(String, u32)>> {
+    ) -> Result<Option<String>> {
+        let next_token = all_tokens.last().expect("Wrong ALL_TOKENS").clone();
         let input = Tensor::new(&[next_token], &self.device)?.unsqueeze(0)?;
         let logits = self.model.forward(&input, prompt_tokens_len + index)?;
         let logits = logits.squeeze(0)?;
@@ -129,7 +119,7 @@ impl QuantizedModel {
             .decode(all_tokens, true)
             .map_err(anyhow::Error::msg)?;
 
-        Ok(Some((current_text, next_token)))
+        Ok(Some(current_text))
     }
 
     pub fn init(
