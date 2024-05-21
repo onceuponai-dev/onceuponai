@@ -1,8 +1,8 @@
 use crate::common::OptionToResult;
 use crate::llm::e5::E5Model;
 use anyhow::Result;
+use arrow_array::cast::as_string_array;
 use futures::TryStreamExt;
-use lancedb::arrow::arrow_array::cast::as_string_array;
 use lancedb::connect;
 use lancedb::query::{ExecutableQuery, QueryBase};
 use once_cell::sync::OnceCell;
