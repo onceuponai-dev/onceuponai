@@ -23,7 +23,7 @@ class RecipesChat:
     async def __init__(self):
 
         self.llm_model = onceuponai.llms.Quantized("speakleash/Bielik-7B-Instruct-v0.1-GGUF", \
-                              "file:///home/jovyan/rust-src/Bielik/Bielik-7B-Instruct-v0.1.Q4_K_S.gguf", \
+                              "bielik-7b-instruct-v0.1.Q4_K_S.gguf", \
                               "speakleash/Bielik-7B-Instruct-v0.1", "cuda")
         
         self.embeddings = onceuponai.embeddings.E5("intfloat/multilingual-e5-small")
@@ -37,7 +37,6 @@ class RecipesChat:
         print("EMB",res)
         context = res.to_dict()["item"][0]
         prompt = PROMPT_TEMPLATE.replace("{context}", context).replace("{question}", prompt)
-        print("PROMPT", prompt)
         return await self.llm_model.invoke(prompt, 2000)
     
     def auth_token(self):
