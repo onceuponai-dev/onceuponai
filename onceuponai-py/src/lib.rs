@@ -1,6 +1,9 @@
+pub mod common;
 extern crate onceuponai as onceuponai_rs;
+use common::ResultExt;
 use futures::channel::oneshot;
 use onceuponai_rs::{
+    auth::validate_jwt_py,
     common::OptionToResult,
     llm::{
         e5::{E5Model, E5_MODEL_REPO},
@@ -23,6 +26,12 @@ fn onceuponai(py: Python<'_>, m: &Bound<'_, PyModule>) -> PyResult<()> {
     llms_module.add_class::<Quantized>()?;
 
     m.add_submodule(&llms_module)?;
+
+    let bot_module = PyModule::new_bound(py, "bot")?;
+
+    bot_module.add_function(wrap_pyfunction!(validate_jwt, &bot_module)?)?;
+    m.add_submodule(&bot_module)?;
+
     Ok(())
 }
 
@@ -101,15 +110,7 @@ async fn sleep(seconds: f64, result: Option<PyObject>) -> Option<PyObject> {
     result
 }
 
-pub trait ResultExt<T, E> {
-    fn map_pyerr(self) -> Result<T, PyErr>;
-}
-
-impl<T, E: std::fmt::Debug> ResultExt<T, E> for Result<T, E> {
-    fn map_pyerr(self) -> Result<T, PyErr> {
-        self.map_err(|e| {
-            let err = format!("{:?}", e);
-            PyErr::new::<PyTypeError, _>(err)
-        })
-    }
+#[pyfunction]
+async fn validate_jwt(token: String, jwks: String) -> PyResult<bool> {
+    validate_jwt_py(&token, &jwks).await.map_pyerr()
 }

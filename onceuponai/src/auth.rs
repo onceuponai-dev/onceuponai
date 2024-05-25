@@ -104,6 +104,21 @@ pub async fn validate_jwt(token: &str) -> Result<bool> {
     }
 }
 
+pub async fn validate_jwt_py(token: &str, jwks: &str) -> Result<bool> {
+    let jwks: JwkSet = serde_json::from_str(jwks)?;
+    let aud = env::var("BOT_CLIENT_ID")?;
+    let headers = decode_header(token)?;
+    let kid = headers.kid.expect("Wrong kid");
+    let alg = headers.alg;
+
+    if let Some(public_key) = find_jwk(&jwks, kid) {
+        let _ = decode_jwt(token, &public_key, alg, &aud)?;
+        Ok(true)
+    } else {
+        Err(anyhow!("No suitable key found for validation"))
+    }
+}
+
 #[tokio::test]
 async fn test_reqwest() -> Result<()> {
     let bot_client_id = env::var("BOT_CLIENT_ID")?;
