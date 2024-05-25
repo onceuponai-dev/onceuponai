@@ -3,8 +3,8 @@ use anyhow::Result;
 use clap::{arg, Command};
 
 fn cli() -> Command {
-    Command::new("adventures")
-        .about("adventures")
+    Command::new("onceuponai")
+        .about("onceuponai")
         .subcommand_required(true)
         .arg_required_else_help(true)
         .subcommand(

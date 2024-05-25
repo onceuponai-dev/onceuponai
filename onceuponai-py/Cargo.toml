@@ -1,5 +1,5 @@
 [package]
-name = "adventures-py"
+name = "onceuponai-py"
 version = "0.0.2"
 edition = "2021"
 repository = "https://github.com/qooba/anonymize-rs"
@@ -14,6 +14,7 @@ crate-type = ["cdylib"]
 rustflags = ["-C", "target-cpu=native"]
 
 [dependencies]
-adventures = { path = "../adventures", features = ["musl","cuda"] }
-pyo3 = { version = "0.21.2", features = ["extension-module"] }
+ onceuponai= { path = "../onceuponai", features = ["musl","cuda"] }
+pyo3 = { version = "0.21.2", features = ["extension-module", "experimental-async"] }
 tokio = { version = "1.20.0", features = ["full"] }
+futures = "0.3.30"

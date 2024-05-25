@@ -100,6 +100,43 @@ pub struct QuantizedModel {
 }
 
 impl QuantizedModel {
+    pub async fn invoke(
+        &mut self,
+        prompt: &str,
+        sample_len: usize,
+        eos_token: u32,
+    ) -> Result<String> {
+        let repeat_penalty: f32 = 1.1;
+        let repeat_last_n: usize = 64;
+
+        let prep = self.prepare(prompt).await?;
+        let prompt_tokens_len = prep.0;
+        let mut all_tokens = prep.1;
+        let mut logits_processor = prep.2;
+
+        let mut previous_text = String::new();
+        for index in 0..sample_len {
+            if let Some(current_text) = self
+                .loop_process(
+                    prompt_tokens_len,
+                    index,
+                    repeat_penalty,
+                    repeat_last_n,
+                    &mut all_tokens,
+                    &mut logits_processor,
+                    eos_token,
+                )
+                .await?
+            {
+                previous_text = current_text;
+            } else {
+                break;
+            }
+        }
+
+        Ok(previous_text)
+    }
+
     pub async fn prepare(&mut self, prompt: &str) -> Result<(usize, Vec<u32>, LogitsProcessor)> {
         let prompt_tokens = self
             .tokenizer

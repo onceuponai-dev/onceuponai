@@ -16,4 +16,4 @@ classifiers = [
 ]
 
 [project.urls]
-repository = "https://github.com/onceuponai-dev/stories-fantasy-shop-assistant"
+repository = "https://github.com/onceuponai-dev/onceuponai"
