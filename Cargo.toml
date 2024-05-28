@@ -1,7 +1,8 @@
 [workspace]
 members = [
     "onceuponai",
-    "onceuponai-py"]
+    "onceuponai-py",
+    ]
 
 [workspace.package]
 version = "0.0.1"

@@ -2,19 +2,19 @@
 name = "onceuponai-py"
 version = "0.0.2"
 edition = "2021"
-repository = "https://github.com/qooba/anonymize-rs"
-description = "Data anonymization library"
+repository = "https://github.com/onceuponai-dev/onceuponai"
+description = "Onceupon AI library"
 license = "Apache-2.0"
 
 [lib]
 name = "onceuponai"
 crate-type = ["cdylib"]
 
-[build]
-rustflags = ["-C", "target-cpu=native"]
+#[build]
+#rustflags = ["-C", "target-cpu=native"]
 
 [dependencies]
  onceuponai= { path = "../onceuponai", features = ["musl","cuda"] }
-pyo3 = { version = "0.21.2", features = ["extension-module", "experimental-async"] }
+pyo3 = { version = "0.21.2", features = ["extension-module", "experimental-async", "abi3", "abi3-py38"] }
 tokio = { version = "1.20.0", features = ["full"] }
 futures = "0.3.30"

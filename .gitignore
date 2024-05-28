@@ -7,3 +7,5 @@ Cargo.lock
 .terraform*
 tf_init.sh
 *.tfvars
+/ssh
+/__pycache__
