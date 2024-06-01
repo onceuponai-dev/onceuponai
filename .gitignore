@@ -9,3 +9,4 @@ tf_init.sh
 *.tfvars
 /ssh
 /__pycache__
+terraform/ssh
