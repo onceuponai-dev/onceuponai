@@ -134,7 +134,7 @@ impl QuantizedModel {
     pub fn load(
         model_repo: &str,
         model_file: &str,
-        tokenizer_repo: &str,
+        tokenizer_repo: Option<String>,
         device_type: Option<String>,
     ) -> Result<QuantizedModel> {
         let base_repo_id = (model_repo, model_file);
@@ -145,10 +145,12 @@ impl QuantizedModel {
             hf_hub_get_path(base_repo_id.0, base_repo_id.1, None, None)?
         };
 
+        let tokenizer_repo = tokenizer_repo.unwrap_or(model_repo.to_string());
+
         let tokenizer = if tokenizer_repo.starts_with("file://") {
             std::fs::read(tokenizer_repo.replace("file://", ""))?
         } else {
-            hf_hub_get(tokenizer_repo, "tokenizer.json", None, None)?
+            hf_hub_get(&tokenizer_repo, "tokenizer.json", None, None)?
         };
 
         let device = parse_device(device_type)?;

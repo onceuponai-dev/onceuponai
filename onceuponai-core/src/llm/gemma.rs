@@ -92,6 +92,7 @@ impl GemmaModel {
     #[allow(clippy::too_many_arguments)]
     pub fn load(
         base_repo_id: String,
+        tokenizer_repo: Option<String>,
         device: Option<String>,
         seed: Option<u64>,
         repeat_last_n: Option<usize>,
@@ -119,8 +120,10 @@ impl GemmaModel {
             DType::F32
         };
 
+        let tokenizer_repo = tokenizer_repo.unwrap_or(base_repo_id.clone());
+
         let vb = unsafe { VarBuilder::from_mmaped_safetensors(&paths, dtype, &device)? };
-        let tokenizer = hf_hub_get(&base_repo_id, "tokenizer.json", None, hf_token.clone())?;
+        let tokenizer = hf_hub_get(&tokenizer_repo, "tokenizer.json", None, hf_token.clone())?;
         let tokenizer = Tokenizer::from_bytes(&tokenizer).map_anyhow_err()?;
         let candle_config = hf_hub_get(&base_repo_id, "config.json", None, hf_token)?;
         let candle_config: Config = serde_json::from_slice(&candle_config)?;
