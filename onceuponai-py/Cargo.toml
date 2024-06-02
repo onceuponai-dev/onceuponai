@@ -14,7 +14,8 @@ crate-type = ["cdylib"]
 #rustflags = ["-C", "target-cpu=native"]
 
 [dependencies]
- onceuponai= { path = "../onceuponai", features = ["musl","cuda"] }
+onceuponai-core= { path = "../onceuponai-core", features = ["musl","cuda"] }
 pyo3 = { version = "0.21.2", features = ["extension-module", "experimental-async", "abi3", "abi3-py38"] }
 tokio = { version = "1.20.0", features = ["full"] }
 futures = "0.3.30"
+anyhow = { version = "1", features = ["backtrace"] }

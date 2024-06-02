@@ -1,6 +1,6 @@
 use crate::{
     auth::refresh_authstate,
-    llm::{quantized::chat_bot, LLMState},
+    llm::{quantized::chat, LLMState},
 };
 use anyhow::Result;
 use onceuponai::auth;
@@ -46,7 +46,7 @@ pub async fn bot_reply(
     access_token: &str,
     llm_state: &LLMState,
 ) -> Result<()> {
-    let text = chat_bot(&incomming_message.text, 2000, llm_state.eos_token).await?;
+    let text = chat(&incomming_message.text, 2000, llm_state.eos_token).await?;
 
     let reply_message = BotReplyMessage {
         r#type: "message".to_string(),

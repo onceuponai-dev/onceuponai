@@ -1,6 +1,6 @@
 [workspace]
 members = [
-    "onceuponai",
+    "onceuponai-core",
     "onceuponai-py",
     ]
 

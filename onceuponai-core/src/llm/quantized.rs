@@ -1,97 +1,12 @@
 use super::parse_device;
 use crate::common::{hf_hub_get, hf_hub_get_path, OptionToResult, ResultExt};
-use actix_web::{HttpResponse, Responder};
 use anyhow::Result;
-use async_stream::stream;
 use candle_core::quantized::{ggml_file, gguf_file};
 use candle_core::{Device, Tensor};
 use candle_transformers::generation::LogitsProcessor;
 use candle_transformers::models::quantized_llama as model;
 use model::ModelWeights;
-use once_cell::sync::OnceCell;
-use std::sync::Arc;
 use tokenizers::Tokenizer;
-use tokio::sync::Mutex;
-
-static QUANTIZED_MODEL: OnceCell<Arc<Mutex<QuantizedModel>>> = OnceCell::new();
-
-pub async fn chat_bot(prompt: &str, sample_len: usize, eos_token: u32) -> Result<String> {
-    let mut model = QUANTIZED_MODEL
-        .get()
-        .ok_or_err("QUANTIZED_MODEL")?
-        .lock()
-        .await;
-
-    let repeat_penalty: f32 = 1.1;
-    let repeat_last_n: usize = 64;
-
-    let prep = model.prepare(prompt).await?;
-    let prompt_tokens_len = prep.0;
-    let mut all_tokens = prep.1;
-    let mut logits_processor = prep.2;
-
-    let mut previous_text = String::new();
-    for index in 0..sample_len {
-        if let Some(current_text) = model
-            .loop_process(
-                prompt_tokens_len,
-                index,
-                repeat_penalty,
-                repeat_last_n,
-                &mut all_tokens,
-                &mut logits_processor,
-                eos_token,
-            )
-            .await?
-        {
-            previous_text = current_text;
-        } else {
-            break;
-        }
-    }
-
-    Ok(previous_text)
-}
-
-pub async fn chat(
-    prompt: &str,
-    sample_len: usize,
-    eos_token: u32,
-) -> Result<impl Responder, Box<dyn std::error::Error>> {
-    let mut model = QUANTIZED_MODEL
-        .get()
-        .ok_or_err("QUANTIZED_MODEL")?
-        .lock()
-        .await;
-
-    let repeat_penalty: f32 = 1.1;
-    let repeat_last_n: usize = 64;
-
-    let prep = model.prepare(prompt).await?;
-    let prompt_tokens_len = prep.0;
-    let mut all_tokens = prep.1;
-    let mut logits_processor = prep.2;
-
-    let stream_tasks = stream! {
-        let mut previous_text = String::new();
-        for index in 0..sample_len {
-
-            if let Some(current_text) = model.loop_process(prompt_tokens_len, index, repeat_penalty, repeat_last_n, &mut all_tokens, &mut logits_processor, eos_token).await? {
-                let text = current_text.split_at(previous_text.len()).1.to_string();
-                previous_text = current_text;
-                let byte = bytes::Bytes::from(text);
-                yield Ok::<bytes::Bytes, Box<dyn std::error::Error>>(byte);
-            } else {
-                break;
-            }
-        }
-
-    };
-
-    Ok(HttpResponse::Ok()
-        .content_type("text/event-stream")
-        .streaming(Box::pin(stream_tasks)))
-}
 
 pub struct QuantizedModel {
     pub model: ModelWeights,
@@ -100,16 +15,22 @@ pub struct QuantizedModel {
 }
 
 impl QuantizedModel {
+    #[allow(clippy::too_many_arguments)]
     pub async fn invoke(
         &mut self,
         prompt: &str,
         sample_len: usize,
         eos_token: u32,
+        seed: Option<u64>,
+        repeat_last_n: Option<usize>,
+        repeat_penalty: Option<f32>,
+        temp: Option<f64>,
+        top_p: Option<f64>,
     ) -> Result<String> {
-        let repeat_penalty: f32 = 1.1;
-        let repeat_last_n: usize = 64;
+        let repeat_penalty: f32 = repeat_penalty.unwrap_or(1.1);
+        let repeat_last_n: usize = repeat_last_n.unwrap_or(64);
 
-        let prep = self.prepare(prompt).await?;
+        let prep = self.prepare(prompt, seed, temp, top_p).await?;
         let prompt_tokens_len = prep.0;
         let mut all_tokens = prep.1;
         let mut logits_processor = prep.2;
@@ -137,7 +58,13 @@ impl QuantizedModel {
         Ok(previous_text)
     }
 
-    pub async fn prepare(&mut self, prompt: &str) -> Result<(usize, Vec<u32>, LogitsProcessor)> {
+    pub async fn prepare(
+        &mut self,
+        prompt: &str,
+        seed: Option<u64>,
+        temperature: Option<f64>,
+        top_p: Option<f64>,
+    ) -> Result<(usize, Vec<u32>, LogitsProcessor)> {
         let prompt_tokens = self
             .tokenizer
             .encode(prompt, true)
@@ -145,12 +72,11 @@ impl QuantizedModel {
             .get_ids()
             .to_vec();
 
-        let seed: u64 = 299792458;
-        let temperature: Option<f64> = Some(0.8);
-        let top_p: Option<f64> = None;
+        let seed: u64 = seed.unwrap_or(299792458);
+        let temperature = temperature.unwrap_or(0.8);
 
         let mut all_tokens = vec![];
-        let mut logits_processor = LogitsProcessor::new(seed, temperature, top_p);
+        let mut logits_processor = LogitsProcessor::new(seed, Some(temperature), top_p);
 
         let input = Tensor::new(prompt_tokens.as_slice(), &self.device)?.unsqueeze(0)?;
         let logits = self.model.forward(&input, 0)?;
@@ -205,33 +131,13 @@ impl QuantizedModel {
         Ok(Some(current_text))
     }
 
-    pub fn init(
-        model_repo: &str,
-        model_file: &str,
-        tokenizer_repo: &str,
-        device_type: &str,
-    ) -> Result<u32> {
-        let model = QuantizedModel::load(model_repo, model_file, tokenizer_repo, device_type)?;
-
-        let eos_token = "</s>";
-        let vocab = model.tokenizer.get_vocab(true).clone();
-        let eos_token = *vocab.get(eos_token).ok_or_err("EOS_TOKEN")?;
-
-        let _ = QUANTIZED_MODEL.set(Arc::new(Mutex::new(model)));
-        Ok(eos_token)
-    }
-
     pub fn load(
         model_repo: &str,
         model_file: &str,
         tokenizer_repo: &str,
-        device_type: &str,
+        device_type: Option<String>,
     ) -> Result<QuantizedModel> {
-        //let base_repo_id = ("TheBloke/CodeLlama-7B-GGUF", "codellama-7b.Q4_0.gguf");
         let base_repo_id = (model_repo, model_file);
-        //let base_repo_id = ("MaziyarPanahi/gemma-2b-it-GGUF", "gemma-2b-it.Q4_K_M.gguf");
-        //let tokenizer_repo = "hf-internal-testing/llama-tokenizer";
-        //let tokenizer_repo = "google/gemma-2b-it";
 
         let model_path = if model_file.starts_with("file://") {
             std::path::PathBuf::from(model_file.replace("file://", ""))

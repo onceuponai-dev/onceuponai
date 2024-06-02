@@ -9,6 +9,8 @@ use once_cell::sync::OnceCell;
 use std::sync::Arc;
 use tokio::sync::Mutex;
 
+use super::e5::E5_MODEL_REPO;
+
 static PROMPT_TEMPLATE: OnceCell<Arc<Mutex<String>>> = OnceCell::new();
 
 static LANCEDB_TABLE: OnceCell<Arc<Mutex<lancedb::Table>>> = OnceCell::new();
@@ -48,7 +50,8 @@ pub fn set_prompt_template(prompt_template: &str, is_gemma: bool) -> Result<()> 
 }
 
 pub async fn find_context(prompt: String) -> Result<String> {
-    let embeddings_data = E5Model::embeddings(vec![prompt]).await?;
+    let embeddings_data =
+        E5Model::load(E5_MODEL_REPO, Some("cpu".to_string()))?.embed(vec![prompt])?;
     let emb = embeddings_data.last().unwrap().clone();
 
     let tbl = LANCEDB_TABLE.get().unwrap().lock().await;
@@ -90,8 +93,8 @@ async fn test_lancedb() -> Result<()> {
     let uri = "/tmp/fantasy-lancedb";
     let db = connect(uri).execute().await.unwrap();
 
-    let e5_model = E5Model::load(crate::llm::e5::E5_MODEL_REPO, "cpu").unwrap();
-    let ii = e5_model.forward(vec!["Adventure with a dragon".to_string()])?;
+    let e5_model = E5Model::load(crate::llm::e5::E5_MODEL_REPO, Some("cpu".to_string())).unwrap();
+    let ii = e5_model.embed(vec!["Adventure with a dragon".to_string()])?;
     let iii = ii.last().unwrap().clone();
 
     let tbl = db.open_table("fantasy_vectors").execute().await.unwrap();

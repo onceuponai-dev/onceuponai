@@ -4,14 +4,9 @@ use anyhow::Result;
 use candle_core::{DType, Device, Tensor};
 use candle_nn::VarBuilder;
 use candle_transformers::models::bert::{BertModel, Config as BertConfig};
-use once_cell::sync::OnceCell;
-use std::sync::Arc;
 use tokenizers::{PaddingParams, Tokenizer};
-use tokio::sync::Mutex;
 
 pub const E5_MODEL_REPO: &str = "intfloat/e5-small-v2";
-
-static E5_MODEL: OnceCell<Arc<Mutex<E5Model>>> = OnceCell::new();
 
 pub struct E5Model {
     pub model: BertModel,
@@ -21,19 +16,7 @@ pub struct E5Model {
 }
 
 impl E5Model {
-    pub fn init(e5_model_repo: &str, device_type: &str) -> Result<()> {
-        let e5_model = E5Model::load(e5_model_repo, device_type)?;
-        let _ = E5_MODEL.set(Arc::new(Mutex::new(e5_model))).is_ok();
-        Ok(())
-    }
-
-    pub async fn embeddings(input: Vec<String>) -> Result<Vec<Vec<f32>>> {
-        let model = E5_MODEL.get().ok_or_err("E5_MODEL")?.lock().await;
-        let embeddings_data = model.forward(input)?;
-        Ok(embeddings_data)
-    }
-
-    pub fn load(e5_model_repo: &str, device_type: &str) -> Result<E5Model> {
+    pub fn load(e5_model_repo: &str, device_type: Option<String>) -> Result<E5Model> {
         let weights = hf_hub_get(e5_model_repo, "model.safetensors", None, None)?;
         let tokenizer = hf_hub_get(e5_model_repo, "tokenizer.json", None, None)?;
         let candle_config = hf_hub_get(e5_model_repo, "config.json", None, None)?;
@@ -62,7 +45,7 @@ impl E5Model {
         })
     }
 
-    pub fn forward(&self, input: Vec<String>) -> Result<Vec<Vec<f32>>> {
+    pub fn embed(&self, input: Vec<String>) -> Result<Vec<Vec<f32>>> {
         let device = &self.device;
         let tokens = self
             .tokenizer
