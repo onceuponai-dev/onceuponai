@@ -146,3 +146,24 @@ impl GemmaModel {
         })
     }
 }
+
+#[tokio::test]
+async fn test_codegemma() -> Result<()> {
+    let mut phi3 = GemmaModel::load(
+        "google/codegemma-1.1-7b-it".to_string(),
+        None,
+        None,
+        None,
+        None,
+        None,
+        None,
+        None,
+        None,
+        None,
+    )?;
+
+    //let resp = phi3.invoke("Write loop in python").await?;
+
+    //println!("RESPONSE: {resp}");
+    Ok(())
+}
