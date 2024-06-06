@@ -52,6 +52,7 @@ pub fn hf_hub_get_path(
     filename: &str,
     endpoint: Option<String>,
     hf_token: Option<String>,
+    revision: Option<String>,
 ) -> Result<PathBuf> {
     use hf_hub::{api::sync::ApiBuilder, Repo, RepoType};
 
@@ -65,9 +66,13 @@ pub fn hf_hub_get_path(
         api_builder = api_builder.with_endpoint(e);
     }
 
-    let api = api_builder
-        .build()?
-        .repo(Repo::new(hf_repo_id.to_string(), RepoType::Model));
+    let repo = if let Some(rev) = revision {
+        Repo::with_revision(hf_repo_id.to_string(), RepoType::Model, rev)
+    } else {
+        Repo::new(hf_repo_id.to_string(), RepoType::Model)
+    };
+
+    let api = api_builder.build()?.repo(repo);
     let path = api.get(filename)?;
 
     Ok(path)
@@ -78,8 +83,9 @@ pub fn hf_hub_get(
     filename: &str,
     endpoint: Option<String>,
     hf_token: Option<String>,
+    revision: Option<String>,
 ) -> Result<Vec<u8>> {
-    let path = hf_hub_get_path(hf_repo_id, filename, endpoint, hf_token)?;
+    let path = hf_hub_get_path(hf_repo_id, filename, endpoint, hf_token, revision)?;
     let data = fs::read(path)?;
     Ok(data)
 }

@@ -19,12 +19,12 @@ tokenizers = { version = "0.19.1", features = [
 ], default-features = false }
 futures = "0.3.25"
 
-candle-core = "=0.5.1"
-candle-nn = "=0.5.1"
-candle-transformers = "=0.5.1"
-#candle-core = { git = "https://github.com/huggingface/candle.git", branch = "main" }
-#candle-nn = { git = "https://github.com/huggingface/candle.git", branch = "main"  }
-#candle-transformers = { git = "https://github.com/huggingface/candle.git", branch = "main" }
+#candle-core = "=0.5.1"
+#candle-nn = "=0.5.1"
+#candle-transformers = "=0.5.1"
+candle-core = { git = "https://github.com/qooba/candle.git", rev="9a9bc6d" }
+candle-nn = { git = "https://github.com/qooba/candle.git", rev="9a9bc6d"  }
+candle-transformers = { git = "https://github.com/qooba/candle.git", rev="9a9bc6d" }
 
 #candle-onnx = "0.3.3"
 hf-hub = { git = "https://github.com/qooba/hf-hub.git", branch = "remove-native-tls", version = "0.3.0", features = [

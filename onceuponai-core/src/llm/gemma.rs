@@ -98,10 +98,12 @@ impl GemmaModel {
         temp: Option<f64>,
         top_p: Option<f64>,
         hf_token: Option<String>,
+        use_flash_attn: Option<bool>,
     ) -> Result<GemmaModel> {
         let seed = seed.unwrap_or(299792458);
         let repeat_last_n = repeat_last_n.unwrap_or(64);
         let repeat_penalty = repeat_penalty.unwrap_or(1.1);
+        let use_flash_attn = use_flash_attn.unwrap_or(false);
         let hf_token = Some(hf_token.unwrap_or(std::env::var("HF_TOKEN").expect("HF_TOKEN")));
 
         let paths = hf_hub_get_multiple(
@@ -121,11 +123,17 @@ impl GemmaModel {
         let tokenizer_repo = tokenizer_repo.unwrap_or(base_repo_id.clone());
 
         let vb = unsafe { VarBuilder::from_mmaped_safetensors(&paths, dtype, &device)? };
-        let tokenizer = hf_hub_get(&tokenizer_repo, "tokenizer.json", None, hf_token.clone())?;
+        let tokenizer = hf_hub_get(
+            &tokenizer_repo,
+            "tokenizer.json",
+            None,
+            hf_token.clone(),
+            None,
+        )?;
         let tokenizer = Tokenizer::from_bytes(&tokenizer).map_anyhow_err()?;
-        let candle_config = hf_hub_get(&base_repo_id, "config.json", None, hf_token)?;
+        let candle_config = hf_hub_get(&base_repo_id, "config.json", None, hf_token, None)?;
         let candle_config: Config = serde_json::from_slice(&candle_config)?;
-        let model = Model::new(true, &candle_config, vb)?;
+        let model = Model::new(use_flash_attn, &candle_config, vb)?;
 
         let logits_processor = LogitsProcessor::new(seed, temp, top_p);
         Ok(GemmaModel {

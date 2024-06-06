@@ -52,6 +52,7 @@ impl Quantized {
     pub fn new(
         model_repo: String,
         model_file: String,
+        model_revision: Option<String>,
         tokenizer_repo: Option<String>,
         device: Option<String>,
         seed: Option<u64>,
@@ -60,8 +61,14 @@ impl Quantized {
         temp: Option<f64>,
         top_p: Option<f64>,
     ) -> PyResult<Self> {
-        let model =
-            QuantizedModel::load(&model_repo, &model_file, tokenizer_repo, device).map_pyerr()?;
+        let model = QuantizedModel::load(
+            &model_repo,
+            &model_file,
+            model_revision,
+            tokenizer_repo,
+            device,
+        )
+        .map_pyerr()?;
 
         let eos_token = "</s>";
         let vocab = model.tokenizer.get_vocab(true).clone();
@@ -117,6 +124,7 @@ impl Gemma {
         temp: Option<f64>,
         top_p: Option<f64>,
         hf_token: Option<String>,
+        use_flash_attn: Option<bool>,
     ) -> PyResult<Self> {
         let model = GemmaModel::load(
             model_repo,
@@ -128,6 +136,7 @@ impl Gemma {
             temp,
             top_p,
             hf_token,
+            use_flash_attn,
         )
         .map_pyerr()?;
 

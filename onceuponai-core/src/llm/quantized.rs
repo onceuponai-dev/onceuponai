@@ -134,20 +134,16 @@ impl QuantizedModel {
     pub fn load(
         model_repo: &str,
         model_file: &str,
+        model_revision: Option<String>,
         tokenizer_repo: Option<String>,
         device_type: Option<String>,
     ) -> Result<QuantizedModel> {
-        //#[cfg(feature = "cuda")]
-        //candle_core::quantized::cuda::set_force_dmmv(false);
-        //candle_core::cuda::set_gemm_reduced_precision_f16(true);
-        //candle_core::cuda::set_gemm_reduced_precision_bf16(true);
-
         let base_repo_id = (model_repo, model_file);
 
         let model_path = if model_file.starts_with("file://") {
             std::path::PathBuf::from(model_file.replace("file://", ""))
         } else {
-            hf_hub_get_path(base_repo_id.0, base_repo_id.1, None, None)?
+            hf_hub_get_path(base_repo_id.0, base_repo_id.1, None, None, model_revision)?
         };
 
         let tokenizer_repo = tokenizer_repo.unwrap_or(model_repo.to_string());
@@ -155,7 +151,7 @@ impl QuantizedModel {
         let tokenizer = if tokenizer_repo.starts_with("file://") {
             std::fs::read(tokenizer_repo.replace("file://", ""))?
         } else {
-            hf_hub_get(&tokenizer_repo, "tokenizer.json", None, None)?
+            hf_hub_get(&tokenizer_repo, "tokenizer.json", None, None, None)?
         };
 
         let device = parse_device(device_type)?;
@@ -178,6 +174,7 @@ async fn test_bielik() -> Result<()> {
     let mut bielik = QuantizedModel::load(
         "speakleash/Bielik-7B-Instruct-v0.1-GGUF",
         "bielik-7b-instruct-v0.1.Q4_K_S.gguf",
+        None,
         Some("speakleash/Bielik-7B-Instruct-v0.1".to_string()),
         Some("cuda".to_string()),
     )?;
@@ -208,6 +205,7 @@ async fn test_phi3() -> Result<()> {
     let mut phi3 = QuantizedModel::load(
         "microsoft/Phi-3-mini-4k-instruct-gguf",
         "Phi-3-mini-4k-instruct-q4.gguf",
+        Some("5eef2ce24766d31909c0b269fe90c817a8f263fb".to_string()),
         Some("microsoft/Phi-3-mini-4k-instruct".to_string()),
         Some("cuda".to_string()),
     )?;
