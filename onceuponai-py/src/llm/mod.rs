@@ -65,7 +65,7 @@ impl Quantized {
 
         let eos_token = "</s>";
         let vocab = model.tokenizer.get_vocab(true).clone();
-        let eos_token = *vocab.get(eos_token).ok_or_err("EOS_TOKEN").unwrap();
+        let eos_token = *vocab.get(eos_token).ok_or_err("EOS_TOKEN").map_pyerr()?;
 
         Ok(Self {
             model,

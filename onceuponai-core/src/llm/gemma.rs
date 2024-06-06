@@ -33,20 +33,24 @@ impl GemmaModel {
             .map_err(anyhow::Error::msg)?
             .get_ids()
             .to_vec();
+        let tokens_len = tokens.len();
 
-        let mut full_text = String::new();
         for index in 0..sample_len {
-            if let Some(text) = self
+            if let Some(_text) = self
                 .loop_process(tokens.len(), index, &mut tokens, eos_token)
                 .await?
             {
-                full_text.push_str(&text);
             } else {
                 break;
             }
         }
 
-        Ok(full_text)
+        let text = self
+            .tokenizer
+            .decode(&tokens[tokens_len..], true)
+            .map_err(anyhow::Error::msg)?;
+
+        Ok(text)
     }
 
     #[allow(clippy::too_many_arguments)]
@@ -80,13 +84,7 @@ impl GemmaModel {
             return Ok(None);
         }
 
-        tokio::task::yield_now().await;
-        let text = &self
-            .tokenizer
-            .decode(&[next_token], true)
-            .map_err(anyhow::Error::msg)?;
-        println!("{text}");
-        Ok(Some(text.to_string()))
+        Ok(Some("".to_string()))
     }
 
     #[allow(clippy::too_many_arguments)]
@@ -127,7 +125,7 @@ impl GemmaModel {
         let tokenizer = Tokenizer::from_bytes(&tokenizer).map_anyhow_err()?;
         let candle_config = hf_hub_get(&base_repo_id, "config.json", None, hf_token)?;
         let candle_config: Config = serde_json::from_slice(&candle_config)?;
-        let model = Model::new(&candle_config, vb)?;
+        let model = Model::new(true, &candle_config, vb)?;
 
         let logits_processor = LogitsProcessor::new(seed, temp, top_p);
         Ok(GemmaModel {

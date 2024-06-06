@@ -2,7 +2,7 @@ pub mod common;
 pub mod llm;
 extern crate onceuponai_core;
 use common::ResultExt;
-use llm::{Quantized, E5};
+use llm::{Gemma, Quantized, E5};
 use onceuponai_core::auth::validate_jwt_py;
 use pyo3::prelude::*;
 
@@ -16,6 +16,7 @@ fn onceuponai(py: Python<'_>, m: &Bound<'_, PyModule>) -> PyResult<()> {
 
     let llms_module = PyModule::new_bound(py, "llms")?;
     llms_module.add_class::<Quantized>()?;
+    llms_module.add_class::<Gemma>()?;
 
     m.add_submodule(&llms_module)?;
 

@@ -15,7 +15,6 @@ crate-type = ["cdylib"]
 
 [dependencies]
 onceuponai-core= { path = "../onceuponai-core", features = ["musl","cuda"] }
-pyo3 = { version = "0.21.2", features = ["extension-module", "experimental-async", "abi3", "abi3-py38"] }
+pyo3 = { version = "0.21.2", features = ["extension-module", "experimental-async", "abi3", "abi3-py38", "anyhow"] }
 tokio = { version = "1.20.0", features = ["full"] }
-futures = "0.3.30"
 anyhow = { version = "1", features = ["backtrace"] }
