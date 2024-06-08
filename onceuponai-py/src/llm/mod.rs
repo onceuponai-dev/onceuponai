@@ -1,4 +1,6 @@
 extern crate onceuponai_core;
+use std::collections::HashMap;
+
 use crate::common::ResultExt;
 use onceuponai_core::{
     common::OptionToResult,
@@ -43,6 +45,7 @@ pub struct Quantized {
     repeat_penalty: Option<f32>,
     temp: Option<f64>,
     top_p: Option<f64>,
+    sample_len: usize,
 }
 
 #[pymethods]
@@ -60,6 +63,7 @@ impl Quantized {
         repeat_penalty: Option<f32>,
         temp: Option<f64>,
         top_p: Option<f64>,
+        sample_len: Option<usize>,
     ) -> PyResult<Self> {
         let model = QuantizedModel::load(
             &model_repo,
@@ -73,6 +77,7 @@ impl Quantized {
         let eos_token = "</s>";
         let vocab = model.tokenizer.get_vocab(true).clone();
         let eos_token = *vocab.get(eos_token).ok_or_err("EOS_TOKEN").map_pyerr()?;
+        let sample_len = sample_len.unwrap_or(1000);
 
         Ok(Self {
             model,
@@ -82,15 +87,16 @@ impl Quantized {
             repeat_penalty,
             temp,
             top_p,
+            sample_len,
         })
     }
 
-    pub async fn invoke(&mut self, prompt: String, sample_len: usize) -> PyResult<String> {
+    pub fn invoke(&mut self, prompt: String) -> PyResult<String> {
         let result = self
             .model
             .invoke(
                 &prompt,
-                sample_len,
+                self.sample_len,
                 self.eos_token,
                 self.seed,
                 self.repeat_last_n,
@@ -98,9 +104,33 @@ impl Quantized {
                 self.temp,
                 self.top_p,
             )
-            .await
             .map_pyerr()?;
         Ok(result)
+    }
+
+    fn __call__(
+        &mut self,
+        messages: Vec<HashMap<String, String>>,
+        stop_sequences: Vec<String>,
+    ) -> PyResult<String> {
+        let mut prompt = String::new();
+        let l = messages.len();
+
+        for (i, dict) in messages.iter().enumerate() {
+            let role = dict.get("role").expect("role");
+            let content = dict.get("content").expect("content");
+            if i < l {
+                if role == "user" {
+                    prompt.push_str(&format!("<s> [INST] {} [/INST] ", content));
+                } else {
+                    prompt.push_str(&format!(" {} </s>", content));
+                }
+            } else {
+                prompt.push_str(&format!("[INST] {} [/INST] ", content));
+            }
+        }
+
+        self.invoke(prompt)
     }
 }
 
@@ -108,6 +138,7 @@ impl Quantized {
 pub struct Gemma {
     model: GemmaModel,
     eos_token: u32,
+    sample_len: usize,
 }
 
 #[pymethods]
@@ -125,6 +156,7 @@ impl Gemma {
         top_p: Option<f64>,
         hf_token: Option<String>,
         use_flash_attn: Option<bool>,
+        sample_len: Option<usize>,
     ) -> PyResult<Self> {
         let model = GemmaModel::load(
             model_repo,
@@ -147,14 +179,19 @@ impl Gemma {
             }
         };
 
-        Ok(Self { model, eos_token })
+        let sample_len = sample_len.unwrap_or(1000);
+
+        Ok(Self {
+            model,
+            eos_token,
+            sample_len,
+        })
     }
 
-    pub async fn invoke(&mut self, prompt: String, sample_len: usize) -> PyResult<String> {
+    pub fn invoke(&mut self, prompt: String) -> PyResult<String> {
         let result = self
             .model
-            .invoke(&prompt, sample_len, self.eos_token)
-            .await
+            .invoke(&prompt, self.sample_len, self.eos_token)
             .map_pyerr()?;
         Ok(result)
     }

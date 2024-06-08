@@ -1,4 +1,5 @@
 use anyhow::{anyhow, Result};
+use once_cell::sync::OnceCell;
 use std::io::{self, Result as IoResult};
 use std::{fs, path::PathBuf};
 
@@ -132,4 +133,30 @@ pub fn hf_hub_get_multiple(
         .collect::<Result<Vec<_>>>()?;
 
     Ok(safetensors_files)
+}
+
+// https://docs.rs/once_cell/latest/once_cell/#lateinit
+pub struct LateInit<T> {
+    cell: OnceCell<T>,
+}
+
+impl<T> LateInit<T> {
+    pub fn init(&self, value: T) {
+        assert!(self.cell.set(value).is_ok())
+    }
+}
+
+impl<T> Default for LateInit<T> {
+    fn default() -> Self {
+        LateInit {
+            cell: OnceCell::default(),
+        }
+    }
+}
+
+impl<T> std::ops::Deref for LateInit<T> {
+    type Target = T;
+    fn deref(&self) -> &T {
+        self.cell.get().unwrap()
+    }
 }

@@ -6,7 +6,12 @@ use candle_core::{Device, Tensor};
 use candle_transformers::generation::LogitsProcessor;
 use candle_transformers::models::quantized_llama as model;
 use model::ModelWeights;
+use once_cell::sync::OnceCell;
+use std::sync::Arc;
 use tokenizers::Tokenizer;
+use tokio::sync::Mutex;
+
+static QUANTIZED_INSTANCE: OnceCell<Arc<Mutex<QuantizedInstance>>> = OnceCell::new();
 
 pub struct QuantizedModel {
     pub model: ModelWeights,
@@ -14,9 +19,20 @@ pub struct QuantizedModel {
     pub device: Device,
 }
 
+pub struct QuantizedInstance {
+    pub instance: QuantizedModel,
+    pub eos_token: u32,
+    pub seed: u64,
+    pub repeat_last_n: usize,
+    pub repeat_penalty: f32,
+    pub temp: f64,
+    pub top_p: Option<f64>,
+    pub sample_len: usize,
+}
+
 impl QuantizedModel {
     #[allow(clippy::too_many_arguments)]
-    pub async fn invoke(
+    pub fn invoke(
         &mut self,
         prompt: &str,
         sample_len: usize,
@@ -30,25 +46,22 @@ impl QuantizedModel {
         let repeat_penalty: f32 = repeat_penalty.unwrap_or(1.1);
         let repeat_last_n: usize = repeat_last_n.unwrap_or(64);
 
-        let prep = self.prepare(prompt, seed, temp, top_p).await?;
+        let prep = self.prepare(prompt, seed, temp, top_p)?;
         let prompt_tokens_len = prep.0;
         let mut all_tokens = prep.1;
         let mut logits_processor = prep.2;
 
         let mut previous_text = String::new();
         for index in 0..sample_len {
-            if let Some(current_text) = self
-                .loop_process(
-                    prompt_tokens_len,
-                    index,
-                    repeat_penalty,
-                    repeat_last_n,
-                    &mut all_tokens,
-                    &mut logits_processor,
-                    eos_token,
-                )
-                .await?
-            {
+            if let Some(current_text) = self.loop_process(
+                prompt_tokens_len,
+                index,
+                repeat_penalty,
+                repeat_last_n,
+                &mut all_tokens,
+                &mut logits_processor,
+                eos_token,
+            )? {
                 previous_text = current_text;
             } else {
                 break;
@@ -58,7 +71,7 @@ impl QuantizedModel {
         Ok(previous_text)
     }
 
-    pub async fn prepare(
+    pub fn prepare(
         &mut self,
         prompt: &str,
         seed: Option<u64>,
@@ -90,7 +103,7 @@ impl QuantizedModel {
     }
 
     #[allow(clippy::too_many_arguments)]
-    pub async fn loop_process(
+    pub fn loop_process(
         &mut self,
         prompt_tokens_len: usize,
         index: usize,
@@ -117,8 +130,6 @@ impl QuantizedModel {
         let next_token = logits_processor.sample(&logits)?;
         all_tokens.push(next_token);
 
-        tokio::task::yield_now().await;
-
         if next_token == eos_token {
             return Ok(None);
         };
@@ -129,6 +140,58 @@ impl QuantizedModel {
             .map_err(anyhow::Error::msg)?;
 
         Ok(Some(current_text))
+    }
+
+    #[allow(clippy::too_many_arguments)]
+    pub fn lazy<'a>(
+        model_repo: Option<String>,
+        model_file: Option<String>,
+        model_revision: Option<String>,
+        tokenizer_repo: Option<String>,
+        device: Option<String>,
+        seed: Option<u64>,
+        repeat_last_n: Option<usize>,
+        repeat_penalty: Option<f32>,
+        temp: Option<f64>,
+        top_p: Option<f64>,
+        sample_len: Option<usize>,
+    ) -> Result<&'a Arc<Mutex<QuantizedInstance>>> {
+        if QUANTIZED_INSTANCE.get().is_none() {
+            let model = QuantizedModel::load(
+                &model_repo.expect("model_repo"),
+                &model_file.expect("model_file"),
+                model_revision,
+                tokenizer_repo,
+                device,
+            )?;
+
+            let eos_token = "</s>";
+            let vocab = model.tokenizer.get_vocab(true).clone();
+            let eos_token = *vocab.get(eos_token).ok_or_err("EOS_TOKEN")?;
+
+            let seed: u64 = seed.unwrap_or(299792458);
+            let temp = temp.unwrap_or(0.8);
+            let repeat_penalty: f32 = repeat_penalty.unwrap_or(1.1);
+            let repeat_last_n: usize = repeat_last_n.unwrap_or(64);
+            let sample_len = sample_len.unwrap_or(1000);
+
+            let quantized_instance = QuantizedInstance {
+                instance: model,
+                eos_token,
+                seed,
+                repeat_last_n,
+                repeat_penalty,
+                temp,
+                top_p,
+                sample_len,
+            };
+
+            let _ = QUANTIZED_INSTANCE
+                .set(Arc::new(Mutex::new(quantized_instance)))
+                .is_ok();
+        };
+
+        Ok(QUANTIZED_INSTANCE.get().expect("QUANTIZED_INSTANCE"))
     }
 
     pub fn load(
@@ -183,18 +246,16 @@ async fn test_bielik() -> Result<()> {
     let vocab = bielik.tokenizer.get_vocab(true).clone();
     let eos_token = *vocab.get(eos_token).ok_or_err("EOS_TOKEN")?;
 
-    let resp = bielik
-        .invoke(
-            "Jak ugotować żurek ?",
-            500,
-            eos_token,
-            None,
-            None,
-            None,
-            None,
-            None,
-        )
-        .await?;
+    let resp = bielik.invoke(
+        "Jak ugotować żurek ?",
+        500,
+        eos_token,
+        None,
+        None,
+        None,
+        None,
+        None,
+    )?;
 
     println!("RESPONSE: {resp}");
     Ok(())
@@ -210,18 +271,16 @@ async fn test_phi3() -> Result<()> {
         Some("cuda".to_string()),
     )?;
 
-    let resp = phi3
-        .invoke(
-            "Write loop in python",
-            500,
-            200,
-            None,
-            None,
-            None,
-            None,
-            None,
-        )
-        .await?;
+    let resp = phi3.invoke(
+        "Write loop in python",
+        500,
+        200,
+        None,
+        None,
+        None,
+        None,
+        None,
+    )?;
 
     println!("RESPONSE: {resp}");
     Ok(())

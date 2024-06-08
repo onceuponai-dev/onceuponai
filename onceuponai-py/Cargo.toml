@@ -1,10 +1,12 @@
 [package]
 name = "onceuponai-py"
-version = "0.0.2"
-edition = "2021"
-repository = "https://github.com/onceuponai-dev/onceuponai"
-description = "Onceupon AI library"
-license = "Apache-2.0"
+version.workspace = true
+edition.workspace = true
+description.workspace = true
+repository.workspace = true
+keywords.workspace = true
+categories.workspace = true
+license.workspace = true
 
 [lib]
 name = "onceuponai"
@@ -14,7 +16,7 @@ crate-type = ["cdylib"]
 #rustflags = ["-C", "target-cpu=native"]
 
 [dependencies]
-onceuponai-core= { path = "../onceuponai-core", features = ["musl","cuda"] }
+anyhow = { workspace = true }
+onceuponai-core= { path = "../onceuponai-core", features = ["cuda"] }
 pyo3 = { version = "0.21.2", features = ["extension-module", "experimental-async", "abi3", "abi3-py38", "anyhow"] }
-tokio = { version = "1.20.0", features = ["full"] }
-anyhow = { version = "1", features = ["backtrace"] }
+tokio = { workspace = true }

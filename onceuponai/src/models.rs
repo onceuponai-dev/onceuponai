@@ -5,7 +5,6 @@ use serde::{Deserialize, Serialize};
 #[serde(tag = "type", rename_all = "camelCase")]
 pub struct PromptRequest {
     pub prompt: String,
-    pub sample_len: usize,
 }
 
 #[derive(Deserialize, Serialize, Debug, Clone)]

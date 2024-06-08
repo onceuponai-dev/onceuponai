@@ -1,3 +1,4 @@
+pub mod agents;
 pub mod common;
 pub mod llm;
 extern crate onceuponai_core;
