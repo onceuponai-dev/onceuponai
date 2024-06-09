@@ -10,3 +10,4 @@ tf_init.sh
 /ssh
 /__pycache__
 terraform/ssh
+.env

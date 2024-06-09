@@ -1,56 +1,28 @@
-//use crate::bot::BotIncommingMessage;
+use crate::handlers::chat::{chat, chat_quantized};
+use crate::handlers::embeddings::embeddings;
+use crate::handlers::{self, health};
 use crate::models::{EmbeddingsRequest, PromptRequest};
 use actix_files as fs;
+use actix_session::{storage::CookieSessionStore, SessionMiddleware};
 use actix_web::middleware::Logger;
-use actix_web::{web, App, HttpRequest, HttpResponse, HttpServer, Responder};
+use actix_web::{cookie::Key, web, App, HttpRequest, HttpResponse, HttpServer, Responder};
 use anyhow::Result;
 use num_traits::Zero;
 use onceuponai_core::common::{OptionToResult, ResultExt};
 use onceuponai_core::llm::e5::E5Model;
 use onceuponai_core::llm::gemma::GemmaModel;
 use onceuponai_core::llm::quantized::QuantizedModel;
-use onceuponai_core::llm::rag::{build_prompt, find_context};
 use onceuponai_core::llm::rag::{init_lancedb, set_prompt_template};
 use onceuponai_core::llm::LLMState;
 use std::error::Error;
 
-const INDEX_HTML: &str = include_str!("../public/index.html");
-
-pub async fn index() -> impl Responder {
-    HttpResponse::Ok()
-        .content_type("text/html")
-        .body(INDEX_HTML)
-}
-
-pub async fn health() -> impl Responder {
-    HttpResponse::Ok().body("Hey there!")
-}
-
-pub async fn chat(request: web::Query<PromptRequest>) -> Result<impl Responder, Box<dyn Error>> {
-    let context = find_context(request.prompt.to_string()).await.unwrap();
-    let prompt = build_prompt(request.prompt.to_string(), context)
-        .await
-        .unwrap();
-
-    crate::llm::gemma::chat(&prompt).await
-}
-
-pub async fn chat_quantized(
-    request: web::Query<PromptRequest>,
-) -> Result<impl Responder, Box<dyn Error>> {
-    let context = find_context(request.prompt.to_string()).await.unwrap();
-    let prompt = build_prompt(request.prompt.to_string(), context)
-        .await
-        .unwrap();
-
-    crate::llm::quantized::chat(&prompt).await
-}
-
-pub async fn embeddings(
-    embeddings_request: web::Json<EmbeddingsRequest>,
-) -> Result<impl Responder, Box<dyn std::error::Error>> {
-    let embeddings_data = E5Model::embeddings(embeddings_request.input.clone()).await?;
-    Ok(web::Json(embeddings_data))
+fn get_secret_key() -> Key {
+    let key = [
+        0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24,
+        25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47,
+        48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63,
+    ];
+    Key::from(&key)
 }
 
 #[allow(dead_code)]
@@ -62,6 +34,22 @@ pub(crate) async fn vectorize(
     _e5_model_repo: &str,
 ) -> std::io::Result<()> {
     todo!()
+}
+
+// Handler for setting a session value
+async fn set_session(req: HttpRequest, session: actix_session::Session) -> HttpResponse {
+    session.insert("user_id", "12345").unwrap();
+    HttpResponse::Ok().body("Session set")
+}
+
+// Handler for getting a session value
+async fn get_session(req: HttpRequest, session: actix_session::Session) -> HttpResponse {
+    let user_id: Option<String> = session.get("EMAIL").unwrap();
+    if let Some(user_id) = user_id {
+        HttpResponse::Ok().body(format!("User ID: {}", user_id))
+    } else {
+        HttpResponse::Ok().body("No session found")
+    }
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -127,18 +115,34 @@ pub(crate) async fn serve(
 
     println!("Server running on http://{host}:{port}");
     let mut server = HttpServer::new(move || {
+        let secret_key = get_secret_key();
         let mut app = App::new()
+            .wrap(SessionMiddleware::new(
+                CookieSessionStore::default(),
+                secret_key.clone(),
+            ))
             .wrap(Logger::default())
             .route("/health", web::get().to(health))
             .route("/embeddings", web::post().to(embeddings))
+            .route("/set", web::get().to(set_session))
+            .route("/get", web::get().to(get_session))
+            .route("/auth", web::get().to(handlers::auth::auth))
+            .route(
+                "/auth-callback",
+                web::get().to(handlers::auth::auth_callback),
+            )
             .app_data(web::Data::new(LLMState { use_quantized }));
         //.route("/", web::get().to(index))
 
+        let mut llm_scope = web::scope("/llm");
+
         if !use_quantized {
-            app = app.route("/chat", web::get().to(chat))
+            llm_scope = llm_scope.route("/chat", web::get().to(chat))
         } else {
-            app = app.route("/chat", web::get().to(chat_quantized));
+            llm_scope = llm_scope.route("/chat", web::get().to(chat_quantized));
         }
+
+        app = app.service(llm_scope);
 
         app.service(fs::Files::new("/", "./public").show_files_listing())
     });

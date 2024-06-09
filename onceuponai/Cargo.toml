@@ -7,15 +7,21 @@ edition = "2021"
 [dependencies]
 actix-web = { workspace = true }
 actix-files = { workspace = true }
+actix-session = { workspace = true }
 anyhow = { workspace = true }
 async-stream = { workspace = true }
 bytes = { workspace = true }
 clap = { workspace = true }
+cookie = { workspace = true }
 derive_more = { workspace = true }
+dotenv = { workspace = true }
 env_logger = { workspace = true }
+envy = { workspace = true }
 log = { workspace = true }
 num-traits = { workspace = true }
-onceuponai-core= { path = "../onceuponai-core", features = ["cuda"] }
+once_cell = { workspace = true }
+onceuponai-core= { path = "../onceuponai-core" }
+openidconnect = { workspace = true }
 reqwest = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
@@ -23,4 +29,8 @@ tokio = { workspace = true }
 
 [target.x86_64-pc-windows-gnu]
 linker = "/usr/bin/x86_64-w64-mingw32-gcc"
+
+[features]
+default = []
+cuda = ["onceuponai-core/cuda"]
 

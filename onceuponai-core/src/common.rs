@@ -1,10 +1,43 @@
 use anyhow::{anyhow, Result};
 use once_cell::sync::OnceCell;
+use std::any;
 use std::io::{self, Result as IoResult};
 use std::{fs, path::PathBuf};
 
 #[cfg(feature = "wasm")]
 use wasm_bindgen::prelude::*;
+
+#[derive(thiserror::Error, Debug)]
+pub enum CommonError {
+    #[error("Error {0}")]
+    StringError(String),
+}
+
+pub struct Errors {}
+
+impl Errors {
+    pub fn str(error: &str) -> Box<dyn std::error::Error> {
+        Box::new(CommonError::StringError(error.to_string()))
+    }
+
+    pub fn anyhow(error: &str) -> anyhow::Error {
+        anyhow!(error.to_string())
+    }
+
+    pub fn io(error: &str) -> io::Error {
+        io::Error::new(io::ErrorKind::Other, format!("{error:?}"))
+    }
+
+    #[cfg(feature = "wasm")]
+    pub fn jsv(error: &str) -> io::Error {
+        JsValue::from_str(&format!("{:?}", error))
+    }
+
+    #[cfg(feature = "wasm")]
+    pub fn jse(error: &str) -> io::Error {
+        JsError::new(&format!("{:?}", error))
+    }
+}
 
 pub trait OptionToResult<T> {
     fn ok_or_err(self, name: &str) -> Result<T>;
@@ -21,6 +54,8 @@ pub trait ResultExt<T, E> {
 
     fn map_io_err(self) -> IoResult<T>;
 
+    fn map_box_err(self) -> Result<T, Box<dyn std::error::Error>>;
+
     #[cfg(feature = "wasm")]
     fn map_jsv_err(self) -> Result<T, JsValue>;
 
@@ -35,6 +70,10 @@ impl<T, E: std::fmt::Debug> ResultExt<T, E> for Result<T, E> {
 
     fn map_io_err(self) -> IoResult<T> {
         self.map_err(|e| io::Error::new(io::ErrorKind::Other, format!("{e:?}")))
+    }
+
+    fn map_box_err(self) -> Result<T, Box<dyn std::error::Error>> {
+        Ok(self.map_err(|e| Box::new(CommonError::StringError(format!("{e:?}"))))?)
     }
 
     #[cfg(feature = "wasm")]

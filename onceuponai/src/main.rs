@@ -5,13 +5,18 @@
 
 //pub mod bot;
 pub mod cli;
+pub mod config;
+pub mod handlers;
 pub mod llm;
 pub mod models;
 pub mod serve;
+pub mod session;
 use crate::cli::commands;
 use anyhow::Result;
+use config::Config;
 
 #[tokio::main]
 async fn main() -> Result<()> {
+    Config::load()?;
     commands().await
 }

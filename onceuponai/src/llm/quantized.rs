@@ -33,6 +33,7 @@ pub async fn chat(prompt: &str) -> Result<impl Responder, Box<dyn std::error::Er
                 let text = current_text.split_at(previous_text.len()).1.to_string();
                 previous_text = current_text;
                 let byte = bytes::Bytes::from(text);
+                tokio::task::yield_now().await;
                 yield Ok::<bytes::Bytes, Box<dyn std::error::Error>>(byte);
             } else {
                 break;

@@ -25,6 +25,7 @@ pub async fn chat(prompt: &str) -> Result<impl Responder, Box<dyn std::error::Er
         for index in 0..sample_len {
             if let Some(text) = lazy.instance.loop_process(tokens.len(), index, &mut tokens, eos_token)? {
                 let byte = bytes::Bytes::from(text);
+                tokio::task::yield_now().await;
                 yield Ok::<bytes::Bytes, Box<dyn std::error::Error>>(byte);
             }
             else

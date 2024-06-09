@@ -50,8 +50,10 @@ pub fn set_prompt_template(prompt_template: &str, is_gemma: bool) -> Result<()> 
 }
 
 pub async fn find_context(prompt: String) -> Result<String> {
-    let embeddings_data =
-        E5Model::load(E5_MODEL_REPO, Some("cpu".to_string()))?.embed(vec![prompt])?;
+    let embeddings_data = E5Model::lazy(None, None)?
+        .lock()
+        .await
+        .embed(vec![prompt])?;
     let emb = embeddings_data.last().unwrap().clone();
 
     let tbl = LANCEDB_TABLE.get().unwrap().lock().await;

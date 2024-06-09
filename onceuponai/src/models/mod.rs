@@ -11,3 +11,9 @@ pub struct PromptRequest {
 pub struct EmbeddingsRequest {
     pub input: Vec<String>,
 }
+
+#[derive(Deserialize, Serialize, Debug, Clone)]
+#[serde(tag = "type", rename_all = "camelCase")]
+pub struct AuthCallback {
+    pub code: String,
+}
