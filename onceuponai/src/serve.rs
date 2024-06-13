@@ -1,28 +1,25 @@
+use crate::config::Config;
 use crate::handlers::chat::{chat, chat_quantized};
 use crate::handlers::embeddings::embeddings;
 use crate::handlers::{self, health};
-use crate::models::{EmbeddingsRequest, PromptRequest};
 use actix_files as fs;
 use actix_session::{storage::CookieSessionStore, SessionMiddleware};
 use actix_web::middleware::Logger;
-use actix_web::{cookie::Key, web, App, HttpRequest, HttpResponse, HttpServer, Responder};
+use actix_web::{cookie::Key, web, App, HttpRequest, HttpResponse, HttpServer};
 use anyhow::Result;
+use base64::{engine::general_purpose, Engine as _};
 use num_traits::Zero;
-use onceuponai_core::common::{OptionToResult, ResultExt};
+use onceuponai_core::common::ResultExt;
 use onceuponai_core::llm::e5::E5Model;
 use onceuponai_core::llm::gemma::GemmaModel;
 use onceuponai_core::llm::quantized::QuantizedModel;
 use onceuponai_core::llm::rag::{init_lancedb, set_prompt_template};
 use onceuponai_core::llm::LLMState;
-use std::error::Error;
 
-fn get_secret_key() -> Key {
-    let key = [
-        0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24,
-        25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47,
-        48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63,
-    ];
-    Key::from(&key)
+fn get_secret_key() -> Result<Key> {
+    let key = Config::get().session_key.to_string();
+    let k = general_purpose::STANDARD.decode(key)?;
+    Ok(Key::from(&k))
 }
 
 #[allow(dead_code)]
@@ -34,12 +31,6 @@ pub(crate) async fn vectorize(
     _e5_model_repo: &str,
 ) -> std::io::Result<()> {
     todo!()
-}
-
-// Handler for setting a session value
-async fn set_session(req: HttpRequest, session: actix_session::Session) -> HttpResponse {
-    session.insert("user_id", "12345").unwrap();
-    HttpResponse::Ok().body("Session set")
 }
 
 // Handler for getting a session value
@@ -113,9 +104,9 @@ pub(crate) async fn serve(
         .await
         .map_io_err()?;
 
+    let secret_key = get_secret_key().map_io_err()?;
     println!("Server running on http://{host}:{port}");
     let mut server = HttpServer::new(move || {
-        let secret_key = get_secret_key();
         let mut app = App::new()
             .wrap(SessionMiddleware::new(
                 CookieSessionStore::default(),
@@ -124,7 +115,6 @@ pub(crate) async fn serve(
             .wrap(Logger::default())
             .route("/health", web::get().to(health))
             .route("/embeddings", web::post().to(embeddings))
-            .route("/set", web::get().to(set_session))
             .route("/get", web::get().to(get_session))
             .route("/auth", web::get().to(handlers::auth::auth))
             .route(
@@ -144,7 +134,7 @@ pub(crate) async fn serve(
 
         app = app.service(llm_scope);
 
-        app.service(fs::Files::new("/", "./public").show_files_listing())
+        app.service(fs::Files::new("/", "../onceuponai-ui/dist/").show_files_listing())
     });
 
     if let Some(num_workers) = workers {

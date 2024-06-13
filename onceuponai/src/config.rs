@@ -11,6 +11,8 @@ pub(crate) struct Config {
     pub oidc_client_id: String,
     pub oidc_client_secret: String,
     pub oidc_redirect_url: String,
+
+    pub session_key: String,
 }
 
 impl Config {

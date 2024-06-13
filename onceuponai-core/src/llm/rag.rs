@@ -2,9 +2,9 @@ use crate::common::OptionToResult;
 use crate::llm::e5::E5Model;
 use anyhow::Result;
 use arrow_array::cast::as_string_array;
-use futures::TryStreamExt;
-use lancedb::connect;
+use futures::{StreamExt, TryFutureExt, TryStreamExt};
 use lancedb::query::{ExecutableQuery, QueryBase};
+use lancedb::{connect, query};
 use once_cell::sync::OnceCell;
 use std::sync::Arc;
 use tokio::sync::Mutex;
@@ -211,6 +211,168 @@ async fn test_quantized() -> Result<()> {
             break;
         };
     }
+
+    Ok(())
+}
+*/
+
+#[tokio::test]
+async fn test_lancedb_fruits1() -> Result<()> {
+    use lancedb::arrow::arrow_schema::{DataType, Field, Schema};
+    use lancedb::connection::{ConnectBuilder, Connection as LanceDBConnection, CreateTableMode};
+
+    let uri = "az://recipesv2/vectors_111";
+    let db = ConnectBuilder::new(uri).execute().await?;
+
+    let schema = Arc::new(Schema::new(vec![Field::new("x", DataType::Int32, false)]));
+
+    const DIM: usize = 2;
+    let schema = Arc::new(Schema::new(vec![
+        Field::new(
+            "vector",
+            DataType::FixedSizeList(
+                Arc::new(Field::new("item", DataType::Float32, true)),
+                DIM as i32,
+            ),
+            true,
+        ),
+        Field::new("item", DataType::Utf8, false),
+        Field::new("price", DataType::Int32, false),
+    ]));
+
+    let name = "fruits2";
+    db.create_empty_table(name, schema).execute().await?;
+
+    Ok(())
+}
+
+#[tokio::test]
+async fn test_lancedb_fruits2() -> Result<()> {
+    use arrow_array::types::Float32Type;
+    use arrow_array::{
+        FixedSizeListArray, Int32Array, RecordBatch, RecordBatchIterator, StringArray,
+    };
+    use lancedb::arrow::arrow_schema::{DataType, Field, Schema};
+    use lancedb::connection::{ConnectBuilder, Connection as LanceDBConnection, CreateTableMode};
+
+    let uri = "az://recipesv2/vectors_111";
+    let db = ConnectBuilder::new(uri).execute().await?;
+
+    let name = "fruits2";
+    let table = db.open_table(name).execute().await?;
+
+    const DIM: usize = 2;
+    let schema = Arc::new(Schema::new(vec![
+        Field::new(
+            "vector",
+            DataType::FixedSizeList(
+                Arc::new(Field::new("item", DataType::Float32, true)),
+                DIM as i32,
+            ),
+            true,
+        ),
+        Field::new("item", DataType::Utf8, false),
+        Field::new("price", DataType::Int32, false),
+    ]));
+
+    const TOTAL: usize = 2;
+
+    let batches = RecordBatchIterator::new(
+        vec![RecordBatch::try_new(
+            schema.clone(),
+            vec![
+                Arc::new(
+                    FixedSizeListArray::from_iter_primitive::<Float32Type, _, _>(
+                        (0..TOTAL).map(|_| Some(vec![Some(1.0); DIM])),
+                        DIM as i32,
+                    ),
+                ),
+                Arc::new(StringArray::from_iter_values(["banana", "apple"])),
+                Arc::new(Int32Array::from_iter_values(0..TOTAL as i32)),
+            ],
+        )
+        .unwrap()]
+        .into_iter()
+        .map(Ok),
+        schema.clone(),
+    );
+
+    table.add(batches).execute().await?;
+
+    Ok(())
+}
+
+#[tokio::test]
+async fn test_lancedb_fruits3() -> Result<()> {
+    use lancedb::connection::ConnectBuilder;
+
+    let uri = "az://recipesv2/vectors_111";
+    let db = ConnectBuilder::new(uri).execute().await?;
+
+    let name = "fruits2";
+    let table = db.open_table(name).execute().await?;
+    let batches = table.query().execute().await?;
+    let batches = batches.try_collect::<Vec<_>>().await?;
+
+    println!("BATCHES {batches:#?}");
+    Ok(())
+}
+
+#[tokio::test]
+async fn test_lancedb_fruits4() -> Result<()> {
+    use lancedb::connection::ConnectBuilder;
+
+    let uri = "az://recipesv2/vectors_111";
+    let db = ConnectBuilder::new(uri).execute().await?;
+
+    let name = "fruits2";
+    let table = db.open_table(name).execute().await?;
+
+    //let nat = table.as_native().unwrap();
+    let _r = table.optimize(lancedb::table::OptimizeAction::All).await?;
+
+    Ok(())
+}
+
+/*
+#[tokio::test]
+async fn test_lancedb_fruits5() -> Result<()> {
+    use lancedb::connection::ConnectBuilder;
+
+    let uri = "az://recipesv2/vectors_111";
+    let db = ConnectBuilder::new(uri).execute().await?;
+
+    let name = "fruits1";
+    let table = db.open_table(name).execute().await?;
+    let batches = table.query().execute().await?.into_polars().await?;
+
+    println!("{batches:?} ");
+
+    Ok(())
+}
+*/
+
+/*
+#[tokio::test]
+async fn test_opendal1() -> Result<()> {
+    use opendal::layers::LoggingLayer;
+    use opendal::services;
+    use opendal::Operator;
+    use opendal::Result;
+
+    let mut builder = services::Azblob::default();
+    builder.container("recipesv2");
+
+    // Init an operator
+    let op = Operator::new(builder)?
+        // Init with logging layer enabled.
+        .layer(LoggingLayer::default())
+        .finish();
+
+    let file = "vectors_111/hello.yaml";
+
+    let meta = op.stat(file).await?;
+    let length = meta.content_length();
 
     Ok(())
 }

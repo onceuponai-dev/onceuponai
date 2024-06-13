@@ -69,3 +69,20 @@ impl SessionExt for Session {
         self.remove(key).ok_or_err(key)
     }
 }
+
+#[tokio::test]
+async fn test_key() -> Result<()> {
+    use actix_web::cookie::Key;
+    use base64::{engine::general_purpose, Engine as _};
+    let key = Key::generate();
+    let master = key.master();
+    let enc = general_purpose::STANDARD.encode(master);
+
+    // Convert &str to String
+    println!("KEY: {}", enc);
+
+    let d = general_purpose::STANDARD.decode(enc)?;
+
+    let _kk = Key::from(&d);
+    Ok(())
+}

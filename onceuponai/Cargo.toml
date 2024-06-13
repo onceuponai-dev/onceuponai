@@ -10,6 +10,7 @@ actix-files = { workspace = true }
 actix-session = { workspace = true }
 anyhow = { workspace = true }
 async-stream = { workspace = true }
+base64 = { workspace = true }
 bytes = { workspace = true }
 clap = { workspace = true }
 cookie = { workspace = true }
