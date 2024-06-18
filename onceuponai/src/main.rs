@@ -4,7 +4,9 @@
 //extern crate intel_mkl_src;
 
 //pub mod bot;
+pub mod actors;
 pub mod cli;
+pub mod cluster;
 pub mod config;
 pub mod handlers;
 pub mod llm;
@@ -15,7 +17,7 @@ use crate::cli::commands;
 use anyhow::Result;
 use config::Config;
 
-#[tokio::main]
+#[actix_rt::main]
 async fn main() -> Result<()> {
     Config::load()?;
     commands().await
