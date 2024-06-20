@@ -1,4 +1,7 @@
-use crate::actors::{main_actor::MainActor, ActorMetadata, ActorObject, ActorWrapper, GemmaConfig};
+use crate::{
+    actors::{main_actor::MainActor, ActorMetadata, ActorObject, ActorWrapper},
+    llm::gemma::GemmaConfig,
+};
 use actix::prelude::*;
 use actix_telepathy::{Cluster, RemoteActor, RemoteAddr};
 use anyhow::Result;
@@ -35,7 +38,19 @@ pub async fn start_cluster(host: &SocketAddr, seed: Option<&SocketAddr>) -> Resu
                 metadata: ActorMetadata {
                     name: "TEST".to_string(),
                 },
-                spec: GemmaConfig {},
+                spec: GemmaConfig {
+                    base_repo_id: None,
+                    tokenizer_repo: None,
+                    device: None,
+                    seed: None,
+                    repeat_last_n: None,
+                    repeat_penalty: None,
+                    temp: None,
+                    top_p: None,
+                    hf_token: None,
+                    use_flash_attn: None,
+                    sample_len: None,
+                },
             },
             uuid,
         }

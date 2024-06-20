@@ -1,6 +1,7 @@
 use actix_web::{HttpResponse, Responder};
 use async_stream::stream;
 use onceuponai_core::llm::gemma::GemmaModel;
+use serde::Deserialize;
 
 pub async fn chat(prompt: &str) -> Result<impl Responder, Box<dyn std::error::Error>> {
     let mut lazy = GemmaModel::lazy(
@@ -38,4 +39,19 @@ pub async fn chat(prompt: &str) -> Result<impl Responder, Box<dyn std::error::Er
     Ok(HttpResponse::Ok()
         .content_type("text/event-stream")
         .streaming(Box::pin(stream_tasks)))
+}
+
+#[derive(Deserialize, Debug, Clone)]
+pub struct GemmaConfig {
+    pub base_repo_id: Option<String>,
+    pub tokenizer_repo: Option<String>,
+    pub device: Option<String>,
+    pub seed: Option<u64>,
+    pub repeat_last_n: Option<usize>,
+    pub repeat_penalty: Option<f32>,
+    pub temp: Option<f64>,
+    pub top_p: Option<f64>,
+    pub hf_token: Option<String>,
+    pub use_flash_attn: Option<bool>,
+    pub sample_len: Option<usize>,
 }

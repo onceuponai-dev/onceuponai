@@ -56,6 +56,7 @@ openidconnect = { version="3.5", features=["reqwest"] }
 #polars = "0.39.2"
 #polars-arrow = "0.39.2"
 rand = "0.8.5"
+regex = "1"
 reqwest = { version = "0.12.4", features = ["json", "rustls-tls", "blocking"], default-features = false}
 safetensors = "0.4.2"
 serde = { version = "1.0.171", features = ["derive"] }
@@ -66,6 +67,7 @@ tokenizers = { version = "0.19.1", features = [
     "unstable_wasm",
 ], default-features = false }
 tokio = { version = "1.20.0", features = ["full"]}
+url = "2.3"
 uuid = "1.6.1"
 #accelerate-src = { version = "0.3.2", optional = true }
 #intel-mkl-src = { version = "0.8.1", features = ["mkl-static-lp64-iomp"], optional = true }

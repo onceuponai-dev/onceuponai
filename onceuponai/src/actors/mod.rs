@@ -1,4 +1,5 @@
 pub mod main_actor;
+use crate::llm::{gemma::GemmaConfig, quantized::QuantizedConfig};
 use actix::prelude::*;
 use actix_telepathy::prelude::*;
 use log::debug;
@@ -33,12 +34,16 @@ pub struct ModelResponse {
     pub response: String,
 }
 
-pub struct GemmaConfig {}
-
+#[derive(Deserialize, Debug, Clone)]
+#[serde(tag = "kind", rename_all = "camelCase")]
 pub enum ActorObject {
     Gemma {
         metadata: ActorMetadata,
         spec: GemmaConfig,
+    },
+    Quantized {
+        metadata: ActorMetadata,
+        spec: QuantizedConfig,
     },
 }
 
@@ -48,7 +53,7 @@ pub struct ActorInfoRequest {
     pub source: RemoteAddr,
 }
 
-#[derive(RemoteActor)]
+#[derive(RemoteActor, Deserialize, Debug, Clone)]
 #[remote_messages(ActorInfoRequest)]
 pub struct ActorWrapper {
     pub uuid: Uuid,
@@ -60,6 +65,10 @@ impl Actor for ActorWrapper {
     type Context = Context<Self>;
 
     fn started(&mut self, ctx: &mut Self::Context) {
+        match &self.actor {
+            ActorObject::Gemma { metadata, spec } => debug!("STARTING GEMMA MODEL"),
+            ActorObject::Quantized { metadata, spec } => debug!("STARTING QUANTIZED MODEL"),
+        };
         self.register(ctx.address().recipient());
     }
 }
@@ -70,6 +79,7 @@ impl Handler<ActorInfoRequest> for ActorWrapper {
     fn handle(&mut self, msg: ActorInfoRequest, _ctx: &mut Self::Context) -> Self::Result {
         let metadata = match &self.actor {
             ActorObject::Gemma { metadata, spec: _ } => metadata,
+            ActorObject::Quantized { metadata, spec } => metadata,
         };
         let model_info = ActorInfo {
             uuid: self.uuid,

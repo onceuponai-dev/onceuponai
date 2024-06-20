@@ -1,7 +1,6 @@
 use super::parse_device;
 use crate::common::{hf_hub_get, hf_hub_get_multiple, ResultExt};
 use anyhow::Result;
-use candle_core::pickle::read_all_with_key;
 use candle_core::{DType, Device, Tensor};
 use candle_nn::VarBuilder;
 use candle_transformers::generation::LogitsProcessor;
