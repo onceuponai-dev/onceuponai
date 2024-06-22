@@ -4,7 +4,7 @@ use actix::prelude::*;
 use actix_telepathy::prelude::*;
 use anyhow::Result;
 use log::debug;
-use main_actor::MainActor;
+use main_actor::{MainActor, MainActorConfig};
 use onceuponai_core::{common::ResultExt, common_models::EntityValue, config::read_config_str};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -32,8 +32,8 @@ pub struct ActorInfo {
 #[derive(RemoteMessage, Serialize, Deserialize, Debug, Clone)]
 pub struct ActorMetadata {
     pub name: String,
-    pub host: String,
-    pub seed: Option<String>,
+    pub actor_host: String,
+    pub actor_seed: Option<String>,
 }
 
 #[derive(RemoteMessage, Serialize, Deserialize, Clone)]
@@ -53,6 +53,7 @@ pub struct ModelResponse {
 pub enum ActorObject {
     Main {
         metadata: ActorMetadata,
+        spec: MainActorConfig,
     },
     Gemma {
         metadata: ActorMetadata,
@@ -74,31 +75,40 @@ impl ActorObject {
             ActorObject::Gemma { metadata, spec: _ } => metadata,
             ActorObject::Quantized { metadata, spec: _ } => metadata,
             ActorObject::E5 { metadata, spec: _ } => metadata,
-            ActorObject::Main { metadata } => metadata,
+            ActorObject::Main { metadata, spec: _ } => metadata,
         }
     }
 
     fn actor_id(&self) -> &str {
         match self {
-            ActorObject::Main { metadata: _ } => MainActor::ACTOR_ID,
+            ActorObject::Main {
+                metadata: _,
+                spec: _,
+            } => MainActor::ACTOR_ID,
             _ => WorkerActor::ACTOR_ID,
         }
     }
 
     fn is_main(&self) -> bool {
-        let is_main = matches!(self, ActorObject::Main { metadata: _ });
+        let is_main = matches!(
+            self,
+            ActorObject::Main {
+                metadata: _,
+                spec: _
+            }
+        );
         is_main
     }
 
     pub fn own_addr(&self) -> Result<SocketAddr> {
-        let socket_addr: SocketAddr = self.metadata().host.parse::<SocketAddr>()?;
+        let socket_addr: SocketAddr = self.metadata().actor_host.parse::<SocketAddr>()?;
         Ok(socket_addr)
     }
 
     pub fn seed_addr(&self) -> Result<SocketAddr> {
         let socket_addr = self
             .metadata()
-            .seed
+            .actor_seed
             .clone()
             .expect("SEED REQUIRED")
             .parse::<SocketAddr>()?;
@@ -118,7 +128,10 @@ impl ActorObject {
             ActorObject::Quantized { metadata: _, spec } => {
                 crate::llm::quantized::start(spec.clone())
             }
-            ActorObject::Main { metadata: _ } => Ok(()),
+            ActorObject::Main {
+                metadata: _,
+                spec: _,
+            } => Ok(()),
         }?;
 
         Ok(())
@@ -138,9 +151,13 @@ impl ActorObject {
                 metadata: _,
                 spec: _,
             } => crate::llm::e5::invoke(uuid, request.clone()),
-            ActorObject::Main { metadata: _ } => Ok(ActorInvokeResponse::Failure(
-                ActorError::FatalError(uuid, String::from("MAIN ACTOR CAN'T BE INVOKED")),
-            )),
+            ActorObject::Main {
+                metadata: _,
+                spec: _,
+            } => Ok(ActorInvokeResponse::Failure(ActorError::FatalError(
+                uuid,
+                String::from("MAIN ACTOR CAN'T BE INVOKED"),
+            ))),
         }?;
 
         Ok(response)
@@ -199,14 +216,15 @@ impl ActorBuilder {
                 remote_addr,
                 models: HashMap::new(),
                 own_addr: actor.own_addr()?,
+                actor,
             })
         } else {
             ActorInstance::Worker(WorkerActor {
                 uuid: Uuid::new_v4(),
-                actor: actor.clone(),
                 own_addr: actor.own_addr()?,
                 seed_addr: actor.seed_addr()?,
                 remote_addr,
+                actor,
             })
         };
 

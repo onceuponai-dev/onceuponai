@@ -1,12 +1,73 @@
+use std::collections::HashMap;
+
 use actix_web::{HttpResponse, Responder};
 use anyhow::Result;
 use async_stream::stream;
-use onceuponai_core::llm::gemma::GemmaModel;
+use onceuponai_core::{common_models::EntityValue, llm::gemma::GemmaModel};
 use serde::Deserialize;
+use uuid::Uuid;
+
+use crate::actors::{ActorError, ActorInvokeRequest, ActorInvokeResponse, ActorInvokeResult};
 
 pub fn start(spec: GemmaConfig) -> Result<()> {
-    todo!("IMPLEMENT");
+    GemmaModel::lazy(
+        spec.base_repo_id,
+        spec.tokenizer_repo,
+        spec.device,
+        spec.seed,
+        spec.repeat_last_n,
+        spec.repeat_penalty,
+        spec.temp,
+        spec.top_p,
+        spec.hf_token,
+        spec.use_flash_attn,
+        spec.sample_len,
+    )?;
     Ok(())
+}
+
+pub fn invoke(uuid: Uuid, request: ActorInvokeRequest) -> Result<ActorInvokeResponse> {
+    let input = request.data.get("prompt");
+
+    if input.is_none() {
+        return Ok(ActorInvokeResponse::Failure(ActorError::BadRequest(
+            uuid,
+            "REQUEST MUST CONTAINER PROMPT COLUMN WITH Vec<String>".to_string(),
+        )));
+    }
+
+    let input: Vec<String> = input
+        .expect("PROMPT")
+        .iter()
+        .map(|x| match x {
+            EntityValue::STRING(i) => i.clone(),
+            _ => todo!(),
+        })
+        .collect();
+
+    let mut model = GemmaModel::lazy(
+        None, None, None, None, None, None, None, None, None, None, None,
+    )?
+    .blocking_lock();
+    let sample_len = model.sample_len;
+    let eos_token = model.eos_token;
+
+    let results = input
+        .iter()
+        .map(|prompt| model.instance.invoke(prompt, sample_len, eos_token))
+        .collect::<Result<Vec<String>, _>>()?;
+
+    let results = results
+        .iter()
+        .map(|r| EntityValue::STRING(r.clone()))
+        .collect::<Vec<EntityValue>>();
+
+    let result = ActorInvokeResult {
+        uuid,
+        data: HashMap::from([(String::from("results"), results)]),
+    };
+
+    Ok(ActorInvokeResponse::Success(result))
 }
 
 pub async fn chat(prompt: &str) -> Result<impl Responder, Box<dyn std::error::Error>> {

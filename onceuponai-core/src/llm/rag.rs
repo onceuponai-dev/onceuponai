@@ -2,14 +2,12 @@ use crate::common::OptionToResult;
 use crate::llm::e5::E5Model;
 use anyhow::Result;
 use arrow_array::cast::as_string_array;
-use futures::{StreamExt, TryFutureExt, TryStreamExt};
+use futures::TryStreamExt;
+use lancedb::connect;
 use lancedb::query::{ExecutableQuery, QueryBase};
-use lancedb::{connect, query};
 use once_cell::sync::OnceCell;
 use std::sync::Arc;
 use tokio::sync::Mutex;
-
-use super::e5::E5_MODEL_REPO;
 
 static PROMPT_TEMPLATE: OnceCell<Arc<Mutex<String>>> = OnceCell::new();
 

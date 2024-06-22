@@ -1,12 +1,89 @@
 use actix_web::{HttpResponse, Responder};
 use anyhow::Result;
 use async_stream::stream;
-use onceuponai_core::llm::quantized::QuantizedModel;
+use onceuponai_core::{common_models::EntityValue, llm::quantized::QuantizedModel};
 use serde::Deserialize;
+use std::collections::HashMap;
+use uuid::Uuid;
+
+use crate::actors::{ActorError, ActorInvokeRequest, ActorInvokeResponse, ActorInvokeResult};
 
 pub fn start(spec: QuantizedConfig) -> Result<()> {
-    todo!("IMPLEMENT");
+    QuantizedModel::lazy(
+        spec.model_repo,
+        spec.model_file,
+        spec.model_revision,
+        spec.tokenizer_repo,
+        spec.device,
+        spec.seed,
+        spec.repeat_last_n,
+        spec.repeat_penalty,
+        spec.temp,
+        spec.top_p,
+        spec.sample_len,
+    )?;
+
     Ok(())
+}
+
+pub fn invoke(uuid: Uuid, request: ActorInvokeRequest) -> Result<ActorInvokeResponse> {
+    let input = request.data.get("prompt");
+
+    if input.is_none() {
+        return Ok(ActorInvokeResponse::Failure(ActorError::BadRequest(
+            uuid,
+            "REQUEST MUST CONTAINER PROMPT COLUMN WITH Vec<String>".to_string(),
+        )));
+    }
+
+    let input: Vec<String> = input
+        .expect("PROMPT")
+        .iter()
+        .map(|x| match x {
+            EntityValue::STRING(i) => i.clone(),
+            _ => todo!(),
+        })
+        .collect();
+
+    let mut model = QuantizedModel::lazy(
+        None, None, None, None, None, None, None, None, None, None, None,
+    )?
+    .blocking_lock();
+    let eos_token = model.eos_token;
+    let seed = model.seed;
+    let repeat_last_n = model.repeat_last_n;
+    let repeat_penalty = model.repeat_penalty;
+    let temp = model.temp;
+    let top_p = model.top_p;
+    let sample_len = model.sample_len;
+
+    let results = input
+        .iter()
+        .map(|prompt| {
+            model.instance.invoke(
+                prompt,
+                sample_len,
+                eos_token,
+                Some(seed),
+                Some(repeat_last_n),
+                Some(repeat_penalty),
+                Some(temp),
+                top_p,
+            )
+        })
+        .collect::<Result<Vec<String>, _>>()?;
+
+    let results = results
+        .iter()
+        .map(|r| EntityValue::STRING(r.clone()))
+        .collect::<Vec<EntityValue>>();
+
+    let result = ActorInvokeResult {
+        uuid,
+        data: HashMap::from([(String::from("results"), results)]),
+    };
+
+    Ok(ActorInvokeResponse::Success(result))
 }
 
 pub async fn chat(prompt: &str) -> Result<impl Responder, Box<dyn std::error::Error>> {
@@ -18,9 +95,9 @@ pub async fn chat(prompt: &str) -> Result<impl Responder, Box<dyn std::error::Er
 
     let repeat_penalty: f32 = 1.1;
     let repeat_last_n: usize = 64;
-    let seed = lazy.seed.clone();
-    let temp = lazy.temp.clone();
-    let top_p = lazy.top_p.clone();
+    let seed = lazy.seed;
+    let temp = lazy.temp;
+    let top_p = lazy.top_p;
 
     let prep = lazy
         .instance

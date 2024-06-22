@@ -1,8 +1,8 @@
 kind: e5
 metadata: 
   name: e5_actor
-  host: 127.0.0.1:1993
-  seed: 127.0.0.1:1992
+  actor_host: 127.0.0.1:1993
+  actor_seed: 127.0.0.1:1992
 spec:
   model_repo: intfloat/multilingual-e5-small
   device: cpu

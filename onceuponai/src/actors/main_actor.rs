@@ -1,8 +1,9 @@
-use super::{ActorInfo, ActorInfoRequest, ActorInfoResponse, ActorInvokeResponse};
+use super::{ActorInfo, ActorInfoRequest, ActorInfoResponse, ActorInvokeResponse, ActorObject};
 use crate::actors::WorkerActor;
 use actix::prelude::*;
 use actix_broker::BrokerSubscribe;
 use actix_telepathy::prelude::*;
+use serde::Deserialize;
 use std::{collections::HashMap, net::SocketAddr};
 use uuid::Uuid;
 
@@ -10,9 +11,18 @@ use uuid::Uuid;
 #[remote_messages(ActorInfoResponse, ActorInvokeResponse)]
 pub struct MainActor {
     pub uuid: Uuid,
+    pub actor: ActorObject,
     pub own_addr: SocketAddr,
     pub remote_addr: RemoteAddr,
     pub models: HashMap<Uuid, ActorInfo>,
+}
+
+#[derive(Deserialize, Debug, Clone)]
+pub struct MainActorConfig {
+    pub server_host: String,
+    pub server_port: u16,
+    pub log_level: Option<String>,
+    pub workers: Option<usize>,
 }
 
 impl Actor for MainActor {
@@ -21,7 +31,6 @@ impl Actor for MainActor {
     fn started(&mut self, ctx: &mut Self::Context) {
         self.register(ctx.address().recipient());
         self.subscribe_system_async::<ClusterLog>(ctx);
-        self.models = HashMap::new();
     }
 }
 
