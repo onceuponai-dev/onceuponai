@@ -1,4 +1,5 @@
 use crate::actors::main_actor::{MainActor, MainActorConfig};
+use crate::actors::ActorStartInvokeRequest;
 use crate::config::Config;
 use crate::handlers::chat::chat;
 use crate::handlers::embeddings::embeddings;
@@ -13,6 +14,8 @@ use anyhow::Result;
 use base64::{engine::general_purpose, Engine as _};
 use num_traits::Zero;
 use onceuponai_core::common::ResultExt;
+use onceuponai_core::common_models::EntityValue;
+use std::collections::HashMap;
 use std::error::Error;
 
 fn get_secret_key() -> Result<Key> {
@@ -71,6 +74,14 @@ async fn invoke(
         .map_box_err()?;
 
     let keys = connected_actors.clone();
+
+    let mut dd = HashMap::new();
+    dd.insert(
+        "input".to_string(),
+        vec![EntityValue::STRING("Hello".to_string())],
+    );
+    data.addr.do_send(ActorStartInvokeRequest { data: dd });
+
     Ok(HttpResponse::Ok().json(keys.clone()))
 }
 

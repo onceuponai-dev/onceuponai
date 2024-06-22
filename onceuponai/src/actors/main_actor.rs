@@ -1,5 +1,8 @@
-use super::{ActorInfo, ActorInfoRequest, ActorInfoResponse, ActorInvokeResponse, ActorObject};
-use crate::actors::WorkerActor;
+use super::{
+    ActorInfo, ActorInfoRequest, ActorInfoResponse, ActorInvokeResponse, ActorObject,
+    ActorStartInvokeRequest,
+};
+use crate::actors::{ActorInvokeRequest, WorkerActor};
 use actix::prelude::*;
 use actix_broker::BrokerSubscribe;
 use actix_telepathy::prelude::*;
@@ -12,7 +15,7 @@ use uuid::Uuid;
 pub static CONNECTED_ACTORS: OnceCell<Arc<Mutex<HashMap<Uuid, ActorInfo>>>> = OnceCell::new();
 
 #[derive(RemoteActor, Clone)]
-#[remote_messages(ActorInfoResponse, ActorInvokeResponse)]
+#[remote_messages(ActorInfo, ActorInvokeResponse)]
 pub struct MainActor {
     pub uuid: Uuid,
     pub actor: ActorObject,
@@ -41,24 +44,34 @@ impl Actor for MainActor {
     }
 }
 
-impl Handler<ActorInfoResponse> for MainActor {
+impl Handler<ActorInfo> for MainActor {
     type Result = ();
 
-    fn handle(&mut self, msg: ActorInfoResponse, _ctx: &mut Self::Context) -> Self::Result {
-        debug!("Received model state: {:?}", msg);
-        match msg {
-            ActorInfoResponse::Success(actor_info) => {
-                self.connected_actors
-                    .insert(actor_info.uuid, actor_info.clone());
-                CONNECTED_ACTORS
-                    .get()
-                    .expect("CONNECTED_MODELS")
-                    .lock()
-                    .unwrap()
-                    .insert(actor_info.uuid, actor_info);
-            }
-            ActorInfoResponse::Failure(error) => debug!("{error:?}"),
-        }
+    fn handle(&mut self, actor_info: ActorInfo, _ctx: &mut Self::Context) -> Self::Result {
+        debug!("Received model state: {:?}", actor_info);
+        self.connected_actors
+            .insert(actor_info.uuid, actor_info.clone());
+        CONNECTED_ACTORS
+            .get()
+            .expect("CONNECTED_MODELS")
+            .lock()
+            .unwrap()
+            .insert(actor_info.uuid, actor_info);
+    }
+}
+
+impl Handler<ActorStartInvokeRequest> for MainActor {
+    type Result = ();
+
+    fn handle(&mut self, msg: ActorStartInvokeRequest, _ctx: &mut Self::Context) -> Self::Result {
+        debug!("START INVOKE REQUEST: {:?}", msg);
+        let key: Vec<&Uuid> = self.connected_actors.keys().collect();
+        let key = key[0];
+        let worker_actor = self.connected_actors.get(key).unwrap();
+        worker_actor.source.do_send(ActorInvokeRequest {
+            data: msg.data,
+            source: self.remote_addr.clone(),
+        });
     }
 }
 

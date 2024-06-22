@@ -22,11 +22,12 @@ pub enum ActorError {
 // https://github.com/yummyml/yummy/blob/master/yummy-rs/yummy-core/src/config.rs
 // https://github.com/yummyml/yummy/blob/master/yummy-rs/yummy-delta/tests/config/01_bronze_tables.yaml
 
-#[derive(Serialize, Deserialize, Debug, Clone)]
+#[derive(RemoteMessage, Serialize, Deserialize, Debug, Clone)]
+#[with_source(source)]
 pub struct ActorInfo {
     pub uuid: Uuid,
     pub metadata: ActorMetadata,
-    pub addr: RemoteAddr,
+    pub source: RemoteAddr,
 }
 
 #[derive(RemoteMessage, Serialize, Deserialize, Debug, Clone)]
@@ -177,6 +178,11 @@ pub enum ActorInfoResponse {
 }
 
 #[derive(RemoteMessage, Serialize, Deserialize, Debug, Clone)]
+pub struct ActorStartInvokeRequest {
+    pub data: HashMap<String, Vec<EntityValue>>,
+}
+
+#[derive(RemoteMessage, Serialize, Deserialize, Debug, Clone)]
 #[with_source(source)]
 pub struct ActorInvokeRequest {
     pub source: RemoteAddr,
@@ -259,10 +265,10 @@ impl Handler<ActorInfoRequest> for WorkerActor {
         let model_info = ActorInfo {
             uuid: self.uuid,
             metadata: metadata.clone(),
-            addr: self.remote_addr.clone(),
+            source: self.remote_addr.clone(),
         };
         debug!("MODEL INFO REQUEST: {:?}", msg);
-        msg.source.do_send(ActorInfoResponse::Success(model_info))
+        msg.source.do_send(model_info)
     }
 }
 
