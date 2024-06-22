@@ -5,9 +5,8 @@ use candle_core::{DType, Device, Tensor};
 use candle_nn::VarBuilder;
 use candle_transformers::models::bert::{BertModel, Config as BertConfig};
 use once_cell::sync::OnceCell;
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 use tokenizers::{PaddingParams, Tokenizer};
-use tokio::sync::Mutex;
 
 pub const E5_MODEL_REPO: &str = "intfloat/e5-small-v2";
 
@@ -33,8 +32,12 @@ impl E5Model {
         Ok(E5_INSTANCE.get().expect("E5_INSTANCE"))
     }
 
-    pub async fn embeddings(input: Vec<String>) -> Result<Vec<Vec<f32>>> {
-        let model = E5_INSTANCE.get().ok_or_err("E5_MODEL")?.lock().await;
+    pub fn embeddings(input: Vec<String>) -> Result<Vec<Vec<f32>>> {
+        let model = E5_INSTANCE
+            .get()
+            .ok_or_err("E5_MODEL")?
+            .lock()
+            .map_anyhow_err()?;
         let embeddings_data = model.embed(input)?;
         Ok(embeddings_data)
     }

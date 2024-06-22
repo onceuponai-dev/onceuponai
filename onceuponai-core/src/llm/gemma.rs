@@ -6,9 +6,8 @@ use candle_nn::VarBuilder;
 use candle_transformers::generation::LogitsProcessor;
 use candle_transformers::models::gemma::{Config, Model};
 use once_cell::sync::OnceCell;
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 use tokenizers::Tokenizer;
-use tokio::sync::Mutex;
 
 pub const GEMMA_2B_REPO_ID: &str = "google/gemma-2b-it";
 

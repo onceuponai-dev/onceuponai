@@ -7,9 +7,8 @@ use candle_transformers::generation::LogitsProcessor;
 use candle_transformers::models::quantized_llama as model;
 use model::ModelWeights;
 use once_cell::sync::OnceCell;
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 use tokenizers::Tokenizer;
-use tokio::sync::Mutex;
 
 static QUANTIZED_INSTANCE: OnceCell<Arc<Mutex<QuantizedInstance>>> = OnceCell::new();
 

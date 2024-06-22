@@ -1,4 +1,4 @@
-use crate::common::OptionToResult;
+use crate::common::{OptionToResult, ResultExt};
 use crate::llm::e5::E5Model;
 use anyhow::Result;
 use arrow_array::cast::as_string_array;
@@ -6,8 +6,7 @@ use futures::TryStreamExt;
 use lancedb::connect;
 use lancedb::query::{ExecutableQuery, QueryBase};
 use once_cell::sync::OnceCell;
-use std::sync::Arc;
-use tokio::sync::Mutex;
+use std::sync::{Arc, Mutex};
 
 static PROMPT_TEMPLATE: OnceCell<Arc<Mutex<String>>> = OnceCell::new();
 
@@ -50,11 +49,11 @@ pub fn set_prompt_template(prompt_template: &str, is_gemma: bool) -> Result<()> 
 pub async fn find_context(prompt: String) -> Result<String> {
     let embeddings_data = E5Model::lazy(None, None)?
         .lock()
-        .await
+        .map_anyhow_err()?
         .embed(vec![prompt])?;
     let emb = embeddings_data.last().unwrap().clone();
 
-    let tbl = LANCEDB_TABLE.get().unwrap().lock().await;
+    let tbl = LANCEDB_TABLE.get().unwrap().lock().map_anyhow_err()?;
     let batches = tbl
         .query()
         .nearest_to(emb)?
@@ -78,7 +77,7 @@ pub async fn build_prompt(prompt: String, context: String) -> Result<String> {
         .get()
         .ok_or_err("PROMPT_TEMPLATE")?
         .lock()
-        .await
+        .map_anyhow_err()?
         .to_string();
 
     let prompt = prompt_template

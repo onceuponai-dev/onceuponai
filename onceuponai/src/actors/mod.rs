@@ -22,7 +22,7 @@ pub enum ActorError {
 // https://github.com/yummyml/yummy/blob/master/yummy-rs/yummy-core/src/config.rs
 // https://github.com/yummyml/yummy/blob/master/yummy-rs/yummy-delta/tests/config/01_bronze_tables.yaml
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct ActorInfo {
     pub uuid: Uuid,
     pub metadata: ActorMetadata,
@@ -214,7 +214,7 @@ impl ActorBuilder {
             ActorInstance::Main(MainActor {
                 uuid: Uuid::new_v4(),
                 remote_addr,
-                models: HashMap::new(),
+                connected_actors: HashMap::new(),
                 own_addr: actor.own_addr()?,
                 actor,
             })

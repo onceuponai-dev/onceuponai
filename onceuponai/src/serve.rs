@@ -1,21 +1,28 @@
-use crate::actors::main_actor::{self, MainActor, MainActorConfig};
+use crate::actors::main_actor::{MainActor, MainActorConfig};
 use crate::config::Config;
-use crate::handlers::chat::{chat, chat_quantized};
+use crate::handlers::chat::chat;
 use crate::handlers::embeddings::embeddings;
 use crate::handlers::{self, health};
+use actix::Addr;
 use actix_files as fs;
 use actix_session::{storage::CookieSessionStore, SessionMiddleware};
 use actix_web::middleware::Logger;
+use actix_web::Responder;
 use actix_web::{cookie::Key, web, App, HttpRequest, HttpResponse, HttpServer};
 use anyhow::Result;
 use base64::{engine::general_purpose, Engine as _};
 use num_traits::Zero;
 use onceuponai_core::common::ResultExt;
+use std::error::Error;
 
 fn get_secret_key() -> Result<Key> {
     let key = Config::get().session_key.to_string();
     let k = general_purpose::STANDARD.decode(key)?;
     Ok(Key::from(&k))
+}
+
+pub struct AppState {
+    pub addr: Addr<MainActor>,
 }
 
 #[allow(dead_code)]
@@ -30,17 +37,45 @@ pub(crate) async fn vectorize(
 }
 
 // Handler for getting a session value
-async fn get_session(_req: HttpRequest, session: actix_session::Session) -> HttpResponse {
-    let user_id: Option<String> = session.get("EMAIL").unwrap();
+async fn get_session(
+    _req: HttpRequest,
+    session: actix_session::Session,
+) -> Result<impl Responder, Box<dyn Error>> {
+    let user_id: Option<String> = session.get("EMAIL")?;
     if let Some(user_id) = user_id {
-        HttpResponse::Ok().body(format!("User ID: {}", user_id))
+        Ok(HttpResponse::Ok().body(format!("User ID: {}", user_id)))
     } else {
-        HttpResponse::Ok().body("No session found")
+        Ok(HttpResponse::Ok().body("No session found"))
     }
 }
 
+async fn connected_actors(_req: HttpRequest) -> Result<impl Responder, Box<dyn Error>> {
+    let connected_actors = crate::actors::main_actor::CONNECTED_ACTORS
+        .get()
+        .expect("CONNECTED_ACTORS")
+        .lock()
+        .map_box_err()?;
+
+    let keys = connected_actors.clone();
+    Ok(HttpResponse::Ok().json(keys.clone()))
+}
+
+async fn invoke(
+    _req: HttpRequest,
+    data: web::Data<AppState>,
+) -> Result<impl Responder, Box<dyn Error>> {
+    let connected_actors = crate::actors::main_actor::CONNECTED_ACTORS
+        .get()
+        .expect("CONNECTED_ACTORS")
+        .lock()
+        .map_box_err()?;
+
+    let keys = connected_actors.clone();
+    Ok(HttpResponse::Ok().json(keys.clone()))
+}
+
 #[allow(clippy::too_many_arguments)]
-pub(crate) async fn serve(spec: MainActorConfig) -> std::io::Result<()> {
+pub(crate) async fn serve(spec: MainActorConfig, addr: Addr<MainActor>) -> std::io::Result<()> {
     if let Some(v) = spec.log_level {
         env_logger::init_from_env(env_logger::Env::new().default_filter_or(v));
     }
@@ -60,11 +95,14 @@ pub(crate) async fn serve(spec: MainActorConfig) -> std::io::Result<()> {
             .route("/health", web::get().to(health))
             .route("/embeddings", web::post().to(embeddings))
             .route("/get", web::get().to(get_session))
+            .route("/actors", web::get().to(connected_actors))
+            .route("/invoke", web::get().to(invoke))
             .route("/auth", web::get().to(handlers::auth::auth))
             .route(
                 "/auth-callback",
                 web::get().to(handlers::auth::auth_callback),
-            );
+            )
+            .app_data(web::Data::new(AppState { addr: addr.clone() }));
 
         let mut llm_scope = web::scope("/llm");
         llm_scope = llm_scope.route("/chat", web::get().to(chat));

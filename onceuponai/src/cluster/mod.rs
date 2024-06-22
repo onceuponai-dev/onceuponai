@@ -16,13 +16,16 @@ pub async fn start_cluster(file: &String) -> Result<()> {
                 ActorObject::Main { metadata: _, spec } => spec,
                 _ => todo!(),
             };
-            main_actor.start();
-            serve(spec).await?;
+
+            let addr = main_actor.start();
+
+            serve(spec, addr).await?;
         }
         ActorInstance::Worker(worker_actor) => {
+            env_logger::init();
             let _ = Cluster::new(worker_actor.own_addr, vec![worker_actor.seed_addr]);
             worker_actor.start();
-            tokio::signal::ctrl_c().await.unwrap();
+            tokio::signal::ctrl_c().await?;
             println!("Ctrl-C received, shutting down");
         }
     }

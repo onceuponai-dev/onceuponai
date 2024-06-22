@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use actix_web::{HttpResponse, Responder};
 use anyhow::Result;
 use async_stream::stream;
-use onceuponai_core::{common_models::EntityValue, llm::gemma::GemmaModel};
+use onceuponai_core::{common::ResultExt, common_models::EntityValue, llm::gemma::GemmaModel};
 use serde::Deserialize;
 use uuid::Uuid;
 
@@ -48,7 +48,8 @@ pub fn invoke(uuid: Uuid, request: ActorInvokeRequest) -> Result<ActorInvokeResp
     let mut model = GemmaModel::lazy(
         None, None, None, None, None, None, None, None, None, None, None,
     )?
-    .blocking_lock();
+    .lock()
+    .map_anyhow_err()?;
     let sample_len = model.sample_len;
     let eos_token = model.eos_token;
 
@@ -75,7 +76,7 @@ pub async fn chat(prompt: &str) -> Result<impl Responder, Box<dyn std::error::Er
         None, None, None, None, None, None, None, None, None, None, None,
     )?
     .lock()
-    .await;
+    .map_anyhow_err()?;
     lazy.instance.model.clear_kv_cache();
 
     let mut tokens = lazy

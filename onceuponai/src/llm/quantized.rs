@@ -1,7 +1,9 @@
 use actix_web::{HttpResponse, Responder};
 use anyhow::Result;
 use async_stream::stream;
-use onceuponai_core::{common_models::EntityValue, llm::quantized::QuantizedModel};
+use onceuponai_core::{
+    common::ResultExt, common_models::EntityValue, llm::quantized::QuantizedModel,
+};
 use serde::Deserialize;
 use std::collections::HashMap;
 use uuid::Uuid;
@@ -48,7 +50,8 @@ pub fn invoke(uuid: Uuid, request: ActorInvokeRequest) -> Result<ActorInvokeResp
     let mut model = QuantizedModel::lazy(
         None, None, None, None, None, None, None, None, None, None, None,
     )?
-    .blocking_lock();
+    .lock()
+    .map_anyhow_err()?;
     let eos_token = model.eos_token;
     let seed = model.seed;
     let repeat_last_n = model.repeat_last_n;
@@ -90,8 +93,7 @@ pub async fn chat(prompt: &str) -> Result<impl Responder, Box<dyn std::error::Er
     let mut lazy = QuantizedModel::lazy(
         None, None, None, None, None, None, None, None, None, None, None,
     )?
-    .lock()
-    .await;
+    .lock()?;
 
     let repeat_penalty: f32 = 1.1;
     let repeat_last_n: usize = 64;
