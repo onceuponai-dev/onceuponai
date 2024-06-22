@@ -1,7 +1,13 @@
 use actix_web::{HttpResponse, Responder};
+use anyhow::Result;
 use async_stream::stream;
 use onceuponai_core::llm::gemma::GemmaModel;
 use serde::Deserialize;
+
+pub fn start(spec: GemmaConfig) -> Result<()> {
+    todo!("IMPLEMENT");
+    Ok(())
+}
 
 pub async fn chat(prompt: &str) -> Result<impl Responder, Box<dyn std::error::Error>> {
     let mut lazy = GemmaModel::lazy(

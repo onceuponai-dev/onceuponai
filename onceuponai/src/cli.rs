@@ -106,22 +106,17 @@ Question: {question}"),
                 .arg_required_else_help(true),
         )
         .subcommand(
-            Command::new("cluster")
-                .about("cluster")
+            Command::new("apply")
+                .about("apply")
                 .args(vec![
                     arg!(--loglevel <LOGLEVEL>)
                         .required(false)
                         .help("log level")
                         .default_value("error"),
-                    arg!(--host <HOST> "host")
-                        .required(false)
-                        .help("host")
-                        .default_value("127.0.0.1:1992")
-                        .value_parser(clap::value_parser!(SocketAddr)),
-                    arg!(--seed <SEED> "seed")
-                        .required(false)
-                        .help("seed")
-                        .value_parser(clap::value_parser!(SocketAddr)),
+                    arg!(--file <FILE> "file")
+                        .required(true)
+                        .short('f')
+                        .help("file")
                 ])
                 .arg_required_else_help(true),
         )
@@ -211,13 +206,10 @@ pub(crate) async fn commands() -> Result<()> {
 
             vectorize(log_level, lancedb_uri, lancedb_table, e5_model_repo).await?
         }
-        Some(("cluster", sub_sub_matches)) => {
+        Some(("apply", sub_sub_matches)) => {
             let log_level = sub_sub_matches.get_one::<String>("loglevel");
-            let host = sub_sub_matches
-                .get_one::<SocketAddr>("host")
-                .expect("required");
-            let seed = sub_sub_matches.get_one::<SocketAddr>("seed");
-            start_cluster(host, seed).await?
+            let file = sub_sub_matches.get_one::<String>("file").expect("required");
+            start_cluster(file).await?
         }
 
         _ => unreachable!(),

@@ -1,60 +1,21 @@
-use crate::{
-    actors::{main_actor::MainActor, ActorMetadata, ActorObject, ActorWrapper},
-    llm::gemma::GemmaConfig,
-};
+use crate::actors::{ActorBuilder, ActorInstance};
 use actix::prelude::*;
-use actix_telepathy::{Cluster, RemoteActor, RemoteAddr};
+use actix_telepathy::Cluster;
 use anyhow::Result;
-use log::debug;
-use std::net::SocketAddr;
-use uuid::Uuid;
 
-pub async fn start_cluster(host: &SocketAddr, seed: Option<&SocketAddr>) -> Result<()> {
+pub async fn start_cluster(file: &String) -> Result<()> {
     env_logger::init();
-    let seed_nodes = if let Some(seed) = seed {
-        vec![*seed]
-    } else {
-        vec![]
-    };
-    let _ = Cluster::new(*host, seed_nodes);
-    let uuid = Uuid::new_v4();
+    let actor = ActorBuilder::build(file).await?;
 
-    if seed.is_none() {
-        let remote_addr = RemoteAddr::new_from_id(*host, MainActor::ACTOR_ID);
-        debug!("START MAIN_ACTOR {:?}", remote_addr);
-        let _ = MainActor {
-            uuid,
-            remote_addr,
-            own_addr: *host,
-            models: Vec::new(),
+    match actor {
+        ActorInstance::Main(main_actor) => {
+            let _ = Cluster::new(main_actor.own_addr, Vec::new());
+            main_actor.start();
         }
-        .start();
-    } else {
-        let remote_addr = RemoteAddr::new_from_id(*host, ActorWrapper::ACTOR_ID);
-        debug!("START MODEL_ACTOR {:?}", remote_addr);
-        let _ = ActorWrapper {
-            remote_addr,
-            actor: ActorObject::Gemma {
-                metadata: ActorMetadata {
-                    name: "TEST".to_string(),
-                },
-                spec: GemmaConfig {
-                    base_repo_id: None,
-                    tokenizer_repo: None,
-                    device: None,
-                    seed: None,
-                    repeat_last_n: None,
-                    repeat_penalty: None,
-                    temp: None,
-                    top_p: None,
-                    hf_token: None,
-                    use_flash_attn: None,
-                    sample_len: None,
-                },
-            },
-            uuid,
+        ActorInstance::Worker(worker_actor) => {
+            let _ = Cluster::new(worker_actor.own_addr, vec![worker_actor.seed_addr]);
+            worker_actor.start();
         }
-        .start();
     }
 
     tokio::signal::ctrl_c().await.unwrap();

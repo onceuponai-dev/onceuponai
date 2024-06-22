@@ -1,0 +1,4 @@
+kind: main
+metadata: 
+  name: main_actor
+  host: 127.0.0.1:1992
