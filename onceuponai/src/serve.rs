@@ -1,4 +1,6 @@
-use crate::actors::main_actor::{InvokeTask, MainActor, MainActorConfig, INVOKE_TASKS};
+use crate::actors::main_actor::{
+    InvokeTask, MainActor, MainActorConfig, CONNECTED_ACTORS, INVOKE_TASKS,
+};
 use crate::actors::ActorStartInvokeRequest;
 use crate::config::Config;
 use crate::handlers::chat::chat;
@@ -92,6 +94,20 @@ async fn base_invoke(
 ) -> Result<impl Responder, Box<dyn Error>> {
     let task_id = Uuid::new_v4();
     let (tx, rx) = oneshot::channel();
+
+    let kind_connected = CONNECTED_ACTORS
+        .get()
+        .expect("CONNECTED_MODELS")
+        .lock()
+        .unwrap()
+        .iter()
+        .any(|a| a.1.kind == kind);
+
+    if !kind_connected {
+        return Ok(
+            HttpResponse::NotFound().body(format!("ACTOR WITH KIND: {kind:?} NOT CONNECTED"))
+        );
+    }
 
     {
         let mut response_map = INVOKE_TASKS.get().expect("INVOKE_TASKS").lock()?;
