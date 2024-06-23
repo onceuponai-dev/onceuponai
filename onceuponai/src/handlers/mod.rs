@@ -1,6 +1,8 @@
 use actix_web::{HttpResponse, Responder};
+pub mod actors;
 pub mod auth;
 pub mod chat;
+pub mod users;
 
 pub const ASSETS_CSS_HASH: &str = "4a47f803";
 pub const ASSETS_JS_HASH: &str = "e1b29641";
