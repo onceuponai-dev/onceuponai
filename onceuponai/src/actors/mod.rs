@@ -28,6 +28,7 @@ pub struct ActorInfo {
     pub uuid: Uuid,
     pub metadata: ActorMetadata,
     pub source: RemoteAddr,
+    pub kind: String,
 }
 
 #[derive(RemoteMessage, Serialize, Deserialize, Debug, Clone)]
@@ -77,6 +78,15 @@ impl ActorObject {
             ActorObject::Quantized { metadata, spec: _ } => metadata,
             ActorObject::E5 { metadata, spec: _ } => metadata,
             ActorObject::Main { metadata, spec: _ } => metadata,
+        }
+    }
+
+    pub fn kind(&self) -> String {
+        match self {
+            ActorObject::Gemma { metadata, spec: _ } => "gemma".to_string(),
+            ActorObject::Quantized { metadata, spec: _ } => "quantized".to_string(),
+            ActorObject::E5 { metadata, spec: _ } => "e5".to_string(),
+            ActorObject::Main { metadata, spec: _ } => "main".to_string(),
         }
     }
 
@@ -171,14 +181,9 @@ pub struct ActorInfoRequest {
     pub source: RemoteAddr,
 }
 
-#[derive(RemoteMessage, Serialize, Deserialize, Debug)]
-pub enum ActorInfoResponse {
-    Success(ActorInfo),
-    Failure(ActorError),
-}
-
 #[derive(RemoteMessage, Serialize, Deserialize, Debug, Clone)]
 pub struct ActorStartInvokeRequest {
+    pub kind: String,
     pub data: HashMap<String, Vec<EntityValue>>,
 }
 
@@ -266,6 +271,7 @@ impl Handler<ActorInfoRequest> for WorkerActor {
             uuid: self.uuid,
             metadata: metadata.clone(),
             source: self.remote_addr.clone(),
+            kind: self.actor.kind(),
         };
         debug!("MODEL INFO REQUEST: {:?}", msg);
         msg.source.do_send(model_info)

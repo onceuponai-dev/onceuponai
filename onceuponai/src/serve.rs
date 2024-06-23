@@ -17,6 +17,9 @@ use onceuponai_core::common::ResultExt;
 use onceuponai_core::common_models::EntityValue;
 use std::collections::HashMap;
 use std::error::Error;
+use std::sync::{Arc, Mutex};
+use tokio::sync::oneshot;
+use uuid::Uuid;
 
 fn get_secret_key() -> Result<Key> {
     let key = Config::get().session_key.to_string();
@@ -26,6 +29,7 @@ fn get_secret_key() -> Result<Key> {
 
 pub struct AppState {
     pub addr: Addr<MainActor>,
+    pub response_map: Arc<Mutex<HashMap<Uuid, oneshot::Sender<String>>>>,
 }
 
 #[allow(dead_code)]
@@ -64,25 +68,26 @@ async fn connected_actors(_req: HttpRequest) -> Result<impl Responder, Box<dyn E
 }
 
 async fn invoke(
-    _req: HttpRequest,
-    data: web::Data<AppState>,
+    req: HttpRequest,
+    app_state: web::Data<AppState>,
 ) -> Result<impl Responder, Box<dyn Error>> {
-    let connected_actors = crate::actors::main_actor::CONNECTED_ACTORS
-        .get()
-        .expect("CONNECTED_ACTORS")
-        .lock()
-        .map_box_err()?;
+    let kind = req
+        .match_info()
+        .get("kind")
+        .expect("KIND")
+        .to_string()
+        .to_lowercase();
 
-    let keys = connected_actors.clone();
-
-    let mut dd = HashMap::new();
-    dd.insert(
+    let mut data = HashMap::new();
+    data.insert(
         "input".to_string(),
         vec![EntityValue::STRING("Hello".to_string())],
     );
-    data.addr.do_send(ActorStartInvokeRequest { data: dd });
+    app_state
+        .addr
+        .do_send(ActorStartInvokeRequest { kind, data });
 
-    Ok(HttpResponse::Ok().json(keys.clone()))
+    Ok(HttpResponse::Ok().body("OK"))
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -92,6 +97,7 @@ pub(crate) async fn serve(spec: MainActorConfig, addr: Addr<MainActor>) -> std::
     }
 
     let secret_key = get_secret_key().map_io_err()?;
+    let response_map = Arc::new(Mutex::new(HashMap::new()));
     println!(
         "Server running on http://{}:{}",
         spec.server_host, spec.server_port
@@ -107,13 +113,16 @@ pub(crate) async fn serve(spec: MainActorConfig, addr: Addr<MainActor>) -> std::
             .route("/embeddings", web::post().to(embeddings))
             .route("/get", web::get().to(get_session))
             .route("/actors", web::get().to(connected_actors))
-            .route("/invoke", web::get().to(invoke))
+            .route("/invoke/{kind}", web::get().to(invoke))
             .route("/auth", web::get().to(handlers::auth::auth))
             .route(
                 "/auth-callback",
                 web::get().to(handlers::auth::auth_callback),
             )
-            .app_data(web::Data::new(AppState { addr: addr.clone() }));
+            .app_data(web::Data::new(AppState {
+                addr: addr.clone(),
+                response_map: response_map.clone(),
+            }));
 
         let mut llm_scope = web::scope("/llm");
         llm_scope = llm_scope.route("/chat", web::get().to(chat));

@@ -1,12 +1,12 @@
 use super::{
-    ActorInfo, ActorInfoRequest, ActorInfoResponse, ActorInvokeResponse, ActorObject,
-    ActorStartInvokeRequest,
+    ActorInfo, ActorInfoRequest, ActorInvokeResponse, ActorObject, ActorStartInvokeRequest,
 };
 use crate::actors::{ActorInvokeRequest, WorkerActor};
 use actix::prelude::*;
 use actix_broker::BrokerSubscribe;
 use actix_telepathy::prelude::*;
 use once_cell::sync::OnceCell;
+use rand::seq::SliceRandom;
 use serde::Deserialize;
 use std::sync::{Arc, Mutex};
 use std::{collections::HashMap, net::SocketAddr};
@@ -65,9 +65,19 @@ impl Handler<ActorStartInvokeRequest> for MainActor {
 
     fn handle(&mut self, msg: ActorStartInvokeRequest, _ctx: &mut Self::Context) -> Self::Result {
         debug!("START INVOKE REQUEST: {:?}", msg);
-        let key: Vec<&Uuid> = self.connected_actors.keys().collect();
-        let key = key[0];
-        let worker_actor = self.connected_actors.get(key).unwrap();
+        let kind = msg.kind;
+        debug!("KIND: {kind:?}");
+        //debug!("CONNECTED_ACTORS: {s:?}");
+        let actors: Vec<ActorInfo> = self
+            .connected_actors
+            .iter()
+            .filter(|a| a.1.kind == kind)
+            .map(|a| a.1.clone())
+            .collect();
+
+        let worker_actor = actors
+            .choose(&mut rand::thread_rng())
+            .expect("WORKER_ACTOR");
         worker_actor.source.do_send(ActorInvokeRequest {
             data: msg.data,
             source: self.remote_addr.clone(),
