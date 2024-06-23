@@ -122,7 +122,25 @@ impl Handler<ClusterLog> for MainActor {
                 }
             }
             ClusterLog::MemberLeft(addr) => {
-                debug!("member left {:?}", addr);
+                debug!("MEMBER LEFT {:?}", addr);
+                let actors: Vec<Uuid> = CONNECTED_ACTORS
+                    .get()
+                    .expect("CONNECTED_MODELS")
+                    .lock()
+                    .unwrap()
+                    .iter()
+                    .filter(|a| a.1.source.node.socket_addr == addr)
+                    .map(|a| *a.0)
+                    .collect();
+
+                for actor in actors {
+                    CONNECTED_ACTORS
+                        .get()
+                        .expect("CONNECTED_MODELS")
+                        .lock()
+                        .unwrap()
+                        .remove(&actor);
+                }
             }
         }
     }
