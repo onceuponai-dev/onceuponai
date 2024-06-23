@@ -4,7 +4,6 @@ use crate::actors::main_actor::{
 use crate::actors::ActorStartInvokeRequest;
 use crate::config::Config;
 use crate::handlers::chat::chat;
-use crate::handlers::embeddings::embeddings;
 use crate::handlers::{self, health};
 use actix::Addr;
 use actix_files as fs;
@@ -17,6 +16,7 @@ use base64::{engine::general_purpose, Engine as _};
 use num_traits::Zero;
 use onceuponai_core::common::ResultExt;
 use onceuponai_core::common_models::EntityValue;
+use serde::Deserialize;
 use std::collections::HashMap;
 use std::error::Error;
 use std::sync::mpsc;
@@ -34,15 +34,9 @@ pub struct AppState {
     pub spec: MainActorConfig,
 }
 
-#[allow(dead_code)]
-#[allow(clippy::too_many_arguments)]
-pub(crate) async fn vectorize(
-    _log_level: Option<&String>,
-    _lancedb_uri: &str,
-    _lancedb_table: &str,
-    _e5_model_repo: &str,
-) -> std::io::Result<()> {
-    todo!()
+#[derive(Deserialize)]
+pub struct InvokeRequest {
+    data: HashMap<String, Vec<EntityValue>>,
 }
 
 // Handler for getting a session value
@@ -71,6 +65,7 @@ async fn connected_actors(_req: HttpRequest) -> Result<impl Responder, Box<dyn E
 
 async fn invoke(
     req: HttpRequest,
+    invoke_request: web::Json<HashMap<String, Vec<EntityValue>>>,
     app_state: web::Data<AppState>,
 ) -> Result<impl Responder, Box<dyn Error>> {
     let kind = req
@@ -79,13 +74,8 @@ async fn invoke(
         .expect("KIND")
         .to_string()
         .to_lowercase();
-    let mut data = HashMap::new();
-    data.insert(
-        "input".to_string(),
-        vec![EntityValue::STRING("Hello".to_string())],
-    );
 
-    base_invoke(kind, app_state, data).await
+    base_invoke(kind, app_state, invoke_request.clone()).await
 }
 
 async fn base_invoke(
@@ -170,10 +160,9 @@ pub(crate) async fn serve(spec: MainActorConfig, addr: Addr<MainActor>) -> std::
             ))
             .wrap(Logger::default())
             .route("/health", web::get().to(health))
-            .route("/embeddings", web::post().to(embeddings))
             .route("/get", web::get().to(get_session))
             .route("/actors", web::get().to(connected_actors))
-            .route("/invoke/{kind}", web::get().to(invoke))
+            .route("/invoke/{kind}", web::post().to(invoke))
             .route("/auth", web::get().to(handlers::auth::auth))
             .route(
                 "/auth-callback",

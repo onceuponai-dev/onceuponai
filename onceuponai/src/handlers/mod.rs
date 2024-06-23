@@ -1,7 +1,6 @@
 use actix_web::{HttpResponse, Responder};
 pub mod auth;
 pub mod chat;
-pub mod embeddings;
 
 const INDEX_HTML: &str = include_str!("../../public/index.html");
 
