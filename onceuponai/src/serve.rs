@@ -75,11 +75,19 @@ async fn invoke(
         .to_string()
         .to_lowercase();
 
-    base_invoke(kind, app_state, invoke_request.clone()).await
+    let name = req
+        .match_info()
+        .get("name")
+        .expect("NAME")
+        .to_string()
+        .to_lowercase();
+
+    base_invoke(kind, name, app_state, invoke_request.clone()).await
 }
 
 async fn base_invoke(
     kind: String,
+    name: String,
     app_state: web::Data<AppState>,
     data: HashMap<String, Vec<EntityValue>>,
 ) -> Result<impl Responder, Box<dyn Error>> {
@@ -92,12 +100,12 @@ async fn base_invoke(
         .lock()
         .unwrap()
         .iter()
-        .any(|a| a.1.kind == kind);
+        .any(|a| a.1.kind == kind && a.1.metadata.name == name);
 
     if !kind_connected {
-        return Ok(
-            HttpResponse::NotFound().body(format!("ACTOR WITH KIND: {kind:?} NOT CONNECTED"))
-        );
+        return Ok(HttpResponse::NotFound().body(format!(
+            "ACTOR WITH KIND: {kind:?} NAME: {name:?} NOT CONNECTED"
+        )));
     }
 
     {
@@ -114,12 +122,12 @@ async fn base_invoke(
     app_state.addr.do_send(ActorStartInvokeRequest {
         task_id,
         kind,
+        name,
         data,
     });
 
-    match rx.recv_timeout(Duration::from_secs(
-        app_state.spec.invoke_timeout.unwrap_or(5u64),
-    )) {
+    let invoke_timeout = app_state.spec.invoke_timeout.unwrap_or(5u64);
+    match rx.recv_timeout(Duration::from_secs(invoke_timeout)) {
         Ok(response) => {
             let mut response_map = INVOKE_TASKS.get().expect("INVOKE_TASKS").lock()?;
             response_map.remove(&task_id);
@@ -127,15 +135,16 @@ async fn base_invoke(
                 crate::actors::ActorInvokeResponse::Success(result) => {
                     Ok(HttpResponse::Ok().json(result.data))
                 }
-                crate::actors::ActorInvokeResponse::Failure(error) => {
-                    Ok(HttpResponse::BadRequest().json(error))
+                crate::actors::ActorInvokeResponse::Failure(result) => {
+                    Ok(HttpResponse::BadRequest().json(result.error))
                 }
             }
         }
         Err(_) => {
             let mut response_map = INVOKE_TASKS.get().expect("INVOKE_TASKS").lock()?;
             response_map.remove(&task_id);
-            Ok(HttpResponse::InternalServerError().body("Error processing request"))
+            Ok(HttpResponse::InternalServerError()
+                .body(format!("Request timeout ( > {invoke_timeout:?} s)")))
         }
     }
 }
@@ -162,7 +171,7 @@ pub(crate) async fn serve(spec: MainActorConfig, addr: Addr<MainActor>) -> std::
             .route("/health", web::get().to(health))
             .route("/get", web::get().to(get_session))
             .route("/actors", web::get().to(connected_actors))
-            .route("/invoke/{kind}", web::post().to(invoke))
+            .route("/invoke/{kind}/{name}", web::post().to(invoke))
             .route("/auth", web::get().to(handlers::auth::auth))
             .route(
                 "/auth-callback",

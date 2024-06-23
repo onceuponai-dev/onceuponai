@@ -38,7 +38,6 @@ pub fn invoke(uuid: Uuid, request: ActorInvokeRequest) -> Result<ActorInvokeResp
             uuid,
             task_id: request.task_id,
             error: ActorError::BadRequest(
-                uuid,
                 "REQUEST MUST CONTAINER PROMPT COLUMN WITH Vec<String>".to_string(),
             ),
         }));

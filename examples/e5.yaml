@@ -1,6 +1,6 @@
 kind: e5
 metadata: 
-  name: e5_actor
+  name: multilingual
   actor_host: 127.0.0.1:1993
   actor_seed: 127.0.0.1:1992
 spec:

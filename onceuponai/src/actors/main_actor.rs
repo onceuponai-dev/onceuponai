@@ -80,12 +80,14 @@ impl Handler<ActorStartInvokeRequest> for MainActor {
     fn handle(&mut self, msg: ActorStartInvokeRequest, _ctx: &mut Self::Context) -> Self::Result {
         debug!("START INVOKE REQUEST: {:?}", msg);
         let kind = msg.kind;
-        debug!("KIND: {kind:?}");
+        let name = msg.name;
+        debug!("KIND/NAME: {kind:?}/{name:?}");
+
         //debug!("CONNECTED_ACTORS: {s:?}");
         let actors: Vec<ActorInfo> = self
             .connected_actors
             .iter()
-            .filter(|a| a.1.kind == kind)
+            .filter(|a| a.1.kind == kind && a.1.metadata.name == name)
             .map(|a| a.1.clone())
             .collect();
 

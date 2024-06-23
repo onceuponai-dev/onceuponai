@@ -13,9 +13,9 @@ use uuid::Uuid;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub enum ActorError {
-    FatalError(Uuid, String),
-    NetworkError(Uuid, String),
-    BadRequest(Uuid, String),
+    FatalError(String),
+    NetworkError(String),
+    BadRequest(String),
 }
 
 // https://github.com/yummyml/yummy/blob/master/yummy-rs/yummy-delta/src/apply.rs
@@ -168,7 +168,7 @@ impl ActorObject {
             } => Ok(ActorInvokeResponse::Failure(ActorInvokeError {
                 uuid,
                 task_id: request.task_id,
-                error: ActorError::FatalError(uuid, String::from("MAIN ACTOR CAN'T BE INVOKED")),
+                error: ActorError::FatalError(String::from("MAIN ACTOR CAN'T BE INVOKED")),
             })),
         }?;
 
@@ -186,6 +186,7 @@ pub struct ActorInfoRequest {
 pub struct ActorStartInvokeRequest {
     pub task_id: Uuid,
     pub kind: String,
+    pub name: String,
     pub data: HashMap<String, Vec<EntityValue>>,
 }
 

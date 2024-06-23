@@ -7,4 +7,4 @@ spec:
   server_port: 8080
   log_level: error
   workers: 0
-  invoke_timeout: 5
+  invoke_timeout: 15
