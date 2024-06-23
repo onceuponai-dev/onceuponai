@@ -1,15 +1,15 @@
 
-GET http://rust:8080/health HTTP/1.1
+GET http://rust:8080/api/health HTTP/1.1
 content-type: application/json
 
 ###
 
-GET http://rust:8080/actors HTTP/1.1
+GET http://rust:8080/api/actors HTTP/1.1
 content-type: application/json
 
 ###
 
-POST http://rust:8080/invoke/e5/multilingual HTTP/1.1
+POST http://rust:8080/api/invoke/e5/multilingual HTTP/1.1
 content-type: application/json
 
 {
@@ -18,7 +18,7 @@ content-type: application/json
 
 ###
 
-POST http://rust:8080/invoke/quantized/bielik HTTP/1.1
+POST http://rust:8080/api/invoke/quantized/bielik HTTP/1.1
 content-type: application/json
 
 {

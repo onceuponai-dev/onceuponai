@@ -1,0 +1,9 @@
+:9085 {
+    handle /api* {
+        reverse_proxy rust:8080
+    }
+
+    handle /ui* {
+        reverse_proxy rust:8082
+    }
+}

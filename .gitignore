@@ -11,3 +11,4 @@ tf_init.sh
 /__pycache__
 terraform/ssh
 .env
+.vscode

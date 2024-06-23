@@ -4,9 +4,11 @@ use crate::actors::main_actor::{
 use crate::actors::ActorStartInvokeRequest;
 use crate::config::Config;
 use crate::handlers::chat::chat;
-use crate::handlers::{self, health};
+use crate::handlers::{
+    self, assets_css, assets_js, health, index_html, ASSETS_CSS_HASH, ASSETS_JS_HASH,
+};
 use actix::Addr;
-use actix_files as fs;
+//use actix_files as fs;
 use actix_session::{storage::CookieSessionStore, SessionMiddleware};
 use actix_web::middleware::Logger;
 use actix_web::Responder;
@@ -16,7 +18,6 @@ use base64::{engine::general_purpose, Engine as _};
 use num_traits::Zero;
 use onceuponai_core::common::ResultExt;
 use onceuponai_core::common_models::EntityValue;
-use serde::Deserialize;
 use std::collections::HashMap;
 use std::error::Error;
 use std::sync::mpsc;
@@ -32,11 +33,6 @@ fn get_secret_key() -> Result<Key> {
 pub struct AppState {
     pub addr: Addr<MainActor>,
     pub spec: MainActorConfig,
-}
-
-#[derive(Deserialize)]
-pub struct InvokeRequest {
-    data: HashMap<String, Vec<EntityValue>>,
 }
 
 // Handler for getting a session value
@@ -168,13 +164,22 @@ pub(crate) async fn serve(spec: MainActorConfig, addr: Addr<MainActor>) -> std::
                 secret_key.clone(),
             ))
             .wrap(Logger::default())
-            .route("/health", web::get().to(health))
-            .route("/get", web::get().to(get_session))
-            .route("/actors", web::get().to(connected_actors))
-            .route("/invoke/{kind}/{name}", web::post().to(invoke))
-            .route("/auth", web::get().to(handlers::auth::auth))
+            .route("/", web::get().to(index_html))
             .route(
-                "/auth-callback",
+                &format!("/assets/index-{}.js", ASSETS_JS_HASH),
+                web::get().to(assets_js),
+            )
+            .route(
+                &format!("/assets/index-{}.css", ASSETS_CSS_HASH),
+                web::get().to(assets_css),
+            )
+            .route("/api/health", web::get().to(health))
+            .route("/api/get", web::get().to(get_session))
+            .route("/api/actors", web::get().to(connected_actors))
+            .route("/api/invoke/{kind}/{name}", web::post().to(invoke))
+            .route("/api/auth", web::get().to(handlers::auth::auth))
+            .route(
+                "/api/auth-callback",
                 web::get().to(handlers::auth::auth_callback),
             )
             .app_data(web::Data::new(AppState {
@@ -187,7 +192,8 @@ pub(crate) async fn serve(spec: MainActorConfig, addr: Addr<MainActor>) -> std::
 
         app = app.service(llm_scope);
 
-        app.service(fs::Files::new("/", "../onceuponai-ui/dist/").show_files_listing())
+        //app.service(fs::Files::new("/", "../onceuponai-ui/dist/").show_files_listing())
+        app
     });
 
     if let Some(num_workers) = spec.workers {
