@@ -1,10 +1,11 @@
-use crate::config::Config;
 use crate::models::AuthCallback;
+use crate::serve::AppState;
 use crate::session::SessionExt;
 use actix_web::{web, Responder};
 use actix_web::{HttpRequest, HttpResponse};
 use anyhow::anyhow;
 use anyhow::Result;
+use log::debug;
 use onceuponai_core::common::{Errors, OptionToResult};
 use openidconnect::core::{CoreAuthenticationFlow, CoreClient, CoreProviderMetadata};
 use openidconnect::reqwest::http_client;
@@ -19,18 +20,18 @@ use std::error::Error;
 pub async fn auth(
     _req: HttpRequest,
     session: actix_session::Session,
+    app_state: web::Data<AppState>,
 ) -> Result<impl Responder, Box<dyn Error>> {
-    let provider_metadata = CoreProviderMetadata::discover(
-        &IssuerUrl::new(Config::get().oidc_issuer_url.clone())?,
-        http_client,
-    )?;
+    let oidc = app_state.spec.oidc.clone().expect("OIDC");
+    let provider_metadata =
+        CoreProviderMetadata::discover(&IssuerUrl::new(oidc.issuer_url.clone())?, http_client)?;
 
     let client = CoreClient::from_provider_metadata(
         provider_metadata,
-        ClientId::new(Config::get().oidc_client_id.clone()),
-        Some(ClientSecret::new(Config::get().oidc_client_secret.clone())),
+        ClientId::new(oidc.client_id.clone()),
+        Some(ClientSecret::new(oidc.client_secret.clone())),
     )
-    .set_redirect_uri(RedirectUrl::new(Config::get().oidc_redirect_url.clone())?);
+    .set_redirect_uri(RedirectUrl::new(oidc.redirect_url.clone())?);
 
     let (pkce_challenge, pkce_verifier) = PkceCodeChallenge::new_random_sha256();
     let (auth_url, csrf_token, nonce) = client
@@ -42,10 +43,10 @@ pub async fn auth(
         .set_pkce_challenge(pkce_challenge)
         .url();
 
-    println!("Browse to: {}", auth_url);
-    println!("PKCE: {}", pkce_verifier.secret());
-    println!("NONCE: {}", nonce.secret());
-    println!("CSRF: {}", csrf_token.secret());
+    // println!("Browse to: {}", auth_url);
+    // println!("PKCE: {}", pkce_verifier.secret());
+    // println!("NONCE: {}", nonce.secret());
+    // println!("CSRF: {}", csrf_token.secret());
 
     session.set_pkce(pkce_verifier.secret())?;
     session.set_nonce(nonce.secret())?;
@@ -58,24 +59,25 @@ pub async fn auth(
 pub async fn auth_callback(
     request: web::Query<AuthCallback>,
     session: actix_session::Session,
+    app_state: web::Data<AppState>,
 ) -> Result<impl Responder, Box<dyn Error>> {
+    let oidc = app_state.spec.oidc.clone().expect("OIDC");
+
     let pkce = session.pkce()?;
     let nonce = session.nonce()?;
 
     let pkce_verifier = PkceCodeVerifier::new(pkce);
     let nonce = Nonce::new(nonce);
 
-    let provider_metadata = CoreProviderMetadata::discover(
-        &IssuerUrl::new(Config::get().oidc_issuer_url.clone())?,
-        http_client,
-    )?;
+    let provider_metadata =
+        CoreProviderMetadata::discover(&IssuerUrl::new(oidc.issuer_url.clone())?, http_client)?;
 
     let client = CoreClient::from_provider_metadata(
         provider_metadata,
-        ClientId::new(Config::get().oidc_client_id.clone()),
-        Some(ClientSecret::new(Config::get().oidc_client_secret.clone())),
+        ClientId::new(oidc.client_id.clone()),
+        Some(ClientSecret::new(oidc.client_secret.clone())),
     )
-    .set_redirect_uri(RedirectUrl::new(Config::get().oidc_redirect_url.clone())?);
+    .set_redirect_uri(RedirectUrl::new(oidc.redirect_url.clone())?);
 
     let token_response = client
         .exchange_code(AuthorizationCode::new(request.code.clone()))
@@ -95,14 +97,14 @@ pub async fn auth_callback(
         }
     }
 
-    println!(
-        "User {} with e-mail address {} has authenticated successfully",
-        claims.subject().as_str(),
-        claims
-            .email()
-            .map(|email| email.as_str())
-            .unwrap_or("<not provided>"),
-    );
+    // println!(
+    //     "User {} with e-mail address {} has authenticated successfully",
+    //     claims.subject().as_str(),
+    //     claims
+    //         .email()
+    //         .map(|email| email.as_str())
+    //         .unwrap_or("<not provided>"),
+    // );
 
     let email = claims.email().ok_or_err("EMAIL")?;
     session.rm_pkce()?;

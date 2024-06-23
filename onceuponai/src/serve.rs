@@ -1,5 +1,4 @@
 use crate::actors::main_actor::{MainActor, MainActorConfig};
-use crate::config::Config;
 use crate::handlers::actors::{connected_actors, invoke};
 use crate::handlers::chat::chat;
 use crate::handlers::users::user;
@@ -15,8 +14,8 @@ use base64::{engine::general_purpose, Engine as _};
 use num_traits::Zero;
 use onceuponai_core::common::ResultExt;
 
-fn get_secret_key() -> Result<Key> {
-    let key = Config::get().session_key.to_string();
+fn get_secret_key(spec: &MainActorConfig) -> Result<Key> {
+    let key = spec.session_key.clone().expect("SESSION_KEY");
     let k = general_purpose::STANDARD.decode(key)?;
     Ok(Key::from(&k))
 }
@@ -30,12 +29,12 @@ pub struct AppState {
 
 #[allow(clippy::too_many_arguments)]
 pub(crate) async fn serve(spec: MainActorConfig, addr: Addr<MainActor>) -> std::io::Result<()> {
+    let secret_key = get_secret_key(&spec).map_io_err()?;
     let sp = spec.clone();
     if let Some(v) = spec.log_level {
         env_logger::init_from_env(env_logger::Env::new().default_filter_or(v));
     }
 
-    let secret_key = get_secret_key().map_io_err()?;
     println!(
         "Server running on http://{}:{}",
         spec.server_host, spec.server_port

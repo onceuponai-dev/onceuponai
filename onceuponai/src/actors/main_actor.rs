@@ -41,6 +41,16 @@ pub struct MainActorConfig {
     pub log_level: Option<String>,
     pub workers: Option<usize>,
     pub invoke_timeout: Option<u64>,
+    pub session_key: Option<String>,
+    pub oidc: Option<MainActorOidcConfig>,
+}
+
+#[derive(Deserialize, Debug, Clone)]
+pub struct MainActorOidcConfig {
+    pub issuer_url: String,
+    pub client_id: String,
+    pub client_secret: String,
+    pub redirect_url: String,
 }
 
 impl Actor for MainActor {
