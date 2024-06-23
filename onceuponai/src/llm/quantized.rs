@@ -8,7 +8,9 @@ use serde::Deserialize;
 use std::collections::HashMap;
 use uuid::Uuid;
 
-use crate::actors::{ActorError, ActorInvokeRequest, ActorInvokeResponse, ActorInvokeResult};
+use crate::actors::{
+    ActorError, ActorInvokeError, ActorInvokeRequest, ActorInvokeResponse, ActorInvokeResult,
+};
 
 pub fn start(spec: QuantizedConfig) -> Result<()> {
     QuantizedModel::lazy(
@@ -32,10 +34,14 @@ pub fn invoke(uuid: Uuid, request: ActorInvokeRequest) -> Result<ActorInvokeResp
     let input = request.data.get("prompt");
 
     if input.is_none() {
-        return Ok(ActorInvokeResponse::Failure(ActorError::BadRequest(
+        return Ok(ActorInvokeResponse::Failure(ActorInvokeError {
             uuid,
-            "REQUEST MUST CONTAINER PROMPT COLUMN WITH Vec<String>".to_string(),
-        )));
+            task_id: request.task_id,
+            error: ActorError::BadRequest(
+                uuid,
+                "REQUEST MUST CONTAINER PROMPT COLUMN WITH Vec<String>".to_string(),
+            ),
+        }));
     }
 
     let input: Vec<String> = input

@@ -133,9 +133,20 @@ async fn base_invoke(
         Ok(response) => {
             let mut response_map = INVOKE_TASKS.get().expect("INVOKE_TASKS").lock()?;
             response_map.remove(&task_id);
-            Ok(HttpResponse::Ok().json(response))
+            match response {
+                crate::actors::ActorInvokeResponse::Success(result) => {
+                    Ok(HttpResponse::Ok().json(result.data))
+                }
+                crate::actors::ActorInvokeResponse::Failure(error) => {
+                    Ok(HttpResponse::BadRequest().json(error))
+                }
+            }
         }
-        Err(_) => Ok(HttpResponse::InternalServerError().body("Error processing request")),
+        Err(_) => {
+            let mut response_map = INVOKE_TASKS.get().expect("INVOKE_TASKS").lock()?;
+            response_map.remove(&task_id);
+            Ok(HttpResponse::InternalServerError().body("Error processing request"))
+        }
     }
 }
 

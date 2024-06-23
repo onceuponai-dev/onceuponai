@@ -21,7 +21,7 @@ pub static INVOKE_TASKS: OnceCell<Arc<Mutex<HashMap<Uuid, InvokeTask>>>> = OnceC
 #[derive(Debug)]
 pub struct InvokeTask {
     pub time: Instant,
-    pub sender: mpsc::Sender<HashMap<String, Vec<EntityValue>>>,
+    pub sender: mpsc::Sender<ActorInvokeResponse>,
 }
 
 #[derive(RemoteActor, Clone)]
@@ -105,6 +105,22 @@ impl Handler<ActorInvokeResponse> for MainActor {
 
     fn handle(&mut self, msg: ActorInvokeResponse, _ctx: &mut Self::Context) -> Self::Result {
         debug!("Received invoke response: {:?}", msg);
+        match &msg {
+            ActorInvokeResponse::Failure(result) => {
+                let mut tasks = INVOKE_TASKS.get().expect("INVOKE_TASKS").lock().unwrap();
+
+                if let Some(task) = tasks.remove(&result.task_id) {
+                    let _ = task.sender.send(msg);
+                }
+            }
+            ActorInvokeResponse::Success(result) => {
+                let mut tasks = INVOKE_TASKS.get().expect("INVOKE_TASKS").lock().unwrap();
+
+                if let Some(task) = tasks.remove(&result.task_id) {
+                    let _ = task.sender.send(msg);
+                }
+            }
+        }
     }
 }
 

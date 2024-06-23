@@ -165,10 +165,11 @@ impl ActorObject {
             ActorObject::Main {
                 metadata: _,
                 spec: _,
-            } => Ok(ActorInvokeResponse::Failure(ActorError::FatalError(
+            } => Ok(ActorInvokeResponse::Failure(ActorInvokeError {
                 uuid,
-                String::from("MAIN ACTOR CAN'T BE INVOKED"),
-            ))),
+                task_id: request.task_id,
+                error: ActorError::FatalError(uuid, String::from("MAIN ACTOR CAN'T BE INVOKED")),
+            })),
         }?;
 
         Ok(response)
@@ -203,10 +204,17 @@ pub struct ActorInvokeResult {
     pub data: HashMap<String, Vec<EntityValue>>,
 }
 
+#[derive(Serialize, Deserialize, Debug)]
+pub struct ActorInvokeError {
+    pub uuid: Uuid,
+    pub task_id: Uuid,
+    pub error: ActorError,
+}
+
 #[derive(RemoteMessage, Serialize, Deserialize, Debug)]
 pub enum ActorInvokeResponse {
     Success(ActorInvokeResult),
-    Failure(ActorError),
+    Failure(ActorInvokeError),
 }
 
 pub enum ActorInstance {
