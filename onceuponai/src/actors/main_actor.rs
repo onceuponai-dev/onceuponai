@@ -6,13 +6,23 @@ use actix::prelude::*;
 use actix_broker::BrokerSubscribe;
 use actix_telepathy::prelude::*;
 use once_cell::sync::OnceCell;
+use onceuponai_core::common_models::EntityValue;
 use rand::seq::SliceRandom;
 use serde::Deserialize;
 use std::sync::{Arc, Mutex};
 use std::{collections::HashMap, net::SocketAddr};
+use tokio::sync::oneshot;
+use tokio::time::Instant;
 use uuid::Uuid;
 
 pub static CONNECTED_ACTORS: OnceCell<Arc<Mutex<HashMap<Uuid, ActorInfo>>>> = OnceCell::new();
+pub static INVOKE_TASKS: OnceCell<Arc<Mutex<HashMap<Uuid, InvokeTask>>>> = OnceCell::new();
+
+#[derive(Debug)]
+pub struct InvokeTask {
+    pub time: Instant,
+    pub sender: oneshot::Sender<HashMap<String, Vec<EntityValue>>>,
+}
 
 #[derive(RemoteActor, Clone)]
 #[remote_messages(ActorInfo, ActorInvokeResponse)]
@@ -39,6 +49,9 @@ impl Actor for MainActor {
         self.register(ctx.address().recipient());
         self.subscribe_system_async::<ClusterLog>(ctx);
         CONNECTED_ACTORS
+            .set(Arc::new(Mutex::new(HashMap::new())))
+            .unwrap();
+        INVOKE_TASKS
             .set(Arc::new(Mutex::new(HashMap::new())))
             .unwrap();
     }
@@ -79,6 +92,7 @@ impl Handler<ActorStartInvokeRequest> for MainActor {
             .choose(&mut rand::thread_rng())
             .expect("WORKER_ACTOR");
         worker_actor.source.do_send(ActorInvokeRequest {
+            task_id: msg.task_id,
             data: msg.data,
             source: self.remote_addr.clone(),
         });

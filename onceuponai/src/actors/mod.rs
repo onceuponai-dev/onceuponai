@@ -153,11 +153,11 @@ impl ActorObject {
             ActorObject::Gemma {
                 metadata: _,
                 spec: _,
-            } => todo!(),
+            } => crate::llm::gemma::invoke(uuid, request.clone()),
             ActorObject::Quantized {
                 metadata: _,
                 spec: _,
-            } => todo!(),
+            } => crate::llm::quantized::invoke(uuid, request.clone()),
             ActorObject::E5 {
                 metadata: _,
                 spec: _,
@@ -183,6 +183,7 @@ pub struct ActorInfoRequest {
 
 #[derive(RemoteMessage, Serialize, Deserialize, Debug, Clone)]
 pub struct ActorStartInvokeRequest {
+    pub task_id: Uuid,
     pub kind: String,
     pub data: HashMap<String, Vec<EntityValue>>,
 }
@@ -190,6 +191,7 @@ pub struct ActorStartInvokeRequest {
 #[derive(RemoteMessage, Serialize, Deserialize, Debug, Clone)]
 #[with_source(source)]
 pub struct ActorInvokeRequest {
+    pub task_id: Uuid,
     pub source: RemoteAddr,
     pub data: HashMap<String, Vec<EntityValue>>,
 }
@@ -197,6 +199,7 @@ pub struct ActorInvokeRequest {
 #[derive(Serialize, Deserialize, Debug)]
 pub struct ActorInvokeResult {
     pub uuid: Uuid,
+    pub task_id: Uuid,
     pub data: HashMap<String, Vec<EntityValue>>,
 }
 

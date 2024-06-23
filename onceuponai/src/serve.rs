@@ -1,4 +1,4 @@
-use crate::actors::main_actor::{MainActor, MainActorConfig};
+use crate::actors::main_actor::{InvokeTask, MainActor, MainActorConfig, INVOKE_TASKS};
 use crate::actors::ActorStartInvokeRequest;
 use crate::config::Config;
 use crate::handlers::chat::chat;
@@ -17,8 +17,8 @@ use onceuponai_core::common::ResultExt;
 use onceuponai_core::common_models::EntityValue;
 use std::collections::HashMap;
 use std::error::Error;
-use std::sync::{Arc, Mutex};
 use tokio::sync::oneshot;
+use tokio::time::Instant;
 use uuid::Uuid;
 
 fn get_secret_key() -> Result<Key> {
@@ -29,7 +29,6 @@ fn get_secret_key() -> Result<Key> {
 
 pub struct AppState {
     pub addr: Addr<MainActor>,
-    pub response_map: Arc<Mutex<HashMap<Uuid, oneshot::Sender<String>>>>,
 }
 
 #[allow(dead_code)]
@@ -77,17 +76,48 @@ async fn invoke(
         .expect("KIND")
         .to_string()
         .to_lowercase();
-
     let mut data = HashMap::new();
     data.insert(
         "input".to_string(),
         vec![EntityValue::STRING("Hello".to_string())],
     );
-    app_state
-        .addr
-        .do_send(ActorStartInvokeRequest { kind, data });
 
-    Ok(HttpResponse::Ok().body("OK"))
+    base_invoke(kind, app_state, data).await
+}
+
+async fn base_invoke(
+    kind: String,
+    app_state: web::Data<AppState>,
+    data: HashMap<String, Vec<EntityValue>>,
+) -> Result<impl Responder, Box<dyn Error>> {
+    let task_id = Uuid::new_v4();
+    let (tx, rx) = oneshot::channel();
+
+    {
+        let mut response_map = INVOKE_TASKS.get().expect("INVOKE_TASKS").lock()?;
+        response_map.insert(
+            task_id,
+            InvokeTask {
+                time: Instant::now(),
+                sender: tx,
+            },
+        );
+    }
+
+    app_state.addr.do_send(ActorStartInvokeRequest {
+        task_id,
+        kind,
+        data,
+    });
+
+    match rx.await {
+        Ok(response) => {
+            let mut response_map = INVOKE_TASKS.get().expect("INVOKE_TASKS").lock()?;
+            response_map.remove(&task_id);
+            Ok(HttpResponse::Ok().json(response))
+        }
+        Err(_) => Ok(HttpResponse::InternalServerError().body("Error processing request")),
+    }
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -97,7 +127,6 @@ pub(crate) async fn serve(spec: MainActorConfig, addr: Addr<MainActor>) -> std::
     }
 
     let secret_key = get_secret_key().map_io_err()?;
-    let response_map = Arc::new(Mutex::new(HashMap::new()));
     println!(
         "Server running on http://{}:{}",
         spec.server_host, spec.server_port
@@ -119,10 +148,7 @@ pub(crate) async fn serve(spec: MainActorConfig, addr: Addr<MainActor>) -> std::
                 "/auth-callback",
                 web::get().to(handlers::auth::auth_callback),
             )
-            .app_data(web::Data::new(AppState {
-                addr: addr.clone(),
-                response_map: response_map.clone(),
-            }));
+            .app_data(web::Data::new(AppState { addr: addr.clone() }));
 
         let mut llm_scope = web::scope("/llm");
         llm_scope = llm_scope.route("/chat", web::get().to(chat));
