@@ -83,10 +83,22 @@ impl ActorObject {
 
     pub fn kind(&self) -> String {
         match self {
-            ActorObject::Gemma { metadata, spec: _ } => "gemma".to_string(),
-            ActorObject::Quantized { metadata, spec: _ } => "quantized".to_string(),
-            ActorObject::E5 { metadata, spec: _ } => "e5".to_string(),
-            ActorObject::Main { metadata, spec: _ } => "main".to_string(),
+            ActorObject::Gemma {
+                metadata: _,
+                spec: _,
+            } => "gemma".to_string(),
+            ActorObject::Quantized {
+                metadata: _,
+                spec: _,
+            } => "quantized".to_string(),
+            ActorObject::E5 {
+                metadata: _,
+                spec: _,
+            } => "e5".to_string(),
+            ActorObject::Main {
+                metadata: _,
+                spec: _,
+            } => "main".to_string(),
         }
     }
 
