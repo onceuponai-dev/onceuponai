@@ -9,10 +9,10 @@ use once_cell::sync::OnceCell;
 use onceuponai_core::common_models::EntityValue;
 use rand::seq::SliceRandom;
 use serde::Deserialize;
+use std::sync::mpsc;
 use std::sync::{Arc, Mutex};
+use std::time::{Duration, Instant};
 use std::{collections::HashMap, net::SocketAddr};
-use tokio::sync::oneshot;
-use tokio::time::Instant;
 use uuid::Uuid;
 
 pub static CONNECTED_ACTORS: OnceCell<Arc<Mutex<HashMap<Uuid, ActorInfo>>>> = OnceCell::new();
@@ -21,7 +21,7 @@ pub static INVOKE_TASKS: OnceCell<Arc<Mutex<HashMap<Uuid, InvokeTask>>>> = OnceC
 #[derive(Debug)]
 pub struct InvokeTask {
     pub time: Instant,
-    pub sender: oneshot::Sender<HashMap<String, Vec<EntityValue>>>,
+    pub sender: mpsc::Sender<HashMap<String, Vec<EntityValue>>>,
 }
 
 #[derive(RemoteActor, Clone)]
@@ -40,6 +40,7 @@ pub struct MainActorConfig {
     pub server_port: u16,
     pub log_level: Option<String>,
     pub workers: Option<usize>,
+    pub invoke_timeout: Option<u64>,
 }
 
 impl Actor for MainActor {

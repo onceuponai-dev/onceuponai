@@ -19,8 +19,8 @@ use onceuponai_core::common::ResultExt;
 use onceuponai_core::common_models::EntityValue;
 use std::collections::HashMap;
 use std::error::Error;
-use tokio::sync::oneshot;
-use tokio::time::Instant;
+use std::sync::mpsc;
+use std::time::{Duration, Instant};
 use uuid::Uuid;
 
 fn get_secret_key() -> Result<Key> {
@@ -31,6 +31,7 @@ fn get_secret_key() -> Result<Key> {
 
 pub struct AppState {
     pub addr: Addr<MainActor>,
+    pub spec: MainActorConfig,
 }
 
 #[allow(dead_code)]
@@ -93,7 +94,7 @@ async fn base_invoke(
     data: HashMap<String, Vec<EntityValue>>,
 ) -> Result<impl Responder, Box<dyn Error>> {
     let task_id = Uuid::new_v4();
-    let (tx, rx) = oneshot::channel();
+    let (tx, rx) = mpsc::channel();
 
     let kind_connected = CONNECTED_ACTORS
         .get()
@@ -126,7 +127,9 @@ async fn base_invoke(
         data,
     });
 
-    match rx.await {
+    match rx.recv_timeout(Duration::from_secs(
+        app_state.spec.invoke_timeout.unwrap_or(5u64),
+    )) {
         Ok(response) => {
             let mut response_map = INVOKE_TASKS.get().expect("INVOKE_TASKS").lock()?;
             response_map.remove(&task_id);
@@ -138,6 +141,7 @@ async fn base_invoke(
 
 #[allow(clippy::too_many_arguments)]
 pub(crate) async fn serve(spec: MainActorConfig, addr: Addr<MainActor>) -> std::io::Result<()> {
+    let sp = spec.clone();
     if let Some(v) = spec.log_level {
         env_logger::init_from_env(env_logger::Env::new().default_filter_or(v));
     }
@@ -164,7 +168,10 @@ pub(crate) async fn serve(spec: MainActorConfig, addr: Addr<MainActor>) -> std::
                 "/auth-callback",
                 web::get().to(handlers::auth::auth_callback),
             )
-            .app_data(web::Data::new(AppState { addr: addr.clone() }));
+            .app_data(web::Data::new(AppState {
+                addr: addr.clone(),
+                spec: sp.clone(),
+            }));
 
         let mut llm_scope = web::scope("/llm");
         llm_scope = llm_scope.route("/chat", web::get().to(chat));
