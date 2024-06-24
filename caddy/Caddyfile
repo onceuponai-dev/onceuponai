@@ -3,6 +3,14 @@
         reverse_proxy rust:8080
     }
 
+    handle /auth* {
+        reverse_proxy rust:8080
+    }
+
+    handle /health* {
+        reverse_proxy rust:8080
+    }
+
     handle /ui* {
         reverse_proxy rust:8082
     }

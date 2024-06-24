@@ -8,6 +8,7 @@ pub mod actors;
 pub mod cli;
 pub mod cluster;
 pub mod config;
+pub mod guards;
 pub mod handlers;
 pub mod llm;
 pub mod models;

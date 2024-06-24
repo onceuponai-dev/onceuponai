@@ -1,12 +1,14 @@
 use crate::actors::main_actor::{MainActor, MainActorConfig};
+use crate::guards::AuthGuard;
 use crate::handlers::actors::{connected_actors, invoke};
-use crate::handlers::chat::chat;
 use crate::handlers::users::user;
 use crate::handlers::{
     self, assets_css, assets_js, health, index_html, ASSETS_CSS_HASH, ASSETS_JS_HASH,
 };
 use actix::Addr;
+use actix_session::SessionExt;
 use actix_session::{storage::CookieSessionStore, SessionMiddleware};
+use actix_web::guard::Guard;
 use actix_web::middleware::Logger;
 use actix_web::{cookie::Key, web, App, HttpServer};
 use anyhow::Result;
@@ -46,6 +48,10 @@ pub(crate) async fn serve(spec: MainActorConfig, addr: Addr<MainActor>) -> std::
                 secret_key.clone(),
             ))
             .wrap(Logger::default())
+            .app_data(web::Data::new(AppState {
+                addr: addr.clone(),
+                spec: sp.clone(),
+            }))
             .route("/", web::get().to(index_html))
             .route(
                 &format!("/assets/index-{}.js", ASSETS_JS_HASH),
@@ -55,24 +61,24 @@ pub(crate) async fn serve(spec: MainActorConfig, addr: Addr<MainActor>) -> std::
                 &format!("/assets/index-{}.css", ASSETS_CSS_HASH),
                 web::get().to(assets_css),
             )
-            .route("/api/health", web::get().to(health))
-            .route("/api/user", web::get().to(user))
-            .route("/api/actors", web::get().to(connected_actors))
-            .route("/api/invoke/{kind}/{name}", web::post().to(invoke))
-            .route("/api/auth", web::get().to(handlers::auth::auth))
-            .route(
-                "/api/auth-callback",
-                web::get().to(handlers::auth::auth_callback),
-            )
-            .app_data(web::Data::new(AppState {
-                addr: addr.clone(),
-                spec: sp.clone(),
-            }));
+            .route("/health", web::get().to(health));
 
-        let mut llm_scope = web::scope("/llm");
-        llm_scope = llm_scope.route("/chat", web::get().to(chat));
+        app = app.service(
+            web::scope("/auth")
+                .route("/", web::get().to(handlers::auth::auth))
+                .route("/callback", web::get().to(handlers::auth::auth_callback)),
+        );
 
-        app = app.service(llm_scope);
+        let mut api_scope = web::scope("/api")
+            .route("/user", web::get().to(user))
+            .route("/actors", web::get().to(connected_actors))
+            .route("/invoke/{kind}/{name}", web::post().to(invoke));
+
+        if sp.oidc.is_some() {
+            api_scope = api_scope.guard(AuthGuard);
+        }
+
+        app = app.service(api_scope);
 
         //app.service(fs::Files::new("/", "../onceuponai-ui/dist/").show_files_listing())
         app

@@ -15,6 +15,7 @@ use openidconnect::{
     PkceCodeChallenge, RedirectUrl,
 };
 use openidconnect::{OAuth2TokenResponse, TokenResponse};
+use serde_json::json;
 use std::error::Error;
 
 pub async fn auth(
@@ -122,4 +123,8 @@ pub async fn auth_callback(
     Ok(HttpResponse::Found()
         .append_header(("Location", "/".to_string()))
         .finish())
+}
+
+pub async fn unauthorized() -> HttpResponse {
+    HttpResponse::Unauthorized().json(json!({"error": "Unauthorized"}))
 }
