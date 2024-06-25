@@ -92,12 +92,12 @@ export default defineComponent({
     </v-card>
     <v-bottom-navigation color="primary" horizontal height="75">
       <v-row>
-        <v-col cols="2">
+        <v-col cols="2" offset="1">
           <v-select label="Actor"  menu-icon="mdi-brain" bg-color="white" density="comfortable"
             :items="['California', 'Colorado', 'Florida', 'Georgia', 'Texas', 'Wyoming']"></v-select>
         </v-col>
-        <v-col cols="8">
-          <v-text-field v-model="inputMessage" @keyup.enter="sendMessage" label="🗯️ Message" variant="underlined"
+        <v-col cols="7">
+          <v-text-field clearable v-model="inputMessage" @keyup.enter="sendMessage" label="🗯️ Message" variant="underlined"
             required></v-text-field>
         </v-col>
         <v-col cols="2">
