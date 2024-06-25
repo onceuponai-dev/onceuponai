@@ -7,9 +7,9 @@ impl Guard for AuthGuard {
     fn check(&self, ctx: &actix_web::guard::GuardContext<'_>) -> bool {
         let session = ctx.get_session();
         if let Ok(Some(_email)) = session.get::<String>("EMAIL") {
-            return false;
+            return true;
         }
 
-        true
+        false
     }
 }

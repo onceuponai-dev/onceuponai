@@ -2,29 +2,55 @@
 import { defineComponent, ref, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 
+interface Model {
+  name: string;
+  state: string;
+  host: string;
+}
+
 export default defineComponent({
   name: 'Stories',
   components: {
   },
   setup() {
-    const videoDialog = ref(false);
-    const show = ref(false);
-    const videoSource = ref("");
     const router = useRouter();
+
+    const dialog = ref(false);
+    const selectedModel: any = ref<Model | null>(null);
+
+    const headers = [
+      { text: 'Name', value: 'name' },
+      { text: 'State', value: 'state' },
+      { text: 'Host', value: 'host' },
+      { text: 'Actions', value: 'actions', sortable: false },
+    ];
+
+    const models: any = ref<Model[]>([
+      { name: 'Model 1', state: 'Active', host: 'Host 1' },
+      { name: 'Model 2', state: 'Inactive', host: 'Host 2' },
+      // Add more models as needed
+    ]);
+
+    const openDialog = (model: Model) => {
+      selectedModel.value = model;
+      dialog.value = true;
+    };
+
+    const closeDialog = () => {
+      dialog.value = false;
+    };
 
     onMounted(() => { });
 
-    const showVideo = (video: string) => {
-      videoSource.value = `https://www.youtube.com/embed/${video}`;
-      videoDialog.value = true;
-    };
 
     return {
-      videoDialog,
-      show,
-      showVideo,
-      videoSource,
-      router
+      router,
+      headers,
+      models,
+      openDialog,
+      closeDialog,
+      selectedModel,
+      dialog
     };
 
   }
@@ -33,87 +59,29 @@ export default defineComponent({
 
 <template>
   <v-container>
-    <br />
-    <v-row dense align="center" justify="center">
-      <v-col cols="auto">
-        <v-card class="mx-auto" width="309">
-          <v-img src="/images/LLMCheatsheets.jpeg" cover></v-img>
-          <v-card-title class="swanky-font">
-          </v-card-title>
+    <v-data-table :headers="headers" :items="models" item-key="name">
+      <template v-slot:[`item.actions`]="{ item }">
+        <v-btn @click="openDialog(item)" color="primary">Details</v-btn>
+      </template>
+    </v-data-table>
 
-          <v-card-subtitle>
-          </v-card-subtitle>
-
-          <v-card-actions>
-            <v-btn color="blue-lighten-2" href="/cheatsheets/index.html" variant="outlined">
-              Check
-            </v-btn>
-            <v-btn color="blue-lighten-2" variant="outlined" @click="showVideo('RDhXRGfeCwk')">
-              Intro
-            </v-btn>
-            <v-spacer></v-spacer>
-            <v-btn :icon="show ? 'mdi-chevron-up' : 'mdi-chevron-down'" @click="show = !show"></v-btn>
-          </v-card-actions>
-
-          <v-expand-transition>
-            <div v-show="show">
-              <v-divider></v-divider>
-              <v-card-text>
-                🧞‍♂️ Rub a lamp and unleash the LLM genie from interactive cheat sheets! Get your coding wishes granted
-                with LLM-powered insights – all in your browser.
-              </v-card-text>
-            </div>
-          </v-expand-transition>
-        </v-card>
-      </v-col>
-    </v-row>
-    <v-row dense align="center" justify="center">
-      <v-col cols="auto">
-        <v-card class="mx-auto" width="309">
-          <v-img src="/images/ThumbeLLama.jpeg" cover></v-img>
-          <v-card-title class="swanky-font">
-          </v-card-title>
-
-          <v-card-subtitle>
-          </v-card-subtitle>
-
-          <v-card-actions>
-            <v-btn color="blue-lighten-2" href="https://stories.onceuponai.dev/stories-thumbellama/" variant="outlined">
-              Check
-            </v-btn>
-            <v-btn color="blue-lighten-2" variant="outlined" @click="showVideo('Cex6d4ZnmhY')">
-              Intro
-            </v-btn>
-            <v-spacer></v-spacer>
-            <v-btn :icon="show ? 'mdi-chevron-up' : 'mdi-chevron-down'" @click="show = !show"></v-btn>
-          </v-card-actions>
-
-          <v-expand-transition>
-            <div v-show="show">
-              <v-divider></v-divider>
-              <v-card-text>
-                Story about TinyLLama, a 1.1 billion parameter language model. 
-                How to convert it to WebAssembly using mlc-llm and run on typescript web application! 
-              </v-card-text>
-            </div>
-          </v-expand-transition>
-        </v-card>
-      </v-col>
-    </v-row>
-
-    <br />
-    <v-dialog v-model="videoDialog" max-width="900">
+    <v-dialog v-model="dialog" max-width="500px">
       <v-card>
+        <v-card-title>Model Details</v-card-title>
         <v-card-text>
-          <div class="video-container">
-            <iframe width="900" :src="videoSource" frameborder="0" allowfullscreen></iframe>
-          </div>
+          <p><strong>Name:</strong> {{ selectedModel?.name }}</p>
+          <p><strong>State:</strong> {{ selectedModel?.state }}</p>
+          <p><strong>Host:</strong> {{ selectedModel?.host }}</p>
         </v-card-text>
+        <v-card-actions>
+          <v-spacer></v-spacer>
+          <v-btn color="primary" text @click="closeDialog">Close</v-btn>
+        </v-card-actions>
       </v-card>
     </v-dialog>
-
-    <br /><br /><br />
   </v-container>
+
+
 </template>
 
 <style scoped>
@@ -157,5 +125,4 @@ export default defineComponent({
   font-family: 'Fontdiner Swanky';
   font-size: 32;
 }
-
 </style>

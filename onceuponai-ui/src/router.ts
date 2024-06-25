@@ -7,6 +7,7 @@ import FooterComponent from '@/components/Footer.vue';
 import ProfileComponent from '@/components/Profile.vue';
 import ModelsComponent from '@/components/Models.vue';
 import DashboardComponent from '@/components/Dashboard.vue';
+import ChatComponent from '@/components/Chat.vue';
 
 const routes: Array<any> = [
   {
@@ -62,6 +63,14 @@ const routes: Array<any> = [
     name: 'Dashboard',
     components: {
       default: DashboardComponent,
+      footer: FooterComponent
+    }
+  },
+ {
+    path: '/chat',
+    name: 'Chat',
+    components: {
+      default: ChatComponent,
       footer: FooterComponent
     }
   },

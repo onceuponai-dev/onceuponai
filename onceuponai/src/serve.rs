@@ -6,10 +6,9 @@ use crate::handlers::{
     self, assets_css, assets_js, health, index_html, ASSETS_CSS_HASH, ASSETS_JS_HASH,
 };
 use actix::Addr;
-use actix_session::SessionExt;
 use actix_session::{storage::CookieSessionStore, SessionMiddleware};
-use actix_web::guard::Guard;
 use actix_web::middleware::Logger;
+use actix_web::HttpResponse;
 use actix_web::{cookie::Key, web, App, HttpServer};
 use anyhow::Result;
 use base64::{engine::general_purpose, Engine as _};
@@ -65,17 +64,21 @@ pub(crate) async fn serve(spec: MainActorConfig, addr: Addr<MainActor>) -> std::
 
         app = app.service(
             web::scope("/auth")
-                .route("/", web::get().to(handlers::auth::auth))
+                .route("", web::get().to(handlers::auth::auth))
                 .route("/callback", web::get().to(handlers::auth::auth_callback)),
         );
 
         let mut api_scope = web::scope("/api")
-            .route("/user", web::get().to(user))
             .route("/actors", web::get().to(connected_actors))
             .route("/invoke/{kind}/{name}", web::post().to(invoke));
 
         if sp.oidc.is_some() {
-            api_scope = api_scope.guard(AuthGuard);
+            api_scope = api_scope
+                .guard(AuthGuard)
+                .route("/user", web::get().to(handlers::users::user));
+            app = app.default_service(web::route().to(HttpResponse::Unauthorized));
+        } else {
+            api_scope = api_scope.route("/user", web::get().to(handlers::users::anonymous));
         }
 
         app = app.service(api_scope);
