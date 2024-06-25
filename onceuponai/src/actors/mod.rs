@@ -34,6 +34,7 @@ pub struct ActorInfo {
 #[derive(RemoteMessage, Serialize, Deserialize, Debug, Clone)]
 pub struct ActorMetadata {
     pub name: String,
+    pub features: Option<Vec<String>>,
     pub actor_host: String,
     pub actor_seed: Option<String>,
 }
@@ -72,12 +73,26 @@ pub enum ActorObject {
 }
 
 impl ActorObject {
-    pub fn metadata(&self) -> &ActorMetadata {
+    pub fn metadata(&self) -> ActorMetadata {
         match self {
-            ActorObject::Gemma { metadata, spec: _ } => metadata,
-            ActorObject::Quantized { metadata, spec: _ } => metadata,
-            ActorObject::E5 { metadata, spec: _ } => metadata,
-            ActorObject::Main { metadata, spec: _ } => metadata,
+            ActorObject::Gemma { metadata, spec: _ } => {
+                let mut m = metadata.clone();
+                m.features = Some(vec!["chat".to_string()]);
+                m
+            }
+
+            ActorObject::Quantized { metadata, spec: _ } => {
+                let mut m = metadata.clone();
+
+                m.features = Some(vec!["chat".to_string()]);
+                m
+            }
+            ActorObject::E5 { metadata, spec: _ } => {
+                let mut m = metadata.clone();
+                m.features = Some(vec!["embed".to_string()]);
+                m
+            }
+            ActorObject::Main { metadata, spec: _ } => metadata.clone(),
         }
     }
 

@@ -25,7 +25,7 @@ export default defineComponent({
       { title: 'Datasets', icon: 'mdi-database', route: '/stores' },
       { title: 'Embeddings', icon: 'mdi-vector-triangle', route: '/embeddings' },
       { title: 'Prompts', icon: 'mdi-code-brackets', route: '/prompts' },
-      { title: 'Models', icon: 'mdi-brain', route: '/models' },
+      { title: 'Actors', icon: 'mdi-brain', route: '/models' },
       { title: 'Dashboard', icon: 'mdi-view-dashboard', route: '/dashboard' },
       { title: 'Chat', icon: 'mdi-chat', route: '/chat' },
       { title: 'Support', icon: 'mdi-help-circle', route: '/support' },
@@ -109,7 +109,7 @@ export default defineComponent({
     </v-navigation-drawer>
 
     <v-app-bar app>
-      <v-toolbar-title>My Application</v-toolbar-title>
+      <v-toolbar-title>Once Upon ... AI</v-toolbar-title>
 
       <v-spacer></v-spacer>
 

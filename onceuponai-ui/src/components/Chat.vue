@@ -80,7 +80,7 @@ export default defineComponent({
       <v-row v-for="(message, index) in messages" :key="index" class="mb-2">
         <v-col :cols="message.type === 'request' ? '8' : '12'" :offset="message.type === 'request' ? '0' : '1'">
           <v-card :class="message.type" class="pa-3 rounded-pill" width="90%">
-            <v-card-text>{{ message.text }}</v-card-text>
+            <v-card-text class="card-text">{{ message.text }}</v-card-text>
           </v-card>
         </v-col>
       </v-row>
@@ -92,7 +92,11 @@ export default defineComponent({
     </v-card>
     <v-bottom-navigation color="primary" horizontal height="75">
       <v-row>
-        <v-col cols="9" offset="1">
+        <v-col cols="2">
+          <v-select label="Actor"  menu-icon="mdi-brain" bg-color="white" density="comfortable"
+            :items="['California', 'Colorado', 'Florida', 'Georgia', 'Texas', 'Wyoming']"></v-select>
+        </v-col>
+        <v-col cols="8">
           <v-text-field v-model="inputMessage" @keyup.enter="sendMessage" label="🗯️ Message" variant="underlined"
             required></v-text-field>
         </v-col>
@@ -138,6 +142,13 @@ export default defineComponent({
   padding: 16px !important;
 }
 
+.card-text {
+  font-family: ui-sans-serif, -apple-system, system-ui, Segoe UI, Roboto, Ubuntu, Cantarell, Noto Sans, sans-serif, Helvetica, Apple Color Emoji, Arial, Segoe UI Emoji, Segoe UI Symbol !important;
+  font-size: 1rem !important;
+  font-variation-settings: normal !important;
+
+}
+
 .rounded-pill {
   border-radius: 15px !important;
   margin-left: 1vw;
@@ -150,6 +161,7 @@ export default defineComponent({
 .chat-area {
   overflow-y: auto;
   max-height: 75vh !important;
-  font-family: "Roboto", sans-serif !important;
+  font-family: ui-sans-serif, -apple-system, system-ui, Segoe UI, Roboto, Ubuntu, Cantarell, Noto Sans, sans-serif, Helvetica, Apple Color Emoji, Arial, Segoe UI Emoji, Segoe UI Symbol !important;
+  font-size: 2rem !important;
 }
 </style>

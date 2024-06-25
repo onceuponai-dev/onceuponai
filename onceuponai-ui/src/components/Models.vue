@@ -1,11 +1,18 @@
 <script lang="ts">
 import { defineComponent, ref, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
+import axios from 'axios';
 
-interface Model {
+interface Actor {
+  uuid: string;
+  kind: string;
+  metadata: ActorMetadata;
+}
+
+interface ActorMetadata {
   name: string;
-  state: string;
-  host: string;
+  actor_host: string;
+  actor_seed: string;
 }
 
 export default defineComponent({
@@ -16,22 +23,35 @@ export default defineComponent({
     const router = useRouter();
 
     const dialog = ref(false);
-    const selectedModel: any = ref<Model | null>(null);
+    const selectedModel: any = ref<Actor | null>(null);
+    const actors: any = ref<Actor[]>([]);
+
+    axios.get(`/api/actors`)
+      .then(function (response) {
+        var values = Object.keys(response.data).map(function (key) {
+          return response.data[key];
+        });
+
+        console.log(values);
+        actors.value = values;
+      })
+      .catch(function (error) {
+        console.log(error);
+      });
+
 
     const headers = [
-      { text: 'Name', value: 'name' },
-      { text: 'State', value: 'state' },
-      { text: 'Host', value: 'host' },
+      { title: 'UUID', value: 'uuid' },
+      { title: 'Kind', value: 'kind' },
+      { title: 'Name', value: 'metadata.name' },
+      { title: 'Host', value: 'metadata.actor_host' },
+      { title: 'Seed', value: 'metadata.actor_seed' },
+      { title: 'Features', value: 'metadata.features' },
       { text: 'Actions', value: 'actions', sortable: false },
     ];
 
-    const models: any = ref<Model[]>([
-      { name: 'Model 1', state: 'Active', host: 'Host 1' },
-      { name: 'Model 2', state: 'Inactive', host: 'Host 2' },
-      // Add more models as needed
-    ]);
 
-    const openDialog = (model: Model) => {
+    const openDialog = (model: Actor) => {
       selectedModel.value = model;
       dialog.value = true;
     };
@@ -46,7 +66,7 @@ export default defineComponent({
     return {
       router,
       headers,
-      models,
+      actors,
       openDialog,
       closeDialog,
       selectedModel,
@@ -59,7 +79,9 @@ export default defineComponent({
 
 <template>
   <v-container>
-    <v-data-table :headers="headers" :items="models" item-key="name">
+    <h1>Active Actors</h1>
+<v-divider></v-divider>
+    <v-data-table :headers="headers" :items="actors" item-key="kind">
       <template v-slot:[`item.actions`]="{ item }">
         <v-btn @click="openDialog(item)" color="primary">Details</v-btn>
       </template>
@@ -84,45 +106,4 @@ export default defineComponent({
 
 </template>
 
-<style scoped>
-.position-absolute {
-  position: absolute;
-  top: 40%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-}
-
-.position-absolute-buttons {
-  position: absolute;
-  top: 70%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-}
-
-.bangers-font {
-  font-family: 'Bangers', cursive;
-  font-size: 350%;
-  padding: 7px;
-  margin: 5px;
-}
-
-.video-container {
-  position: relative;
-  padding-bottom: 56.25%;
-  /* 16:9 aspect ratio for widescreen videos */
-  overflow: hidden;
-}
-
-.video-container iframe {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-}
-
-.swanky-font {
-  font-family: 'Fontdiner Swanky';
-  font-size: 32;
-}
-</style>
+<style scoped></style>

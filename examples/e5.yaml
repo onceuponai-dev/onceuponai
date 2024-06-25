@@ -1,7 +1,7 @@
 kind: e5
 metadata: 
   name: multilingual
-  actor_host: 127.0.0.1:1993
+  actor_host: 127.0.0.1:1994
   actor_seed: 127.0.0.1:1992
 spec:
   model_repo: intfloat/multilingual-e5-small
