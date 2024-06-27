@@ -16,7 +16,7 @@ interface ActorMetadata {
 }
 
 export default defineComponent({
-  name: 'Stories',
+  name: 'Actors',
   components: {
   },
   setup() {

@@ -42,6 +42,7 @@ pub struct MainActorConfig {
     pub workers: Option<usize>,
     pub invoke_timeout: Option<u64>,
     pub session_key: Option<String>,
+    pub personal_access_token_secret: Option<String>,
     pub oidc: Option<MainActorOidcConfig>,
 }
 

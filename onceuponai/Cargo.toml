@@ -17,11 +17,13 @@ async-stream = { workspace = true }
 base64 = { workspace = true }
 bytes = { workspace = true }
 clap = { workspace = true }
+chrono = { workspace = true }
 cookie = { workspace = true }
 derive_more = { workspace = true }
 dotenv = { workspace = true }
 env_logger = { workspace = true }
 envy = { workspace = true }
+jsonwebtoken = { workspace = true }
 log = { workspace = true }
 num-traits = { workspace = true }
 once_cell = { workspace = true }

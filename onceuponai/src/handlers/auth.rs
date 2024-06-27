@@ -5,7 +5,8 @@ use actix_web::{web, Responder};
 use actix_web::{HttpRequest, HttpResponse};
 use anyhow::anyhow;
 use anyhow::Result;
-use log::debug;
+use chrono::{Duration, Utc};
+use jsonwebtoken::{decode, encode, DecodingKey, EncodingKey, Header, TokenData, Validation};
 use onceuponai_core::common::{Errors, OptionToResult};
 use openidconnect::core::{CoreAuthenticationFlow, CoreClient, CoreProviderMetadata};
 use openidconnect::reqwest::http_client;
@@ -15,8 +16,10 @@ use openidconnect::{
     PkceCodeChallenge, RedirectUrl,
 };
 use openidconnect::{OAuth2TokenResponse, TokenResponse};
+use serde::{Deserialize, Serialize};
 use serde_json::json;
 use std::error::Error;
+use std::time::{SystemTime, UNIX_EPOCH};
 
 pub async fn auth(
     _req: HttpRequest,
@@ -127,4 +130,68 @@ pub async fn auth_callback(
 
 pub async fn unauthorized() -> HttpResponse {
     HttpResponse::Unauthorized().json(json!({"error": "Unauthorized"}))
+}
+
+pub async fn personal_token(
+    _req: HttpRequest,
+    pat_request: web::Json<PATRequest>,
+    session: actix_session::Session,
+    app_state: web::Data<AppState>,
+) -> Result<impl Responder, Box<dyn Error>> {
+    let email: Option<String> = session.get("EMAIL")?;
+    if let Some(email) = email {
+        let secret = &app_state
+            .spec
+            .clone()
+            .personal_access_token_secret
+            .expect("PERSONAL_ACCESS_TOKEN_SECRET")
+            .to_string();
+        let personal_access_token = generate_pat_token(secret, &email, pat_request.expiration_days);
+        Ok(HttpResponse::Ok().json(PATResponse {
+            personal_access_token,
+        }))
+    } else {
+        Ok(HttpResponse::Ok().body("No session found"))
+    }
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct PATRequest {
+    expiration_days: i64,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct PATResponse {
+    personal_access_token: String,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct PATClaims {
+    sub: String,
+    exp: usize,
+}
+
+pub fn generate_pat_token(secret: &str, email: &str, expiration_days: i64) -> String {
+    let my_claims = PATClaims {
+        sub: email.to_string(),
+        exp: (Utc::now() + Duration::days(expiration_days)).timestamp() as usize,
+    };
+
+    encode(
+        &Header::default(),
+        &my_claims,
+        &EncodingKey::from_secret(secret.as_ref()),
+    )
+    .unwrap()
+}
+
+pub fn verify_pat_token(
+    token: &str,
+    secret: &str,
+) -> Result<TokenData<PATClaims>, jsonwebtoken::errors::Error> {
+    decode::<PATClaims>(
+        token,
+        &DecodingKey::from_secret(secret.as_ref()),
+        &Validation::default(),
+    )
 }

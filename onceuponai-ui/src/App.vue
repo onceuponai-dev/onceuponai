@@ -22,13 +22,14 @@ export default defineComponent({
 
     const drawer: any = ref(true);
     const items: any = ref([
-      { title: 'Datasets', icon: 'mdi-database', route: '/stores' },
-      { title: 'Embeddings', icon: 'mdi-vector-triangle', route: '/embeddings' },
-      { title: 'Prompts', icon: 'mdi-code-brackets', route: '/prompts' },
-      { title: 'Actors', icon: 'mdi-brain', route: '/models' },
-      { title: 'Dashboard', icon: 'mdi-view-dashboard', route: '/dashboard' },
-      { title: 'Chat', icon: 'mdi-chat', route: '/chat' },
-      { title: 'Support', icon: 'mdi-help-circle', route: '/support' },
+      { title: 'ACTORS', icon: 'mdi-brain', route: '/actors' },
+      { title: 'CHAT', icon: 'mdi-chat', route: '/chat' },
+      { title: 'DATASETS', icon: 'mdi-database', route: '/stores' },
+      { title: 'EMBEDDINGS', icon: 'mdi-vector-triangle', route: '/embeddings' },
+      { title: 'PROMPTS', icon: 'mdi-code-brackets', route: '/prompts' },
+      { title: 'DASHBOARD', icon: 'mdi-view-dashboard', route: '/dashboard' },
+      { title: 'PERSONAL TOKENS', icon: 'mdi-account-key', route: '/personal-tokens' },
+      { title: 'SUPPORT', icon: 'mdi-help-circle', route: '/support' },
     ]);
 
     const projects: any = ref([

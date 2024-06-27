@@ -74,8 +74,18 @@ pub(crate) async fn serve(spec: MainActorConfig, addr: Addr<MainActor>) -> std::
 
         if sp.oidc.is_some() {
             api_scope = api_scope
-                .guard(AuthGuard)
-                .route("/user", web::get().to(handlers::users::user));
+                .guard(AuthGuard {
+                    secret: sp
+                        .clone()
+                        .personal_access_token_secret
+                        .expect("PERSONAL_ACCESS_TOKEN_SECRET")
+                        .to_string(),
+                })
+                .route("/user", web::get().to(handlers::users::user))
+                .route(
+                    "/user/personal-token",
+                    web::post().to(handlers::auth::personal_token),
+                );
             app = app.default_service(web::route().to(HttpResponse::Unauthorized));
         } else {
             api_scope = api_scope.route("/user", web::get().to(handlers::users::anonymous));

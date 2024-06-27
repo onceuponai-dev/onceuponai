@@ -5,9 +5,10 @@ import StoresComponent from '@/components/Stores.vue';
 import TermsComponent from '@/components/Terms.vue';
 import FooterComponent from '@/components/Footer.vue';
 import ProfileComponent from '@/components/Profile.vue';
-import ModelsComponent from '@/components/Models.vue';
+import ActorsComponent from '@/components/Actors.vue';
 import DashboardComponent from '@/components/Dashboard.vue';
 import ChatComponent from '@/components/Chat.vue';
+import PersonalTokensComponent from '@/components/PersonalTokens.vue';
 
 const routes: Array<any> = [
   {
@@ -35,10 +36,10 @@ const routes: Array<any> = [
     }
   },
   {
-    path: '/models',
-    name: 'Models',
+    path: '/actors',
+    name: 'Actors',
     components: {
-      default: ModelsComponent,
+      default: ActorsComponent,
       footer: FooterComponent
     }
   },
@@ -71,6 +72,14 @@ const routes: Array<any> = [
     name: 'Chat',
     components: {
       default: ChatComponent,
+      footer: FooterComponent
+    }
+  },
+ {
+    path: '/personal-tokens',
+    name: 'PersonalTokens',
+    components: {
+      default: PersonalTokensComponent,
       footer: FooterComponent
     }
   },

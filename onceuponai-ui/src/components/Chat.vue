@@ -17,6 +17,25 @@ export default defineComponent({
     const messages = ref<Message[]>([]);
     const chatArea = ref<HTMLElement | null>(null);
     const showProgress = ref(false);
+    const actors: any = ref([]);
+    const selectedActor: any = ref(null);
+
+    axios.get(`/api/actors`)
+      .then(function (response) {
+        var values = Object.keys(response.data).map((key) => {
+          return response.data[key];
+        }).filter((v) => v.metadata.features.includes("chat")).map((v) => `${v.kind}/${v.metadata.name}`);
+
+        console.log(values);
+        actors.value = values;
+        if(values.length > 0) {
+          selectedActor.value = values[0];
+        }
+        
+      })
+      .catch(function (error) {
+        console.log(error);
+      });
 
     const sendMessage = () => {
       if (inputMessage.value.trim() === '') return;
@@ -25,7 +44,7 @@ export default defineComponent({
       messages.value.push({ text: text, type: 'request' });
       inputMessage.value = '';
       showProgress.value = true;
-      axios.post(`/api/invoke/quantized/bielik`, {
+      axios.post(`/api/invoke/${selectedActor.value}`, {
         prompt: [text],
       }, {
         headers: {
@@ -66,7 +85,9 @@ export default defineComponent({
       messages,
       sendMessage,
       chatArea,
-      showProgress
+      showProgress,
+      selectedActor,
+      actors
     };
 
 
@@ -93,15 +114,15 @@ export default defineComponent({
     <v-bottom-navigation color="primary" horizontal height="75">
       <v-row>
         <v-col cols="2" offset="1">
-          <v-select label="Actor"  menu-icon="mdi-brain" bg-color="white" density="comfortable"
-            :items="['California', 'Colorado', 'Florida', 'Georgia', 'Texas', 'Wyoming']"></v-select>
+          <v-select label="Actor"  menu-icon="mdi-brain" bg-color="white" density="comfortable" v-model="selectedActor"
+            :items="actors"></v-select>
         </v-col>
         <v-col cols="7">
-          <v-text-field clearable v-model="inputMessage" @keyup.enter="sendMessage" label="🗯️ Message" variant="underlined"
+          <v-text-field clearable v-model="inputMessage" @keyup.enter="sendMessage" label="🗯️ Message" variant="underlined" :disabled="actors == 0"
             required></v-text-field>
         </v-col>
         <v-col cols="2">
-          <v-btn @click="sendMessage">
+          <v-btn @click="sendMessage" :disabled="actors == 0" >
             <v-icon>mdi-send</v-icon>
 
           </v-btn>
