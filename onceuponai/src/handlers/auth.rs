@@ -1,8 +1,8 @@
 use crate::models::{AuthCallback, PATClaims, PATRequest, PATResponse, TokenLogin};
 use crate::serve::AppState;
 use crate::session::SessionExt;
+use actix_web::HttpResponse;
 use actix_web::{web, Responder};
-use actix_web::{HttpRequest, HttpResponse};
 use anyhow::anyhow;
 use anyhow::Result;
 use chrono::{Duration, Utc};
@@ -18,7 +18,6 @@ use openidconnect::{
 use openidconnect::{OAuth2TokenResponse, TokenResponse};
 use rand::distributions::Alphanumeric;
 use rand::Rng;
-use serde::{Deserialize, Serialize};
 use serde_json::json;
 use std::error::Error;
 
@@ -26,7 +25,7 @@ pub async fn auth(
     session: actix_session::Session,
     app_state: web::Data<AppState>,
 ) -> Result<impl Responder, Box<dyn Error>> {
-    let oidc = app_state.spec.oidc.clone().expect("OIDC");
+    let oidc = app_state.spec.oidc();
     let provider_metadata =
         CoreProviderMetadata::discover(&IssuerUrl::new(oidc.issuer_url.clone())?, http_client)?;
 
@@ -38,7 +37,7 @@ pub async fn auth(
     .set_redirect_uri(RedirectUrl::new(oidc.redirect_url.clone())?);
 
     let (pkce_challenge, pkce_verifier) = PkceCodeChallenge::new_random_sha256();
-    let (auth_url, csrf_token, nonce) = client
+    let (auth_url, _csrf_token, nonce) = client
         .authorize_url(
             CoreAuthenticationFlow::AuthorizationCode,
             CsrfToken::new_random,
@@ -65,7 +64,7 @@ pub async fn auth_callback(
     session: actix_session::Session,
     app_state: web::Data<AppState>,
 ) -> Result<impl Responder, Box<dyn Error>> {
-    let oidc = app_state.spec.oidc.clone().expect("OIDC");
+    let oidc = app_state.spec.oidc();
 
     let pkce = session.pkce()?;
     let nonce = session.nonce()?;
@@ -139,7 +138,7 @@ pub async fn token_login(
 ) -> Result<impl Responder, Box<dyn Error>> {
     let token = token.token.clone();
 
-    if app_state.spec.clone()._auth_token.expect("ROOT_TOKEN") == token {
+    if app_state.spec._auth_token() == token {
         let _ = session.set_email("user@");
         return Ok(HttpResponse::Found()
             .append_header(("Location", "/".to_string()))

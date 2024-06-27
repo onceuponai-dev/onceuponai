@@ -9,6 +9,7 @@ use anyhow::Result;
 pub async fn start_cluster(file: &String) -> Result<()> {
     let actor = ActorBuilder::build(file).await?;
 
+    println!("{}", LOGO);
     match actor {
         ActorInstance::Main(main_actor) => {
             let _ = Cluster::new(main_actor.own_addr, Vec::new());
@@ -33,3 +34,12 @@ pub async fn start_cluster(file: &String) -> Result<()> {
     //System::current().stop();
     Ok(())
 }
+
+const LOGO: &str = r#"
+ ██████╗ ███╗   ██╗ ██████╗███████╗    ██╗   ██╗██████╗  ██████╗ ███╗   ██╗                  █████╗ ██╗
+██╔═══██╗████╗  ██║██╔════╝██╔════╝    ██║   ██║██╔══██╗██╔═══██╗████╗  ██║                 ██╔══██╗██║
+██║   ██║██╔██╗ ██║██║     █████╗      ██║   ██║██████╔╝██║   ██║██╔██╗ ██║                 ███████║██║
+██║   ██║██║╚██╗██║██║     ██╔══╝      ██║   ██║██╔═══╝ ██║   ██║██║╚██╗██║                 ██╔══██║██║
+╚██████╔╝██║ ╚████║╚██████╗███████╗    ╚██████╔╝██║     ╚██████╔╝██║ ╚████║    ██╗██╗██╗    ██║  ██║██║
+ ╚═════╝ ╚═╝  ╚═══╝ ╚═════╝╚══════╝     ╚═════╝ ╚═╝      ╚═════╝ ╚═╝  ╚═══╝    ╚═╝╚═╝╚═╝    ╚═╝  ╚═╝╚═╝
+"#;

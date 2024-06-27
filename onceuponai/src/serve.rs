@@ -38,13 +38,13 @@ pub(crate) async fn serve(spec: MainActorConfig, addr: Addr<MainActor>) -> std::
         env_logger::init_from_env(env_logger::Env::new().default_filter_or(v));
     }
 
-    if sp.oidc.is_none() {
-        let root_token = generate_token(50);
-        sp._auth_token = Some(root_token.clone());
+    if !sp.is_oidc() {
+        let _auth_token = generate_token(50);
+        sp._auth_token_set(_auth_token.clone());
         // warn!("Auth token ");
         println!(
             "Server running on http://{}:{}/login?token={}",
-            spec.server_host, spec.server_port, root_token
+            spec.server_host, spec.server_port, _auth_token
         );
     } else {
         println!(
@@ -75,16 +75,14 @@ pub(crate) async fn serve(spec: MainActorConfig, addr: Addr<MainActor>) -> std::
             )
             .route("/health", web::get().to(health));
 
-        if sp.oidc.is_none() && sp._auth_token.is_some() {
-            app = app.route("/login", web::get().to(handlers::auth::token_login));
-        }
-
-        if sp.oidc.is_some() {
+        if sp.is_oidc() {
             app = app.service(
                 web::scope("/auth")
                     .route("", web::get().to(handlers::auth::auth))
                     .route("/callback", web::get().to(handlers::auth::auth_callback)),
             );
+        } else {
+            app = app.route("/login", web::get().to(handlers::auth::token_login));
         }
 
         let mut api_scope = web::scope("/api")

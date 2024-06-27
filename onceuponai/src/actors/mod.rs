@@ -1,8 +1,10 @@
+pub mod custom_actor;
 pub mod main_actor;
 use crate::llm::{e5::E5Config, gemma::GemmaConfig, quantized::QuantizedConfig};
 use actix::prelude::*;
 use actix_telepathy::prelude::*;
 use anyhow::Result;
+use custom_actor::{CustomActorConfig, CustomActorRegistry, CUSTOM_ACTOR_REGISTRY};
 use log::debug;
 use main_actor::{MainActor, MainActorConfig};
 use onceuponai_core::{common::ResultExt, common_models::EntityValue, config::read_config_str};
@@ -58,6 +60,10 @@ pub enum ActorObject {
         metadata: ActorMetadata,
         spec: MainActorConfig,
     },
+    Custom {
+        metadata: ActorMetadata,
+        spec: CustomActorConfig,
+    },
     Gemma {
         metadata: ActorMetadata,
         spec: GemmaConfig,
@@ -93,6 +99,7 @@ impl ActorObject {
                 m
             }
             ActorObject::Main { metadata, spec: _ } => metadata.clone(),
+            ActorObject::Custom { metadata, spec: _ } => metadata.clone(),
         }
     }
 
@@ -111,6 +118,10 @@ impl ActorObject {
                 spec: _,
             } => "e5".to_string(),
             ActorObject::Main {
+                metadata: _,
+                spec: _,
+            } => "main".to_string(),
+            ActorObject::Custom {
                 metadata: _,
                 spec: _,
             } => "main".to_string(),
@@ -170,6 +181,12 @@ impl ActorObject {
                 metadata: _,
                 spec: _,
             } => Ok(()),
+            ActorObject::Custom { metadata: _, spec } => {
+                let registry = CUSTOM_ACTOR_REGISTRY.get_or_init(CustomActorRegistry::new);
+                let custom_actor = registry.create(&spec.name).expect("Custom actor not found");
+                custom_actor.start();
+                Ok(())
+            }
         }?;
 
         Ok(())
@@ -197,6 +214,11 @@ impl ActorObject {
                 task_id: request.task_id,
                 error: ActorError::FatalError(String::from("MAIN ACTOR CAN'T BE INVOKED")),
             })),
+            ActorObject::Custom { metadata: _, spec } => {
+                let registry = CUSTOM_ACTOR_REGISTRY.get_or_init(CustomActorRegistry::new);
+                let custom_actor = registry.create(&spec.name).expect("Custom actor not found");
+                custom_actor.invoke(uuid, request.clone())
+            }
         }?;
 
         Ok(response)

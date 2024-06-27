@@ -6,12 +6,11 @@ use actix::prelude::*;
 use actix_broker::BrokerSubscribe;
 use actix_telepathy::prelude::*;
 use once_cell::sync::OnceCell;
-use onceuponai_core::common_models::EntityValue;
 use rand::seq::SliceRandom;
 use serde::Deserialize;
 use std::sync::mpsc;
 use std::sync::{Arc, Mutex};
-use std::time::{Duration, Instant};
+use std::time::Instant;
 use std::{collections::HashMap, net::SocketAddr};
 use uuid::Uuid;
 
@@ -35,6 +34,12 @@ pub struct MainActor {
 }
 
 #[derive(Deserialize, Debug, Clone)]
+pub struct MainActorAuthConfig {
+    pub oidc: Option<MainActorOidcConfig>,
+    pub _auth_token: Option<String>,
+}
+
+#[derive(Deserialize, Debug, Clone)]
 pub struct MainActorConfig {
     pub server_host: String,
     pub server_port: u16,
@@ -43,8 +48,36 @@ pub struct MainActorConfig {
     pub invoke_timeout: Option<u64>,
     pub session_key: Option<String>,
     pub personal_access_token_secret: Option<String>,
-    pub oidc: Option<MainActorOidcConfig>,
-    pub _auth_token: Option<String>,
+    pub auth: Option<MainActorAuthConfig>,
+}
+
+impl MainActorConfig {
+    pub fn oidc(&self) -> MainActorOidcConfig {
+        self.auth.clone().expect("AUTH").oidc.expect("OIDC")
+    }
+
+    pub fn _auth_token(&self) -> String {
+        self.auth
+            .clone()
+            .expect("AUTH")
+            ._auth_token
+            .expect("_AUTH_TOKEN")
+    }
+
+    pub fn _auth_token_set(&mut self, _auth_token: String) {
+        self.auth = Some(MainActorAuthConfig {
+            _auth_token: Some(_auth_token),
+            oidc: None,
+        });
+    }
+
+    pub fn is_oidc(&self) -> bool {
+        if let Some(auth) = self.auth.clone() {
+            return auth.oidc.is_some();
+        }
+
+        false
+    }
 }
 
 #[derive(Deserialize, Debug, Clone)]
