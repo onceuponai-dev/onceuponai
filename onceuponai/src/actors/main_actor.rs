@@ -44,6 +44,7 @@ pub struct MainActorConfig {
     pub session_key: Option<String>,
     pub personal_access_token_secret: Option<String>,
     pub oidc: Option<MainActorOidcConfig>,
+    pub _auth_token: Option<String>,
 }
 
 #[derive(Deserialize, Debug, Clone)]

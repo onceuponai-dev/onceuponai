@@ -13,7 +13,9 @@ export default defineComponent({
     const dialog = ref(false);
     const expirationDays = ref(1);
     const patToken = ref("");
+    const patTokenDisplay = ref("");
     const patToCopy = ref(null);
+    const tooltipVisible = ref(false);
 
     const openDialog = () => {
       dialog.value = true;
@@ -27,7 +29,15 @@ export default defineComponent({
 
 
     const copyPat = () => {
-      console.log(patToken.value);
+      navigator.clipboard.writeText(patToken.value).then(() => {
+        console.log('Text copied to clipboard');
+        tooltipVisible.value = true;
+        setTimeout(() => {
+          tooltipVisible.value = false;
+        }, 2000);
+      }).catch((err) => {
+        console.error('Failed to copy text: ', err);
+      });
     }
 
     const generateToken = () => {
@@ -41,6 +51,8 @@ export default defineComponent({
         .then(function (response) {
           console.log(response);
           patToken.value = response.data.personal_access_token;
+          patTokenDisplay.value = `  ●●●●●●●●●●●●●●●●●●●●●●●●●●●●●●●●●●●●●●`;
+
         })
         .catch(function (error) {
           console.log(error);
@@ -58,8 +70,10 @@ export default defineComponent({
       generateToken,
       expirationDays,
       patToken,
+      patTokenDisplay,
       copyPat,
-      patToCopy
+      patToCopy,
+      tooltipVisible
     };
 
   }
@@ -70,9 +84,24 @@ export default defineComponent({
   <v-container>
     <h1>Generate Personal Access Token</h1>
     <v-divider></v-divider>
-    <v-btn @click="generateToken">Generate</v-btn>
-    <v-text-field v-model="expirationDays" type="number" label="Expiration days" />
-    <v-text-field v-model="patToken" append-icon="mdi-content-copy" @click:append="copyPat" ></v-text-field>
+    <br />
+    <v-row>
+      <v-col cols="2">
+        <v-text-field v-model="expirationDays" type="number" label="Expiration days" />
+      </v-col>
+      <v-col cols="1">
+        <v-btn size="large" @click="generateToken" icon="mdi-key-plus"></v-btn>
+      </v-col>
+
+      <v-col cols="5">
+        <v-text-field v-model="patTokenDisplay" append-icon="mdi-content-copy" @click:append="copyPat"></v-text-field>
+      </v-col>
+      <v-col cols="1">
+        <div v-if="tooltipVisible" class="tooltip">
+          <span>copied</span>
+        </div>
+      </v-col>
+    </v-row>
     <v-dialog v-model="dialog" max-width="500px">
       <v-card>
         <v-card-title>Model Details</v-card-title>
@@ -90,4 +119,9 @@ export default defineComponent({
 
 </template>
 
-<style scoped></style>
+<style scoped>
+
+.tooltip {
+    margin-top: 15px;
+}
+</style>

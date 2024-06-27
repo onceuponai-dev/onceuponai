@@ -20,9 +20,3 @@ pub async fn user(
         Ok(HttpResponse::Ok().body("No session found"))
     }
 }
-
-pub async fn anonymous(_req: HttpRequest) -> Result<impl Responder, Box<dyn Error>> {
-    Ok(HttpResponse::Ok().json(UserInfo {
-        email: "anonymous".to_string(),
-    }))
-}

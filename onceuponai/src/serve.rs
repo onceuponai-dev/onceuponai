@@ -1,6 +1,7 @@
 use crate::actors::main_actor::{MainActor, MainActorConfig};
 use crate::guards::AuthGuard;
 use crate::handlers::actors::{connected_actors, invoke};
+use crate::handlers::auth::generate_token;
 use crate::handlers::users::user;
 use crate::handlers::{
     self, assets_css, assets_js, health, index_html, ASSETS_CSS_HASH, ASSETS_JS_HASH,
@@ -12,6 +13,7 @@ use actix_web::HttpResponse;
 use actix_web::{cookie::Key, web, App, HttpServer};
 use anyhow::Result;
 use base64::{engine::general_purpose, Engine as _};
+use log::{debug, warn};
 use num_traits::Zero;
 use onceuponai_core::common::ResultExt;
 
@@ -31,15 +33,26 @@ pub struct AppState {
 #[allow(clippy::too_many_arguments)]
 pub(crate) async fn serve(spec: MainActorConfig, addr: Addr<MainActor>) -> std::io::Result<()> {
     let secret_key = get_secret_key(&spec).map_io_err()?;
-    let sp = spec.clone();
+    let mut sp = spec.clone();
     if let Some(v) = spec.log_level {
         env_logger::init_from_env(env_logger::Env::new().default_filter_or(v));
     }
 
-    println!(
-        "Server running on http://{}:{}",
-        spec.server_host, spec.server_port
-    );
+    if sp.oidc.is_none() {
+        let root_token = generate_token(50);
+        sp._auth_token = Some(root_token.clone());
+        // warn!("Auth token ");
+        println!(
+            "Server running on http://{}:{}/login?token={}",
+            spec.server_host, spec.server_port, root_token
+        );
+    } else {
+        println!(
+            "Server running on http://{}:{}",
+            spec.server_host, spec.server_port
+        );
+    }
+
     let mut server = HttpServer::new(move || {
         let mut app = App::new()
             .wrap(SessionMiddleware::new(
@@ -62,34 +75,37 @@ pub(crate) async fn serve(spec: MainActorConfig, addr: Addr<MainActor>) -> std::
             )
             .route("/health", web::get().to(health));
 
-        app = app.service(
-            web::scope("/auth")
-                .route("", web::get().to(handlers::auth::auth))
-                .route("/callback", web::get().to(handlers::auth::auth_callback)),
-        );
+        if sp.oidc.is_none() && sp._auth_token.is_some() {
+            app = app.route("/login", web::get().to(handlers::auth::token_login));
+        }
+
+        if sp.oidc.is_some() {
+            app = app.service(
+                web::scope("/auth")
+                    .route("", web::get().to(handlers::auth::auth))
+                    .route("/callback", web::get().to(handlers::auth::auth_callback)),
+            );
+        }
 
         let mut api_scope = web::scope("/api")
             .route("/actors", web::get().to(connected_actors))
             .route("/invoke/{kind}/{name}", web::post().to(invoke));
 
-        if sp.oidc.is_some() {
-            api_scope = api_scope
-                .guard(AuthGuard {
-                    secret: sp
-                        .clone()
-                        .personal_access_token_secret
-                        .expect("PERSONAL_ACCESS_TOKEN_SECRET")
-                        .to_string(),
-                })
-                .route("/user", web::get().to(handlers::users::user))
-                .route(
-                    "/user/personal-token",
-                    web::post().to(handlers::auth::personal_token),
-                );
-            app = app.default_service(web::route().to(HttpResponse::Unauthorized));
-        } else {
-            api_scope = api_scope.route("/user", web::get().to(handlers::users::anonymous));
-        }
+        api_scope = api_scope
+            .guard(AuthGuard {
+                secret: sp
+                    .clone()
+                    .personal_access_token_secret
+                    .expect("PERSONAL_ACCESS_TOKEN_SECRET")
+                    .to_string(),
+            })
+            .route("/user", web::get().to(handlers::users::user))
+            .route(
+                "/user/personal-token",
+                web::post().to(handlers::auth::personal_token),
+            );
+
+        app = app.default_service(web::route().to(HttpResponse::Unauthorized));
 
         app = app.service(api_scope);
 

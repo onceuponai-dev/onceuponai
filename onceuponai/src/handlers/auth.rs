@@ -1,4 +1,4 @@
-use crate::models::AuthCallback;
+use crate::models::{AuthCallback, PATClaims, PATRequest, PATResponse, TokenLogin};
 use crate::serve::AppState;
 use crate::session::SessionExt;
 use actix_web::{web, Responder};
@@ -16,13 +16,13 @@ use openidconnect::{
     PkceCodeChallenge, RedirectUrl,
 };
 use openidconnect::{OAuth2TokenResponse, TokenResponse};
+use rand::distributions::Alphanumeric;
+use rand::Rng;
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 use std::error::Error;
-use std::time::{SystemTime, UNIX_EPOCH};
 
 pub async fn auth(
-    _req: HttpRequest,
     session: actix_session::Session,
     app_state: web::Data<AppState>,
 ) -> Result<impl Responder, Box<dyn Error>> {
@@ -132,8 +132,31 @@ pub async fn unauthorized() -> HttpResponse {
     HttpResponse::Unauthorized().json(json!({"error": "Unauthorized"}))
 }
 
+pub async fn token_login(
+    session: actix_session::Session,
+    token: web::Query<TokenLogin>,
+    app_state: web::Data<AppState>,
+) -> Result<impl Responder, Box<dyn Error>> {
+    let token = token.token.clone();
+
+    if app_state.spec.clone()._auth_token.expect("ROOT_TOKEN") == token {
+        let _ = session.set_email("user@");
+        return Ok(HttpResponse::Found()
+            .append_header(("Location", "/".to_string()))
+            .finish());
+    }
+
+    Ok(HttpResponse::Unauthorized().json(json!({"error": "Unauthorized"})))
+}
+
+pub fn generate_token(length: usize) -> String {
+    let mut rng = rand::thread_rng();
+    (0..length)
+        .map(|_| rng.sample(Alphanumeric) as char)
+        .collect()
+}
+
 pub async fn personal_token(
-    _req: HttpRequest,
     pat_request: web::Json<PATRequest>,
     session: actix_session::Session,
     app_state: web::Data<AppState>,
@@ -153,22 +176,6 @@ pub async fn personal_token(
     } else {
         Ok(HttpResponse::Ok().body("No session found"))
     }
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-pub struct PATRequest {
-    expiration_days: i64,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-pub struct PATResponse {
-    personal_access_token: String,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-pub struct PATClaims {
-    sub: String,
-    exp: usize,
 }
 
 pub fn generate_pat_token(secret: &str, email: &str, expiration_days: i64) -> String {
