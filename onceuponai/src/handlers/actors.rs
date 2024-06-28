@@ -5,7 +5,9 @@ use crate::serve::AppState;
 use actix_web::Responder;
 use actix_web::{web, HttpRequest, HttpResponse};
 use anyhow::Result;
+use async_stream::stream;
 use onceuponai_core::common::ResultExt;
+use serde_json::json;
 use std::error::Error;
 use std::sync::mpsc;
 use std::time::{Duration, Instant};
@@ -88,26 +90,72 @@ pub async fn base_invoke(
         data: invoke_request.data,
     });
 
-    let invoke_timeout = app_state.spec.invoke_timeout.unwrap_or(5u64);
-    match rx.recv_timeout(Duration::from_secs(invoke_timeout)) {
-        Ok(response) => {
-            let mut response_map = INVOKE_TASKS.get().expect("INVOKE_TASKS").lock()?;
-            response_map.remove(&task_id);
-            match response {
-                crate::actors::ActorInvokeResponse::Success(result) => {
-                    Ok(HttpResponse::Ok().json(result.data))
+    if !stream {
+        let invoke_timeout = app_state.spec.invoke_timeout.unwrap_or(5u64);
+        match rx.recv_timeout(Duration::from_secs(invoke_timeout)) {
+            Ok(response) => {
+                let mut response_map = INVOKE_TASKS.get().expect("INVOKE_TASKS").lock()?;
+                response_map.remove(&task_id);
+                match response {
+                    crate::actors::ActorInvokeResponse::Success(result) => {
+                        Ok(HttpResponse::Ok().json(result.data))
+                    }
+                    crate::actors::ActorInvokeResponse::Failure(result) => {
+                        Ok(HttpResponse::BadRequest().json(result.error))
+                    }
+                    crate::actors::ActorInvokeResponse::Finish(_) => {
+                        Ok(HttpResponse::Ok().body(""))
+                    }
                 }
-                crate::actors::ActorInvokeResponse::Failure(result) => {
-                    Ok(HttpResponse::BadRequest().json(result.error))
-                }
-                crate::actors::ActorInvokeResponse::Finish(_) => Ok(HttpResponse::Ok().body("")),
+            }
+            Err(_) => {
+                let mut response_map = INVOKE_TASKS.get().expect("INVOKE_TASKS").lock()?;
+                response_map.remove(&task_id);
+                Ok(HttpResponse::InternalServerError()
+                    .body(format!("Request timeout ( > {invoke_timeout:?} s)")))
             }
         }
-        Err(_) => {
-            let mut response_map = INVOKE_TASKS.get().expect("INVOKE_TASKS").lock()?;
-            response_map.remove(&task_id);
-            Ok(HttpResponse::InternalServerError()
-                .body(format!("Request timeout ( > {invoke_timeout:?} s)")))
-        }
+    } else {
+        let stream_tasks = stream! {
+            let mut finished = false;
+
+            let invoke_timeout = app_state.spec.invoke_timeout.unwrap_or(5u64);
+            while !finished {
+                tokio::task::yield_now().await;
+                match rx.recv_timeout(Duration::from_secs(invoke_timeout)) {
+                    Ok(response) => {
+                        match response {
+                            crate::actors::ActorInvokeResponse::Success(result) => {
+                                let text = json!(result.data).to_string();
+                                let byte = bytes::Bytes::from(text);
+                                yield Ok::<bytes::Bytes, Box<dyn std::error::Error>>(byte);
+                            }
+                            crate::actors::ActorInvokeResponse::Failure(result) => {
+                                let text = json!(result.error).to_string();
+                                let byte = bytes::Bytes::from(text);
+                                finished = true;
+                                yield Ok::<bytes::Bytes, Box<dyn std::error::Error>>(byte);
+                            }
+                            crate::actors::ActorInvokeResponse::Finish(_) => {
+                                finished = true;
+                            }
+                        }
+                    }
+                    Err(_) => {
+                        let text = format!("Request timeout ( > {invoke_timeout:?} s)");
+                        let byte = bytes::Bytes::from(text);
+                        finished = true;
+                        yield Ok::<bytes::Bytes, Box<dyn std::error::Error>>(byte);
+                    }
+                }
+            }
+        };
+
+        let mut response_map = INVOKE_TASKS.get().expect("INVOKE_TASKS").lock()?;
+        response_map.remove(&task_id);
+
+        Ok(HttpResponse::Ok()
+            .content_type("text/event-stream")
+            .streaming(Box::pin(stream_tasks)))
     }
 }
