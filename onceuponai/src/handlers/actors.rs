@@ -6,9 +6,13 @@ use actix_web::Responder;
 use actix_web::{web, HttpRequest, HttpResponse};
 use anyhow::Result;
 use async_stream::stream;
+use futures::stream::Stream;
+use futures::task::{Context, Poll};
+use log::debug;
 use onceuponai_core::common::ResultExt;
 use serde_json::json;
 use std::error::Error;
+use std::pin::Pin;
 use std::sync::mpsc;
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
@@ -118,47 +122,61 @@ pub async fn base_invoke(
         }
     } else {
         let rx = Arc::new(Mutex::new(rx));
-        let stream_tasks = stream! {
-            let mut finished = false;
 
-            let invoke_timeout = app_state.spec.invoke_timeout.unwrap_or(5u64);
-            while !finished {
-                tokio::task::yield_now().await;
-                match rx.lock().unwrap().recv_timeout(Duration::from_secs(invoke_timeout)) {
-                    Ok(response) => {
-                        match response {
-                            crate::actors::ActorInvokeResponse::Success(result) => {
-                                let text = json!(result.data).to_string();
-                                let byte = bytes::Bytes::from(text);
-                                yield Ok::<bytes::Bytes, Box<dyn std::error::Error>>(byte);
-                            }
-                            crate::actors::ActorInvokeResponse::Failure(result) => {
-                                let text = json!(result.error).to_string();
-                                let byte = bytes::Bytes::from(text);
-                                finished = true;
-                                yield Ok::<bytes::Bytes, Box<dyn std::error::Error>>(byte);
-                            }
-                            crate::actors::ActorInvokeResponse::Finish(_) => {
-                                finished = true;
-                            }
-                        }
-                    }
-                    Err(e) => {
-                        let text = format!("{}", e);
-                        //let text = format!("Request timeout ( > {invoke_timeout:?} s)");
-                        let byte = bytes::Bytes::from(text);
-                        finished = true;
-                        yield Ok::<bytes::Bytes, Box<dyn std::error::Error>>(byte);
-                    }
-                }
-            }
+        let stream = MpscStream {
+            receiver: rx,
+            task_id,
         };
+        Ok(HttpResponse::Ok().streaming(stream))
+    }
+}
 
-        let mut response_map = INVOKE_TASKS.get().expect("INVOKE_TASKS").lock()?;
-        response_map.remove(&task_id);
+struct MpscStream {
+    receiver: Arc<Mutex<mpsc::Receiver<crate::actors::ActorInvokeResponse>>>,
+    task_id: Uuid,
+}
 
-        Ok(HttpResponse::Ok()
-            .content_type("text/event-stream")
-            .streaming(Box::pin(stream_tasks)))
+impl Stream for MpscStream {
+    type Item = Result<bytes::Bytes, actix_web::Error>;
+
+    fn poll_next(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
+        let receiver = self.receiver.lock().unwrap();
+        match receiver.try_recv() {
+            Ok(response) => match response {
+                crate::actors::ActorInvokeResponse::Success(result) => {
+                    let text = json!(result.data).to_string();
+
+                    let byte = bytes::Bytes::from(text);
+                    Poll::Ready(Some(Ok(byte)))
+                }
+                crate::actors::ActorInvokeResponse::Failure(result) => {
+                    let text = json!(result.error).to_string();
+                    debug!("ERROR {text:?}");
+                    let mut response_map =
+                        INVOKE_TASKS.get().expect("INVOKE_TASKS").lock().unwrap();
+                    response_map.remove(&self.task_id);
+
+                    Poll::Ready(None)
+                }
+                crate::actors::ActorInvokeResponse::Finish(_) => {
+                    let mut response_map =
+                        INVOKE_TASKS.get().expect("INVOKE_TASKS").lock().unwrap();
+                    response_map.remove(&self.task_id);
+
+                    Poll::Ready(None)
+                }
+            },
+
+            Err(mpsc::TryRecvError::Empty) => {
+                cx.waker().wake_by_ref();
+                Poll::Pending
+            }
+            Err(mpsc::TryRecvError::Disconnected) => {
+                let mut response_map = INVOKE_TASKS.get().expect("INVOKE_TASKS").lock().unwrap();
+                response_map.remove(&self.task_id);
+
+                Poll::Ready(None)
+            }
+        }
     }
 }
