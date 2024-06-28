@@ -1,5 +1,6 @@
 use crate::actors::main_actor::{InvokeTask, CONNECTED_ACTORS, INVOKE_TASKS};
 use crate::actors::ActorStartInvokeRequest;
+use crate::models::InvokeRequest;
 use crate::serve::AppState;
 use actix_web::Responder;
 use actix_web::{web, HttpRequest, HttpResponse};
@@ -25,7 +26,7 @@ pub async fn connected_actors(_req: HttpRequest) -> Result<impl Responder, Box<d
 
 pub async fn invoke(
     req: HttpRequest,
-    invoke_request: web::Json<HashMap<String, Vec<EntityValue>>>,
+    invoke_request: web::Json<InvokeRequest>,
     app_state: web::Data<AppState>,
 ) -> Result<impl Responder, Box<dyn Error>> {
     let kind = req
@@ -49,7 +50,7 @@ pub async fn base_invoke(
     kind: String,
     name: String,
     app_state: web::Data<AppState>,
-    data: HashMap<String, Vec<EntityValue>>,
+    invoke_request: InvokeRequest,
 ) -> Result<impl Responder, Box<dyn Error>> {
     let task_id = Uuid::new_v4();
     let (tx, rx) = mpsc::channel();
@@ -79,11 +80,18 @@ pub async fn base_invoke(
         );
     }
 
+    let stream = if let Some(stream) = invoke_request.stream {
+        stream
+    } else {
+        false
+    };
+
     app_state.addr.do_send(ActorStartInvokeRequest {
         task_id,
         kind,
         name,
-        data,
+        stream,
+        data: invoke_request.data,
     });
 
     let invoke_timeout = app_state.spec.invoke_timeout.unwrap_or(5u64);

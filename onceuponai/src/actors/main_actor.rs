@@ -141,6 +141,7 @@ impl Handler<ActorStartInvokeRequest> for MainActor {
             .expect("WORKER_ACTOR");
         worker_actor.source.do_send(ActorInvokeRequest {
             task_id: msg.task_id,
+            stream: msg.stream,
             data: msg.data,
             source: self.remote_addr.clone(),
         });

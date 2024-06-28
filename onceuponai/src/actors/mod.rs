@@ -236,6 +236,7 @@ pub struct ActorStartInvokeRequest {
     pub task_id: Uuid,
     pub kind: String,
     pub name: String,
+    pub stream: bool,
     pub data: HashMap<String, Vec<EntityValue>>,
 }
 
@@ -244,6 +245,7 @@ pub struct ActorStartInvokeRequest {
 pub struct ActorInvokeRequest {
     pub task_id: Uuid,
     pub source: RemoteAddr,
+    pub stream: bool,
     pub data: HashMap<String, Vec<EntityValue>>,
 }
 
@@ -251,6 +253,7 @@ pub struct ActorInvokeRequest {
 pub struct ActorInvokeResult {
     pub uuid: Uuid,
     pub task_id: Uuid,
+    pub stream: bool,
     pub data: HashMap<String, Vec<EntityValue>>,
 }
 

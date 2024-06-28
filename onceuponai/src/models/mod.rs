@@ -1,4 +1,7 @@
+use std::collections::HashMap;
+
 use derive_more::{Display, Error};
+use onceuponai_core::common_models::EntityValue;
 use serde::{Deserialize, Serialize};
 
 #[derive(Deserialize, Serialize, Debug, Clone)]
@@ -38,4 +41,10 @@ pub struct PATResponse {
 pub struct PATClaims {
     pub sub: String,
     pub exp: usize,
+}
+
+#[derive(Deserialize, Serialize, Debug, Clone)]
+pub struct InvokeRequest {
+    pub data: HashMap<String, Vec<EntityValue>>,
+    pub stream: Option<bool>,
 }

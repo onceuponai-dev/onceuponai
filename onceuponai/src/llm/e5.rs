@@ -54,6 +54,7 @@ pub fn invoke(uuid: Uuid, request: ActorInvokeRequest) -> Result<ActorInvokeResp
     let result = ActorInvokeResult {
         uuid,
         task_id: request.task_id,
+        stream: request.stream,
         data: HashMap::from([(String::from("embeddings"), embeddings_data)]),
     };
 
