@@ -165,14 +165,17 @@ impl Handler<ActorInvokeResponse> for MainActor {
                 let mut tasks = INVOKE_TASKS.get().expect("INVOKE_TASKS").lock().unwrap();
                 if !result.stream {
                     if let Some(task) = tasks.remove(&result.task_id) {
+                        debug!("NOT STREAM !!!");
                         let _ = task.sender.send(msg);
                     }
                 } else if let Some(task) = tasks.get(&result.task_id) {
+                    debug!("STREAM PART !!!");
                     let _ = task.sender.send(msg);
                 }
             }
             ActorInvokeResponse::Finish(result) => {
                 let mut tasks = INVOKE_TASKS.get().expect("INVOKE_TASKS").lock().unwrap();
+                debug!("FINISH !!!");
                 if let Some(task) = tasks.remove(&result.task_id) {
                     let _ = task.sender.send(msg);
                 }

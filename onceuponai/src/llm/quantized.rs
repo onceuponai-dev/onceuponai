@@ -9,7 +9,8 @@ use std::collections::HashMap;
 use uuid::Uuid;
 
 use crate::actors::{
-    ActorError, ActorInvokeError, ActorInvokeRequest, ActorInvokeResponse, ActorInvokeResult,
+    ActorError, ActorInvokeError, ActorInvokeFinish, ActorInvokeRequest, ActorInvokeResponse,
+    ActorInvokeResult,
 };
 
 pub fn start(spec: QuantizedConfig) -> Result<()> {
@@ -96,33 +97,92 @@ pub fn invoke(uuid: Uuid, request: ActorInvokeRequest) -> Result<ActorInvokeResp
     Ok(ActorInvokeResponse::Success(result))
 }
 
-pub fn invoke_stream<F>(uuid: Uuid, request: &ActorInvokeRequest, mut callback: F) -> Result<()>
+pub fn invoke_stream<F>(uuid: Uuid, request: ActorInvokeRequest, mut callback: F) -> Result<()>
 where
     F: FnMut(ActorInvokeResponse),
 {
-    let input = request.data.get("prompt");
+    let input = request.data.get("message");
     if input.is_none() {
         callback(ActorInvokeResponse::Failure(ActorInvokeError {
             uuid,
             task_id: request.task_id,
             error: ActorError::BadRequest(
-                "REQUEST MUST CONTAINER PROMPT COLUMN WITH Vec<String>".to_string(),
+                "REQUEST MUST CONTAINER MESSAGE COLUMN WITH Vec<MESSAGE { role: String, content: String }>".to_string(),
             ),
         }));
 
         return Ok(());
     }
 
-    let input: Option<String> = input
-        .expect("PROMPT")
+    let input: Vec<String> = input
+        .expect("MESSAGE")
         .iter()
         .map(|x| match x {
-            EntityValue::STRING(i) => i.clone(),
+            EntityValue::MESSAGE { role, content } => content.clone(),
             _ => todo!(),
         })
-        .last();
+        .collect();
 
-    let input = input.expect("PROMPT");
+    let input = input[0].clone();
+
+    let mut model = QuantizedModel::lazy(
+        None, None, None, None, None, None, None, None, None, None, None,
+    )?
+    .lock()
+    .map_anyhow_err()?;
+    let seed = model.seed;
+    let repeat_last_n = model.repeat_last_n;
+    let repeat_penalty = model.repeat_penalty;
+    let temp = model.temp;
+    let top_p = model.top_p;
+
+    let prep = model
+        .instance
+        .prepare(&input, Some(seed), Some(temp), top_p)?;
+    let prompt_tokens_len = prep.0;
+    let mut all_tokens = prep.1;
+    let mut logits_processor = prep.2;
+
+    let sample_len = model.sample_len;
+    let eos_token = model.eos_token;
+
+    let mut previous_text = String::new();
+    for index in 0..sample_len {
+        if let Some(current_text) = model.instance.loop_process(
+            prompt_tokens_len,
+            index,
+            repeat_penalty,
+            repeat_last_n,
+            &mut all_tokens,
+            &mut logits_processor,
+            eos_token,
+        )? {
+            let text = current_text.split_at(previous_text.len()).1.to_string();
+            previous_text = current_text;
+
+            let result = ActorInvokeResult {
+                uuid,
+                task_id: request.task_id,
+                stream: request.stream,
+                data: HashMap::from([(String::from("results"), vec![EntityValue::STRING(text)])]),
+            };
+
+            let response = ActorInvokeResponse::Success(result);
+
+            callback(response);
+        } else {
+            break;
+        }
+    }
+
+    let result = ActorInvokeFinish {
+        uuid,
+        task_id: request.task_id,
+        stream: request.stream,
+    };
+
+    let response = ActorInvokeResponse::Finish(result);
+    callback(response);
 
     Ok(())
 }

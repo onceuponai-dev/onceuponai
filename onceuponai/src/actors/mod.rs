@@ -242,8 +242,7 @@ impl ActorObject {
             ActorObject::Quantized {
                 metadata: _,
                 spec: _,
-            } => todo!(),
-            //crate::llm::quantized::invoke(uuid, request.clone()),
+            } => crate::llm::quantized::invoke_stream(uuid, request.clone(), callback),
             ActorObject::E5 {
                 metadata: _,
                 spec: _,
@@ -255,7 +254,7 @@ impl ActorObject {
             ActorObject::Custom { metadata: _, spec } => {
                 Err(anyhow!("MAIN ACTOR NOT SUPPORT STREAM"))
             }
-        }?
+        }
     }
 }
 
