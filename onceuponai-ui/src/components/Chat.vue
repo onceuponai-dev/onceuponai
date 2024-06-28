@@ -47,7 +47,7 @@ export default defineComponent({
       axios.post(`/api/invoke/${selectedActor.value}`, {
         stream: false,
         data: {
-          prompt: [text],
+          message: [{"content": text, "role": "user"}],
         }
       }, {
         headers: {

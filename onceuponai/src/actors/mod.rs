@@ -1,6 +1,7 @@
 pub mod custom_actor;
 pub mod main_actor;
 use crate::llm::{e5::E5Config, gemma::GemmaConfig, quantized::QuantizedConfig};
+use crate::models::InvokeRequest;
 use actix::prelude::*;
 use actix_telepathy::prelude::*;
 use anyhow::{anyhow, Result};
@@ -224,12 +225,15 @@ impl ActorObject {
         Ok(response)
     }
 
-    pub fn invoke_stream<F, T>(
+    pub fn invoke_stream<F>(
         &self,
         uuid: Uuid,
         request: &ActorInvokeRequest,
         mut callback: F,
-    ) -> Result<T> {
+    ) -> Result<()>
+    where
+        F: FnMut(ActorInvokeResponse),
+    {
         match self {
             ActorObject::Gemma {
                 metadata: _,
@@ -392,7 +396,7 @@ impl Handler<ActorInvokeRequest> for WorkerActor {
         } else {
             self.actor
                 .invoke_stream(self.uuid, &msg, |response: ActorInvokeResponse| {
-                    msg.source.do_send(response)
+                    msg.source.do_send(response);
                 })
                 .unwrap()
         }

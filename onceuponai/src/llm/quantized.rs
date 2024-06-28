@@ -31,23 +31,23 @@ pub fn start(spec: QuantizedConfig) -> Result<()> {
 }
 
 pub fn invoke(uuid: Uuid, request: ActorInvokeRequest) -> Result<ActorInvokeResponse> {
-    let input = request.data.get("prompt");
+    let input = request.data.get("message");
 
     if input.is_none() {
         return Ok(ActorInvokeResponse::Failure(ActorInvokeError {
             uuid,
             task_id: request.task_id,
             error: ActorError::BadRequest(
-                "REQUEST MUST CONTAINER PROMPT COLUMN WITH Vec<String>".to_string(),
+                "REQUEST MUST CONTAINER MESSAGE COLUMN WITH Vec<MESSAGE { role: String, content: String }>".to_string(),
             ),
         }));
     }
 
     let input: Vec<String> = input
-        .expect("PROMPT")
+        .expect("MESSAGE")
         .iter()
         .map(|x| match x {
-            EntityValue::STRING(i) => i.clone(),
+            EntityValue::MESSAGE { role, content } => content.clone(),
             _ => todo!(),
         })
         .collect();
@@ -94,6 +94,37 @@ pub fn invoke(uuid: Uuid, request: ActorInvokeRequest) -> Result<ActorInvokeResp
     };
 
     Ok(ActorInvokeResponse::Success(result))
+}
+
+pub fn invoke_stream<F>(uuid: Uuid, request: &ActorInvokeRequest, mut callback: F) -> Result<()>
+where
+    F: FnMut(ActorInvokeResponse),
+{
+    let input = request.data.get("prompt");
+    if input.is_none() {
+        callback(ActorInvokeResponse::Failure(ActorInvokeError {
+            uuid,
+            task_id: request.task_id,
+            error: ActorError::BadRequest(
+                "REQUEST MUST CONTAINER PROMPT COLUMN WITH Vec<String>".to_string(),
+            ),
+        }));
+
+        return Ok(());
+    }
+
+    let input: Option<String> = input
+        .expect("PROMPT")
+        .iter()
+        .map(|x| match x {
+            EntityValue::STRING(i) => i.clone(),
+            _ => todo!(),
+        })
+        .last();
+
+    let input = input.expect("PROMPT");
+
+    Ok(())
 }
 
 pub async fn chat(prompt: &str) -> Result<impl Responder, Box<dyn std::error::Error>> {
