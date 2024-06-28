@@ -99,8 +99,7 @@ pub async fn base_invoke(
         let invoke_timeout = app_state.spec.invoke_timeout.unwrap_or(5u64);
         match rx.recv_timeout(Duration::from_secs(invoke_timeout)) {
             Ok(response) => {
-                let mut response_map = INVOKE_TASKS.get().expect("INVOKE_TASKS").lock()?;
-                response_map.remove(&task_id);
+                remove_invoke_task(&task_id);
                 match response {
                     crate::actors::ActorInvokeResponse::Success(result) => {
                         Ok(HttpResponse::Ok().json(result.data))
@@ -114,8 +113,7 @@ pub async fn base_invoke(
                 }
             }
             Err(_) => {
-                let mut response_map = INVOKE_TASKS.get().expect("INVOKE_TASKS").lock()?;
-                response_map.remove(&task_id);
+                remove_invoke_task(&task_id);
                 Ok(HttpResponse::InternalServerError()
                     .body(format!("Request timeout ( > {invoke_timeout:?} s)")))
             }
@@ -152,17 +150,11 @@ impl Stream for MpscStream {
                 crate::actors::ActorInvokeResponse::Failure(result) => {
                     let text = json!(result.error).to_string();
                     debug!("ERROR {text:?}");
-                    let mut response_map =
-                        INVOKE_TASKS.get().expect("INVOKE_TASKS").lock().unwrap();
-                    response_map.remove(&self.task_id);
-
+                    remove_invoke_task(&self.task_id);
                     Poll::Ready(None)
                 }
                 crate::actors::ActorInvokeResponse::Finish(_) => {
-                    let mut response_map =
-                        INVOKE_TASKS.get().expect("INVOKE_TASKS").lock().unwrap();
-                    response_map.remove(&self.task_id);
-
+                    remove_invoke_task(&self.task_id);
                     Poll::Ready(None)
                 }
             },
@@ -172,11 +164,14 @@ impl Stream for MpscStream {
                 Poll::Pending
             }
             Err(mpsc::TryRecvError::Disconnected) => {
-                let mut response_map = INVOKE_TASKS.get().expect("INVOKE_TASKS").lock().unwrap();
-                response_map.remove(&self.task_id);
-
+                remove_invoke_task(&self.task_id);
                 Poll::Ready(None)
             }
         }
     }
+}
+
+fn remove_invoke_task(task_id: &Uuid) {
+    let mut response_map = INVOKE_TASKS.get().expect("INVOKE_TASKS").lock().unwrap();
+    response_map.remove(task_id);
 }
