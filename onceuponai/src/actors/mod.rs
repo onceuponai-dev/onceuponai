@@ -3,7 +3,7 @@ pub mod main_actor;
 use crate::llm::{e5::E5Config, gemma::GemmaConfig, quantized::QuantizedConfig};
 use actix::prelude::*;
 use actix_telepathy::prelude::*;
-use anyhow::Result;
+use anyhow::{anyhow, Result};
 use custom_actor::{CustomActorConfig, CustomActorRegistry, CUSTOM_ACTOR_REGISTRY};
 use log::debug;
 use main_actor::{MainActor, MainActorConfig};
@@ -223,6 +223,36 @@ impl ActorObject {
 
         Ok(response)
     }
+
+    pub fn invoke_stream<F, T>(
+        &self,
+        uuid: Uuid,
+        request: &ActorInvokeRequest,
+        mut callback: F,
+    ) -> Result<T> {
+        match self {
+            ActorObject::Gemma {
+                metadata: _,
+                spec: _,
+            } => todo!(),
+            ActorObject::Quantized {
+                metadata: _,
+                spec: _,
+            } => todo!(),
+            //crate::llm::quantized::invoke(uuid, request.clone()),
+            ActorObject::E5 {
+                metadata: _,
+                spec: _,
+            } => Err(anyhow!("E5 ACTOR NOT SUPPORT STREAM")),
+            ActorObject::Main {
+                metadata: _,
+                spec: _,
+            } => Err(anyhow!("MAIN ACTOR NOT SUPPORT STREAM")),
+            ActorObject::Custom { metadata: _, spec } => {
+                Err(anyhow!("MAIN ACTOR NOT SUPPORT STREAM"))
+            }
+        }?
+    }
 }
 
 #[derive(RemoteMessage, Serialize, Deserialize, Debug)]
@@ -356,7 +386,15 @@ impl Handler<ActorInvokeRequest> for WorkerActor {
     fn handle(&mut self, msg: ActorInvokeRequest, _ctx: &mut Self::Context) -> Self::Result {
         debug!("MODEL INVOKE REQUEST: {:?}", msg);
 
-        let response = self.actor.invoke(self.uuid, &msg).unwrap();
-        msg.source.do_send(response)
+        if !msg.stream {
+            let response = self.actor.invoke(self.uuid, &msg).unwrap();
+            msg.source.do_send(response)
+        } else {
+            self.actor
+                .invoke_stream(self.uuid, &msg, |response: ActorInvokeResponse| {
+                    msg.source.do_send(response)
+                })
+                .unwrap()
+        }
     }
 }
