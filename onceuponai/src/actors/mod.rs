@@ -258,6 +258,13 @@ pub struct ActorInvokeResult {
 }
 
 #[derive(Serialize, Deserialize, Debug)]
+pub struct ActorInvokeFinish {
+    pub uuid: Uuid,
+    pub task_id: Uuid,
+    pub stream: bool,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
 pub struct ActorInvokeError {
     pub uuid: Uuid,
     pub task_id: Uuid,
@@ -267,6 +274,7 @@ pub struct ActorInvokeError {
 #[derive(RemoteMessage, Serialize, Deserialize, Debug)]
 pub enum ActorInvokeResponse {
     Success(ActorInvokeResult),
+    Finish(ActorInvokeFinish),
     Failure(ActorInvokeError),
 }
 

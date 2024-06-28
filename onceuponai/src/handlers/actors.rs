@@ -6,8 +6,6 @@ use actix_web::Responder;
 use actix_web::{web, HttpRequest, HttpResponse};
 use anyhow::Result;
 use onceuponai_core::common::ResultExt;
-use onceuponai_core::common_models::EntityValue;
-use std::collections::HashMap;
 use std::error::Error;
 use std::sync::mpsc;
 use std::time::{Duration, Instant};
@@ -80,11 +78,7 @@ pub async fn base_invoke(
         );
     }
 
-    let stream = if let Some(stream) = invoke_request.stream {
-        stream
-    } else {
-        false
-    };
+    let stream = invoke_request.stream.unwrap_or_default();
 
     app_state.addr.do_send(ActorStartInvokeRequest {
         task_id,
@@ -106,6 +100,7 @@ pub async fn base_invoke(
                 crate::actors::ActorInvokeResponse::Failure(result) => {
                     Ok(HttpResponse::BadRequest().json(result.error))
                 }
+                crate::actors::ActorInvokeResponse::Finish(_) => Ok(HttpResponse::Ok().body("")),
             }
         }
         Err(_) => {

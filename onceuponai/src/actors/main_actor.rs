@@ -163,7 +163,16 @@ impl Handler<ActorInvokeResponse> for MainActor {
             }
             ActorInvokeResponse::Success(result) => {
                 let mut tasks = INVOKE_TASKS.get().expect("INVOKE_TASKS").lock().unwrap();
-
+                if !result.stream {
+                    if let Some(task) = tasks.remove(&result.task_id) {
+                        let _ = task.sender.send(msg);
+                    }
+                } else if let Some(task) = tasks.get(&result.task_id) {
+                    let _ = task.sender.send(msg);
+                }
+            }
+            ActorInvokeResponse::Finish(result) => {
+                let mut tasks = INVOKE_TASKS.get().expect("INVOKE_TASKS").lock().unwrap();
                 if let Some(task) = tasks.remove(&result.task_id) {
                     let _ = task.sender.send(msg);
                 }
