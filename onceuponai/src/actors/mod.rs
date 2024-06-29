@@ -1,7 +1,6 @@
 pub mod custom_actor;
 pub mod main_actor;
 use crate::llm::{e5::E5Config, gemma::GemmaConfig, quantized::QuantizedConfig};
-use crate::models::InvokeRequest;
 use actix::prelude::*;
 use actix_telepathy::prelude::*;
 use anyhow::{anyhow, Result};
@@ -12,6 +11,7 @@ use onceuponai_core::{common::ResultExt, common_models::EntityValue, config::rea
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::net::SocketAddr;
+use std::sync::mpsc;
 use uuid::Uuid;
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -338,12 +338,34 @@ impl ActorBuilder {
                 actor,
             })
         } else {
+            let (sender, rx) = mpsc::channel::<ActorInternalRequest>();
+
+            let a = actor.clone();
+            std::thread::spawn(move || {
+                while let Ok(request) = rx.recv() {
+                    if !request.message.stream {
+                        let response = a.invoke(request.task_id, &request.message).unwrap();
+                        request.message.source.do_send(response)
+                    } else {
+                        a.invoke_stream(
+                            request.task_id,
+                            &request.message,
+                            |response: ActorInvokeResponse| {
+                                request.message.source.do_send(response);
+                            },
+                        )
+                        .unwrap();
+                    }
+                }
+            });
+
             ActorInstance::Worker(WorkerActor {
                 uuid: Uuid::new_v4(),
                 own_addr: actor.own_addr()?,
                 seed_addr: actor.seed_addr()?,
                 remote_addr,
                 actor,
+                sender,
             })
         };
 
@@ -351,7 +373,7 @@ impl ActorBuilder {
     }
 }
 
-#[derive(RemoteActor, Deserialize, Debug, Clone)]
+#[derive(RemoteActor, Debug, Clone)]
 #[remote_messages(ActorInfoRequest, ActorInvokeRequest)]
 pub struct WorkerActor {
     pub uuid: Uuid,
@@ -359,6 +381,13 @@ pub struct WorkerActor {
     pub own_addr: SocketAddr,
     pub seed_addr: SocketAddr,
     pub remote_addr: RemoteAddr,
+    pub sender: mpsc::Sender<ActorInternalRequest>,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct ActorInternalRequest {
+    pub task_id: Uuid,
+    pub message: ActorInvokeRequest,
 }
 
 impl Actor for WorkerActor {
@@ -392,21 +421,11 @@ impl Handler<ActorInvokeRequest> for WorkerActor {
     fn handle(&mut self, msg: ActorInvokeRequest, _ctx: &mut Self::Context) -> Self::Result {
         debug!("MODEL INVOKE REQUEST: {:?}", msg);
 
-        if !msg.stream {
-            let response = self.actor.invoke(self.uuid, &msg).unwrap();
-            msg.source.do_send(response)
-        } else {
-            let uuid = self.uuid;
-            let a = self.actor.clone();
-            let m = msg.clone();
-
-            std::thread::spawn(move || {
-                a.invoke_stream(uuid, &m, |response: ActorInvokeResponse| {
-                    m.source.do_send(response);
-                })
-                .unwrap()
-            });
-            debug!("RESSSSSSSSSSULT --------> ");
-        }
+        self.sender
+            .send(ActorInternalRequest {
+                task_id: self.uuid,
+                message: msg.clone(),
+            })
+            .unwrap();
     }
 }

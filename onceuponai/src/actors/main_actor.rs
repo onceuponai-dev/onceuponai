@@ -154,32 +154,33 @@ impl Handler<ActorInvokeResponse> for MainActor {
     fn handle(&mut self, msg: ActorInvokeResponse, _ctx: &mut Self::Context) -> Self::Result {
         //debug!("Received invoke response: {:?}", msg);
 
-        match &msg {
-            ActorInvokeResponse::Failure(result) => {
-                let mut tasks = INVOKE_TASKS.get().expect("INVOKE_TASKS").lock().unwrap();
+        tokio::spawn(async move {
+            match &msg {
+                ActorInvokeResponse::Failure(result) => {
+                    let mut tasks = INVOKE_TASKS.get().expect("INVOKE_TASKS").lock().unwrap();
 
-                if let Some(task) = tasks.remove(&result.task_id) {
-                    let _ = task.sender.send(msg);
-                }
-            }
-            ActorInvokeResponse::Success(result) => {
-                debug!(">>> FETCHED {}", result.task_id.to_string());
-                let mut tasks = INVOKE_TASKS.get().expect("INVOKE_TASKS").lock().unwrap();
-                if !result.stream {
                     if let Some(task) = tasks.remove(&result.task_id) {
                         let _ = task.sender.send(msg);
                     }
-                } else if let Some(task) = tasks.get(&result.task_id) {
-                    let _ = task.sender.send(msg);
                 }
-            }
-            ActorInvokeResponse::Finish(result) => {
-                let mut tasks = INVOKE_TASKS.get().expect("INVOKE_TASKS").lock().unwrap();
-                if let Some(task) = tasks.remove(&result.task_id) {
-                    let _ = task.sender.send(msg);
+                ActorInvokeResponse::Success(result) => {
+                    let mut tasks = INVOKE_TASKS.get().expect("INVOKE_TASKS").lock().unwrap();
+                    if !result.stream {
+                        if let Some(task) = tasks.remove(&result.task_id) {
+                            let _ = task.sender.send(msg);
+                        }
+                    } else if let Some(task) = tasks.get(&result.task_id) {
+                        let _ = task.sender.send(msg);
+                    }
                 }
-            }
-        }
+                ActorInvokeResponse::Finish(result) => {
+                    let mut tasks = INVOKE_TASKS.get().expect("INVOKE_TASKS").lock().unwrap();
+                    if let Some(task) = tasks.remove(&result.task_id) {
+                        let _ = task.sender.send(msg);
+                    }
+                }
+            };
+        });
     }
 }
 

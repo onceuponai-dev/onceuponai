@@ -171,7 +171,6 @@ where
             };
 
             let response = ActorInvokeResponse::Success(result);
-            debug!(">>> GENERATED {}", request.task_id.to_string());
             callback(response);
         } else {
             break;
