@@ -128,7 +128,6 @@ impl Handler<ActorStartInvokeRequest> for MainActor {
         let name = msg.name;
         debug!("KIND/NAME: {kind:?}/{name:?}");
 
-        //debug!("CONNECTED_ACTORS: {s:?}");
         let actors: Vec<ActorInfo> = self
             .connected_actors
             .iter()

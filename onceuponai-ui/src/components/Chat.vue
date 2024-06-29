@@ -69,7 +69,7 @@ export default defineComponent({
         }),
         signal: signal
       })
-        .then(async response => {
+        .then(async (response: any) => {
 
           if (!response.ok) {
             throw new Error('Network response was not ok');
@@ -86,7 +86,6 @@ export default defineComponent({
 
               showProgress.value = false;
               let textChunk = decoder.decode(value, { stream: true });
-              console.log(textChunk)
               resultText += textChunk;
               const messagesToSend = resultText.split('\n').filter(message => message.trim().length > 0);
               for (let message of messagesToSend) {

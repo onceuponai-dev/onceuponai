@@ -1,6 +1,7 @@
 use actix_web::{HttpResponse, Responder};
 use anyhow::Result;
 use async_stream::stream;
+use log::debug;
 use onceuponai_core::{
     common::ResultExt, common_models::EntityValue, llm::quantized::QuantizedModel,
 };
@@ -170,7 +171,6 @@ where
             };
 
             let response = ActorInvokeResponse::Success(result);
-
             callback(response);
         } else {
             break;

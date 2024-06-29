@@ -152,7 +152,6 @@ impl Stream for MpscStream {
                     let mut mapper = self.mapper.clone();
                     let request = self.reqeust.clone();
                     let text = mapper.map(request, result).to_string();
-
                     let byte = bytes::Bytes::from(text);
                     Poll::Ready(Some(Ok(byte)))
                 }
