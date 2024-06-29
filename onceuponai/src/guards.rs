@@ -3,6 +3,7 @@ use actix_web::guard::Guard;
 
 use crate::handlers::auth::verify_pat_token;
 
+#[derive(Clone)]
 pub struct AuthGuard {
     pub secret: String,
 }

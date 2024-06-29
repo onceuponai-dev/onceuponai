@@ -2,6 +2,7 @@ use actix_web::{HttpResponse, Responder};
 pub mod actors;
 pub mod auth;
 pub mod chat;
+pub mod oai;
 pub mod users;
 
 pub const ASSETS_CSS_HASH: &str = "4a47f803";

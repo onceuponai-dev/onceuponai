@@ -15,6 +15,11 @@
         reverse_proxy rust:8080
     }
 
+    handle /v1* {
+        reverse_proxy rust:8080
+    }
+
+
 
     handle /ui* {
         reverse_proxy rust:8082

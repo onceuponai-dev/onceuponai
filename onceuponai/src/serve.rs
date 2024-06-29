@@ -2,6 +2,7 @@ use crate::actors::main_actor::{MainActor, MainActorConfig};
 use crate::guards::AuthGuard;
 use crate::handlers::actors::{connected_actors, invoke};
 use crate::handlers::auth::generate_token;
+use crate::handlers::oai::v1_chat_completions;
 use crate::handlers::users::user;
 use crate::handlers::{
     self, assets_css, assets_js, health, index_html, ASSETS_CSS_HASH, ASSETS_JS_HASH,
@@ -85,27 +86,33 @@ pub(crate) async fn serve(spec: MainActorConfig, addr: Addr<MainActor>) -> std::
             app = app.route("/login", web::get().to(handlers::auth::token_login));
         }
 
-        let mut api_scope = web::scope("/api")
-            .route("/actors", web::get().to(connected_actors))
-            .route("/invoke/{kind}/{name}", web::post().to(invoke));
-
-        api_scope = api_scope
-            .guard(AuthGuard {
-                secret: sp
-                    .clone()
-                    .personal_access_token_secret
-                    .expect("PERSONAL_ACCESS_TOKEN_SECRET")
-                    .to_string(),
-            })
-            .route("/user", web::get().to(handlers::users::user))
-            .route(
-                "/user/personal-token",
-                web::post().to(handlers::auth::personal_token),
-            );
+        let auth_guard = AuthGuard {
+            secret: sp
+                .clone()
+                .personal_access_token_secret
+                .expect("PERSONAL_ACCESS_TOKEN_SECRET")
+                .to_string(),
+        };
 
         app = app.default_service(web::route().to(HttpResponse::Unauthorized));
 
-        app = app.service(api_scope);
+        app = app.service(
+            web::scope("/api")
+                .guard(auth_guard.clone())
+                .route("/actors", web::get().to(connected_actors))
+                .route("/invoke/{kind}/{name}", web::post().to(invoke))
+                .route("/user", web::get().to(handlers::users::user))
+                .route(
+                    "/user/personal-token",
+                    web::post().to(handlers::auth::personal_token),
+                ),
+        );
+
+        app = app.service(
+            web::scope("v1")
+                .guard(auth_guard)
+                .route("/chat/completions", web::post().to(v1_chat_completions)),
+        );
 
         //app.service(fs::Files::new("/", "../onceuponai-ui/dist/").show_files_listing())
         app

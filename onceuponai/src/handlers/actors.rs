@@ -10,6 +10,7 @@ use futures::stream::Stream;
 use futures::task::{Context, Poll};
 use log::debug;
 use onceuponai_core::common::ResultExt;
+use openidconnect::http::request;
 use serde_json::json;
 use std::error::Error;
 use std::pin::Pin;
@@ -93,8 +94,8 @@ pub async fn base_invoke(
         kind,
         name,
         stream,
-        config: invoke_request.config,
-        data: invoke_request.data,
+        config: invoke_request.config.clone(),
+        data: invoke_request.data.clone(),
     });
 
     if !stream {
@@ -104,7 +105,7 @@ pub async fn base_invoke(
                 remove_invoke_task(&task_id);
                 match response {
                     crate::actors::ActorInvokeResponse::Success(result) => {
-                        Ok(HttpResponse::Ok().json(mapper.map(result)))
+                        Ok(HttpResponse::Ok().json(mapper.map(invoke_request, result)))
                     }
                     crate::actors::ActorInvokeResponse::Failure(result) => {
                         Ok(HttpResponse::BadRequest().json(result.error))
@@ -124,6 +125,7 @@ pub async fn base_invoke(
         let rx = Arc::new(Mutex::new(rx));
 
         let stream = MpscStream {
+            reqeust: invoke_request,
             receiver: rx,
             task_id,
             mapper,
@@ -133,6 +135,7 @@ pub async fn base_invoke(
 }
 
 struct MpscStream {
+    reqeust: InvokeRequest,
     receiver: Arc<Mutex<mpsc::Receiver<crate::actors::ActorInvokeResponse>>>,
     task_id: Uuid,
     mapper: Mappers,
@@ -147,7 +150,8 @@ impl Stream for MpscStream {
             Ok(response) => match response {
                 crate::actors::ActorInvokeResponse::Success(result) => {
                     let mut mapper = self.mapper.clone();
-                    let text = mapper.map(result).to_string();
+                    let request = self.reqeust.clone();
+                    let text = mapper.map(request, result).to_string();
 
                     let byte = bytes::Bytes::from(text);
                     Poll::Ready(Some(Ok(byte)))
@@ -184,14 +188,25 @@ fn remove_invoke_task(task_id: &Uuid) {
 #[derive(Clone)]
 pub enum Mappers {
     Base,
-    Custom,
+    OaiChatCompletions,
 }
 
 impl Mappers {
-    fn map(&mut self, result: crate::actors::ActorInvokeResult) -> serde_json::Value {
+    fn map(
+        &mut self,
+        request: InvokeRequest,
+        result: crate::actors::ActorInvokeResult,
+    ) -> serde_json::Value {
         match self {
             Mappers::Base => json!(result.data),
-            Mappers::Custom => json!(result),
+            Mappers::OaiChatCompletions => json!({
+                    "choices": [{
+                        "message": {
+                            "role": "assistant",
+                            "content": result.data.get("content").expect("CONTENT").last()
+                        }
+                    }]
+            }),
         }
     }
 }

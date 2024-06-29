@@ -11,7 +11,7 @@
   "compilerOptions": {
 
     "lib": [
-      "ES6",
+      "ES2021",
       "DOM",
       "WebWorker"
     ],
