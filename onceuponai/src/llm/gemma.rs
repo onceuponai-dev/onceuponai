@@ -72,6 +72,7 @@ pub fn invoke(uuid: Uuid, request: ActorInvokeRequest) -> Result<ActorInvokeResp
         uuid,
         task_id: request.task_id,
         stream: request.stream,
+        metadata: HashMap::new(),
         data: HashMap::from([(String::from("results"), results)]),
     };
 

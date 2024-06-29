@@ -48,7 +48,7 @@ pub async fn invoke(
         .to_string()
         .to_lowercase();
 
-    base_invoke(kind, name, app_state, invoke_request.clone()).await
+    base_invoke(kind, name, app_state, invoke_request.clone(), Mappers::Base).await
 }
 
 pub async fn base_invoke(
@@ -56,6 +56,7 @@ pub async fn base_invoke(
     name: String,
     app_state: web::Data<AppState>,
     invoke_request: InvokeRequest,
+    mut mapper: Mappers,
 ) -> Result<impl Responder, Box<dyn Error>> {
     let kind_connected = CONNECTED_ACTORS
         .get()
@@ -92,6 +93,7 @@ pub async fn base_invoke(
         kind,
         name,
         stream,
+        config: invoke_request.config,
         data: invoke_request.data,
     });
 
@@ -102,7 +104,7 @@ pub async fn base_invoke(
                 remove_invoke_task(&task_id);
                 match response {
                     crate::actors::ActorInvokeResponse::Success(result) => {
-                        Ok(HttpResponse::Ok().json(result.data))
+                        Ok(HttpResponse::Ok().json(mapper.map(result)))
                     }
                     crate::actors::ActorInvokeResponse::Failure(result) => {
                         Ok(HttpResponse::BadRequest().json(result.error))
@@ -124,6 +126,7 @@ pub async fn base_invoke(
         let stream = MpscStream {
             receiver: rx,
             task_id,
+            mapper,
         };
         Ok(HttpResponse::Ok().streaming(stream))
     }
@@ -132,6 +135,7 @@ pub async fn base_invoke(
 struct MpscStream {
     receiver: Arc<Mutex<mpsc::Receiver<crate::actors::ActorInvokeResponse>>>,
     task_id: Uuid,
+    mapper: Mappers,
 }
 
 impl Stream for MpscStream {
@@ -142,7 +146,8 @@ impl Stream for MpscStream {
         match receiver.try_recv() {
             Ok(response) => match response {
                 crate::actors::ActorInvokeResponse::Success(result) => {
-                    let text = json!(result.data).to_string();
+                    let mut mapper = self.mapper.clone();
+                    let text = mapper.map(result).to_string();
 
                     let byte = bytes::Bytes::from(text);
                     Poll::Ready(Some(Ok(byte)))
@@ -174,4 +179,19 @@ impl Stream for MpscStream {
 fn remove_invoke_task(task_id: &Uuid) {
     let mut response_map = INVOKE_TASKS.get().expect("INVOKE_TASKS").lock().unwrap();
     response_map.remove(task_id);
+}
+
+#[derive(Clone)]
+pub enum Mappers {
+    Base,
+    Custom,
+}
+
+impl Mappers {
+    fn map(&mut self, result: crate::actors::ActorInvokeResult) -> serde_json::Value {
+        match self {
+            Mappers::Base => json!(result.data),
+            Mappers::Custom => json!(result),
+        }
+    }
 }

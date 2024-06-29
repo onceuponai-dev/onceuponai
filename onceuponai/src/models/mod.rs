@@ -45,6 +45,7 @@ pub struct PATClaims {
 
 #[derive(Deserialize, Serialize, Debug, Clone)]
 pub struct InvokeRequest {
+    pub config: HashMap<String, EntityValue>,
     pub data: HashMap<String, Vec<EntityValue>>,
     pub stream: Option<bool>,
 }
