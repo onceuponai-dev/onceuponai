@@ -23,7 +23,7 @@ content-type: application/json
 
 POST http://rust:8080/api/invoke/quantized/bielik HTTP/1.1
 content-type: application/json
-Authorization: Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJxYmEuc29sQGdtYWlsLmNvbSIsImV4cCI6MTcxOTY4NDQxMn0.oE09Bl36hnekml96dD-CiP5mFI-L2baPl5RyaamzqIc
+Authorization: Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJxYmEuc29sQGdtYWlsLmNvbSIsImV4cCI6MTcxOTc3MTA5OX0.b2qIq9hyGmfAgGdo5IAJHRwEyVVLp0AqSapckf4uzBk
 
 {
     "stream": false,
@@ -37,7 +37,7 @@ Authorization: Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJxYmEuc29sQ
 
 POST http://rust:8080/api/invoke/quantized/bielik HTTP/1.1
 content-type: application/json
-Authorization: Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJxYmEuc29sQGdtYWlsLmNvbSIsImV4cCI6MTcxOTY4NDQxMn0.oE09Bl36hnekml96dD-CiP5mFI-L2baPl5RyaamzqIc
+Authorization: Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJxYmEuc29sQGdtYWlsLmNvbSIsImV4cCI6MTcxOTc3MTA5OX0.b2qIq9hyGmfAgGdo5IAJHRwEyVVLp0AqSapckf4uzBk
 
 {
     "stream": true,

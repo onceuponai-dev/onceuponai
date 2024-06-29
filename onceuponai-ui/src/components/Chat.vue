@@ -28,7 +28,7 @@ export default defineComponent({
     const showProgress = ref(false);
     const actors: any = ref([]);
     const selectedActor: any = ref(null);
-    const isStream: any = ref(false);
+    const isStream: any = ref(true);
 
     axios.get(`/api/actors`)
       .then(function (response) {
