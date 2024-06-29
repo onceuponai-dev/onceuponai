@@ -152,7 +152,8 @@ impl Handler<ActorInvokeResponse> for MainActor {
     type Result = ();
 
     fn handle(&mut self, msg: ActorInvokeResponse, _ctx: &mut Self::Context) -> Self::Result {
-        debug!("Received invoke response: {:?}", msg);
+        //debug!("Received invoke response: {:?}", msg);
+
         match &msg {
             ActorInvokeResponse::Failure(result) => {
                 let mut tasks = INVOKE_TASKS.get().expect("INVOKE_TASKS").lock().unwrap();
@@ -162,6 +163,7 @@ impl Handler<ActorInvokeResponse> for MainActor {
                 }
             }
             ActorInvokeResponse::Success(result) => {
+                debug!(">>> FETCHED {}", result.task_id.to_string());
                 let mut tasks = INVOKE_TASKS.get().expect("INVOKE_TASKS").lock().unwrap();
                 if !result.stream {
                     if let Some(task) = tasks.remove(&result.task_id) {

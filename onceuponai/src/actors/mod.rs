@@ -14,7 +14,7 @@ use std::collections::HashMap;
 use std::net::SocketAddr;
 use uuid::Uuid;
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub enum ActorError {
     FatalError(String),
     NetworkError(String),
@@ -284,7 +284,7 @@ pub struct ActorInvokeRequest {
     pub data: HashMap<String, Vec<EntityValue>>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct ActorInvokeResult {
     pub uuid: Uuid,
     pub task_id: Uuid,
@@ -293,21 +293,21 @@ pub struct ActorInvokeResult {
     pub data: HashMap<String, Vec<EntityValue>>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct ActorInvokeFinish {
     pub uuid: Uuid,
     pub task_id: Uuid,
     pub stream: bool,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct ActorInvokeError {
     pub uuid: Uuid,
     pub task_id: Uuid,
     pub error: ActorError,
 }
 
-#[derive(RemoteMessage, Serialize, Deserialize, Debug)]
+#[derive(RemoteMessage, Serialize, Deserialize, Debug, Clone)]
 pub enum ActorInvokeResponse {
     Success(ActorInvokeResult),
     Finish(ActorInvokeFinish),
