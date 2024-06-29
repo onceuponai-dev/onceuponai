@@ -4,8 +4,8 @@ import { useRouter } from 'vue-router';
 import axios from 'axios';
 
 interface Message {
-  text: string;
-  type: 'request' | 'response';
+  content: string;
+  role: 'user' | 'assistant' | 'system';
 }
 
 export default defineComponent({
@@ -41,11 +41,12 @@ export default defineComponent({
       if (inputMessage.value.trim() === '') return;
 
       var text = inputMessage.value;
-      messages.value.push({ text: text, type: 'request' });
+      messages.value.push({ content: text, role: 'user' });
       inputMessage.value = '';
       showProgress.value = true;
       axios.post(`/api/invoke/${selectedActor.value}`, {
         stream: false,
+        config: {},
         data: {
           message: [{"content": text, "role": "user"}],
         }
@@ -59,7 +60,7 @@ export default defineComponent({
           showProgress.value = false;
           console.log(response);
           var result = response.data.results[0];
-          messages.value.push({ text: result, type: 'response' });
+          messages.value.push({ content: result, role: 'assistant' });
           nextTick(() => {
             setTimeout(() => {
               var chatDiv = document.getElementsByClassName("chat-area")[0]
@@ -70,7 +71,7 @@ export default defineComponent({
         })
         .catch(function (error) {
 
-          messages.value.push({ text: "😿 Error", type: 'response' });
+          messages.value.push({ content: "😿 Error", role: 'assistant' });
           showProgress.value = false;
           console.log(error);
         });
@@ -102,9 +103,9 @@ export default defineComponent({
   <v-container class="d-flex flex-column fill-height">
     <v-card class="flex-grow-1 mb-2 overflow-auto fill-width chat-area" ref="chatArea">
       <v-row v-for="(message, index) in messages" :key="index" class="mb-2">
-        <v-col :cols="message.type === 'request' ? '8' : '12'" :offset="message.type === 'request' ? '0' : '1'">
-          <v-card :class="message.type" class="pa-3 rounded-pill" width="90%">
-            <v-card-text class="card-text">{{ message.text }}</v-card-text>
+        <v-col :cols="message.role === 'user' ? '8' : '12'" :offset="message.role === 'user' ? '0' : '1'">
+          <v-card :class="message.role" class="pa-3 rounded-pill" width="90%">
+            <v-card-text class="card-text">{{ message.content }}</v-card-text>
           </v-card>
         </v-col>
       </v-row>
@@ -148,16 +149,14 @@ export default defineComponent({
 }
 
 
-.request {
-  /* background-color: #e0e0e0; */
-  background: linear-gradient(135deg, rgba(224, 224, 224, 0.8), rgba(192, 192, 192, 0.8));
+.user {
+  background: linear-gradient(135deg, rgba(250, 255, 250, 0.9), rgba(220, 225, 220, 0.9));
   align-self: flex-start;
   box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.5);
 }
 
-.response {
-  /* background-color: #a5d6a7; */
-  background: linear-gradient(135deg, rgba(165, 214, 167, 0.8), rgba(129, 199, 132, 0.8));
+.assistant {
+  background: linear-gradient(135deg, rgba(250, 250, 255, 0.9), rgba(220, 220, 225, 0.9));
   align-self: flex-end;
   box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.5);
 }

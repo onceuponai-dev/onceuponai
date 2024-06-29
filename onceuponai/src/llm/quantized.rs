@@ -166,7 +166,7 @@ where
                 task_id: request.task_id,
                 stream: request.stream,
                 metadata: HashMap::new(),
-                data: HashMap::from([(String::from("results"), vec![EntityValue::STRING(text)])]),
+                data: HashMap::from([(String::from("content"), vec![EntityValue::STRING(text)])]),
             };
 
             let response = ActorInvokeResponse::Success(result);
