@@ -396,11 +396,17 @@ impl Handler<ActorInvokeRequest> for WorkerActor {
             let response = self.actor.invoke(self.uuid, &msg).unwrap();
             msg.source.do_send(response)
         } else {
-            self.actor
-                .invoke_stream(self.uuid, &msg, |response: ActorInvokeResponse| {
-                    msg.source.do_send(response);
+            let uuid = self.uuid;
+            let a = self.actor.clone();
+            let m = msg.clone();
+
+            std::thread::spawn(move || {
+                a.invoke_stream(uuid, &m, |response: ActorInvokeResponse| {
+                    m.source.do_send(response);
                 })
                 .unwrap()
+            });
+            debug!("RESSSSSSSSSSULT --------> ");
         }
     }
 }
