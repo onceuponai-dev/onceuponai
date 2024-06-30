@@ -18,22 +18,65 @@ RUN apt-get update && apt-get install -y \
 ENV PATH=/root/.cargo/bin:$PATH
 
 WORKDIR /app
-COPY onceuponai-backend/ .
+RUN mkdir onceuponai-core && \
+    mkdir onceuponai-py && \
+    mkdir onceuponai-operator && \
+    mkdir onceuponai && \
+    mkdir onceuponai/src && \
+    echo "fn main() {println!(\"Hello, world!\");}" > onceuponai/src/main.rs && \
+    mkdir onceuponai-core/src && \
+    echo "fn main() {println!(\"Hello, world!\");}" > onceuponai-core/src/lib.rs && \
+    mkdir onceuponai-operator/src && \
+    echo "fn main() {println!(\"Hello, world!\");}" > onceuponai-operator/src/main.rs && \
+    mkdir onceuponai-py/src && \
+    echo "fn main() {println!(\"Hello, world!\");}" > onceuponai-py/src/lib.rs
+
+
+COPY onceuponai-backend/Cargo.toml onceuponai-backend/Cargo.lock ./
+COPY onceuponai-backend/onceuponai/Cargo.toml ./onceuponai/
+COPY onceuponai-backend/onceuponai-core/Cargo.toml ./onceuponai-core/
+COPY onceuponai-backend/onceuponai-operator/Cargo.toml ./onceuponai-operator/
+COPY onceuponai-backend/onceuponai-py/Cargo.toml ./onceuponai-py/
+
 WORKDIR /app/onceuponai
 RUN cargo build --release
 
-#FROM debian:buster-slim
-#
-#RUN apt-get update && apt-get install -y \
-#    libssl1.1 \
-#    ca-certificates \
-#    && rm -rf /var/lib/apt/lists/*
-#
-#WORKDIR /app
-#COPY --from=vue-build /app/dist ./frontend
-#COPY --from=rust-build /app/target/release/onceuponai .
-#
-#EXPOSE 8080
-#
-#CMD ["./onceuponai"]
-#
+WORKDIR /app
+RUN rm -rf onceuponai/src/* && \
+    rm -rf onceuponai-core/src/* && \
+    rm -rf onceuponai-operator/src/* && \
+    rm -rf onceuponai-py/src/*
+
+FROM rust-build AS rust-build-release
+
+WORKDIR /app
+COPY onceuponai-backend/onceuponai/src ./onceuponai/src
+COPY onceuponai-backend/onceuponai-core/src ./onceuponai-core/src
+COPY onceuponai-backend/onceuponai-operator/src ./onceuponai-operator/src
+COPY onceuponai-backend/onceuponai-py/src ./onceuponai-py/src
+
+WORKDIR /app/onceuponai
+COPY --from=vue-build /onceuponai/ui ./ui
+RUN cd ui/assets && \
+    CSS_HASH=$(ls -1 *.css | grep -oP '([a-f0-9]{8})') && \
+    JS_HASH=$(ls -1 *.js | grep -oP '([a-f0-9]{8})') && \
+    sed -i "s/4a47f803/$CSS_HASH/g" /app/onceuponai/src/handlers/mod.rs && \
+    sed -i "s/e1b29641/$JS_HASH/g" /app/onceuponai/src/handlers/mod.rs
+
+
+RUN cargo build --release
+
+FROM ubuntu:22.04
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    libssl3 \
+    ca-certificates \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+COPY --from=rust-build-release /app/target/release/onceuponai .
+
+EXPOSE 8080
+
+CMD ["./onceuponai"]
