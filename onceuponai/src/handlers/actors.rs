@@ -199,6 +199,7 @@ impl Mappers {
         match self {
             Mappers::Base => json!(result.data),
             Mappers::OaiChatCompletions => json!({
+                    "id": result.task_id,
                     "choices": [{
                         "message": {
                             "role": "assistant",
