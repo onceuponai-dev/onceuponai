@@ -22,7 +22,7 @@ export default defineComponent({
   setup() {
     const router = useRouter();
 
-    const dialog = ref(false);
+    const dialog: any = ref(false);
     const selectedModel: any = ref<Actor | null>(null);
     const actors: any = ref<Actor[]>([]);
 
@@ -51,7 +51,7 @@ export default defineComponent({
     ];
 
 
-    const openDialog = (model: Actor) => {
+    const openDialog = (model: any) => {
       selectedModel.value = model;
       dialog.value = true;
     };
@@ -97,7 +97,7 @@ export default defineComponent({
         </v-card-text>
         <v-card-actions>
           <v-spacer></v-spacer>
-          <v-btn color="primary" text @click="closeDialog">Close</v-btn>
+          <v-btn color="primary" @click="closeDialog">Close</v-btn>
         </v-card-actions>
       </v-card>
     </v-dialog>

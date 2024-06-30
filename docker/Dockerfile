@@ -1,30 +1,39 @@
-# based on https://dev.to/kummerer94/multi-stage-docker-builds-for-pyton-projects-using-uv-223g
-FROM python:3.10.12 as build
+FROM node:20 AS vue-build
+WORKDIR /app
+COPY onceuponai-ui/package*.json ./
+RUN npm install
+COPY onceuponai-ui/ .
+RUN npm run build
 
-RUN apt-get update && apt-get install -y build-essential curl
-ENV VIRTUAL_ENV=/opt/venv \
-    PATH="/opt/venv/bin:$PATH"
+FROM nvidia/cuda:12.3.1-devel-ubuntu22.04 AS rust-build
 
-ADD https://astral.sh/uv/install.sh /install.sh
-RUN chmod -R 655 /install.sh && /install.sh && rm /install.sh
-COPY ./requirements.txt .
-COPY ./wheels /wheels
-RUN /root/.cargo/bin/uv venv /opt/venv
-RUN /root/.cargo/bin/uv pip install --no-cache -r requirements.txt
-RUN /root/.cargo/bin/uv pip install --no-cache /wheels/onceuponai-0.0.2-cp310-cp310-manylinux_2_34_x86_64.whl
+RUN apt-get update && apt-get install -y \
+    curl \
+    build-essential \
+    pkg-config \
+    libssl-dev \
+    protobuf-compiler \
+    && curl https://sh.rustup.rs -sSf | sh -s -- -y
 
-FROM python:3.10.12-slim-bookworm
-COPY --from=build /opt/venv /opt/venv
+ENV PATH=/root/.cargo/bin:$PATH
 
-# CREATE USER
-RUN useradd -ms /bin/bash jovyan
-ARG NB_USER=jovyan
-ARG NB_UID=1000
-ARG NB_GID=100
+WORKDIR /app
+COPY onceuponai-backend/ .
+WORKDIR /app/onceuponai
+RUN cargo build --release
 
-USER 1000
-WORKDIR /home/jovyan
-
-ENV PATH="/opt/venv/bin:$PATH"
-COPY ./serve_recipes.py .
-ENTRYPOINT ["serve", "run", "serve_recipes:recipes_app"]
+#FROM debian:buster-slim
+#
+#RUN apt-get update && apt-get install -y \
+#    libssl1.1 \
+#    ca-certificates \
+#    && rm -rf /var/lib/apt/lists/*
+#
+#WORKDIR /app
+#COPY --from=vue-build /app/dist ./frontend
+#COPY --from=rust-build /app/target/release/onceuponai .
+#
+#EXPOSE 8080
+#
+#CMD ["./onceuponai"]
+#

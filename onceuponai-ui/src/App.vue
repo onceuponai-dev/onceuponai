@@ -12,13 +12,11 @@ export default defineComponent({
 
     const app: any = ref(null);
 
-
     const cookieConsentKey = "cookie-consent";
     const cookieConsentBanner = ref(true);
 
-
-    const email = ref(null);
-    const userName = ref(null);
+    const email: any = ref(null);
+    const userName: any = ref(null);
 
     const drawer: any = ref(true);
     const items: any = ref([
