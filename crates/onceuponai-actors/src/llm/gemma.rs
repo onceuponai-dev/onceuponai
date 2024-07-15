@@ -11,7 +11,7 @@ use crate::actors::{
     ActorError, ActorInvokeError, ActorInvokeRequest, ActorInvokeResponse, ActorInvokeResult,
 };
 
-pub fn start(spec: GemmaConfig) -> Result<()> {
+pub fn start(spec: GemmaSpec) -> Result<()> {
     GemmaModel::lazy(
         spec.base_repo_id,
         spec.tokenizer_repo,
@@ -121,7 +121,7 @@ pub async fn chat(prompt: &str) -> Result<impl Responder, Box<dyn std::error::Er
 */
 
 #[derive(Deserialize, Debug, Clone)]
-pub struct GemmaConfig {
+pub struct GemmaSpec {
     pub base_repo_id: Option<String>,
     pub tokenizer_repo: Option<String>,
     pub device: Option<String>,

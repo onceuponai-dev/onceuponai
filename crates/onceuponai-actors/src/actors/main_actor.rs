@@ -40,7 +40,7 @@ pub struct MainActorAuthConfig {
 }
 
 #[derive(Deserialize, Debug, Clone)]
-pub struct MainActorConfig {
+pub struct MainActorSpec {
     pub server_host: String,
     pub server_port: u16,
     pub log_level: Option<String>,
@@ -51,7 +51,7 @@ pub struct MainActorConfig {
     pub auth: Option<MainActorAuthConfig>,
 }
 
-impl MainActorConfig {
+impl MainActorSpec {
     pub fn oidc(&self) -> MainActorOidcConfig {
         self.auth.clone().expect("AUTH").oidc.expect("OIDC")
     }

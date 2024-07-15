@@ -1,12 +1,12 @@
 pub mod custom_actor;
 pub mod main_actor;
-use crate::llm::{e5::E5Config, gemma::GemmaConfig, quantized::QuantizedConfig};
+use crate::llm::{e5::E5Spec, gemma::GemmaSpec, quantized::QuantizedSpec};
 use actix::prelude::*;
 use actix_telepathy::prelude::*;
 use anyhow::{anyhow, Result};
-use custom_actor::{CustomActorConfig, CustomActorRegistry, CUSTOM_ACTOR_REGISTRY};
+use custom_actor::{CustomActorRegistry, CustomActorSpec, CUSTOM_ACTOR_REGISTRY};
 use log::debug;
-use main_actor::{MainActor, MainActorConfig};
+use main_actor::{MainActor, MainActorSpec};
 use onceuponai_core::{common::ResultExt, common_models::EntityValue, config::read_config_str};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -59,23 +59,23 @@ pub struct ModelResponse {
 pub enum ActorObject {
     Main {
         metadata: ActorMetadata,
-        spec: MainActorConfig,
+        spec: MainActorSpec,
     },
     Custom {
         metadata: ActorMetadata,
-        spec: CustomActorConfig,
+        spec: CustomActorSpec,
     },
     Gemma {
         metadata: ActorMetadata,
-        spec: GemmaConfig,
+        spec: GemmaSpec,
     },
     Quantized {
         metadata: ActorMetadata,
-        spec: QuantizedConfig,
+        spec: QuantizedSpec,
     },
     E5 {
         metadata: ActorMetadata,
-        spec: E5Config,
+        spec: E5Spec,
     },
 }
 

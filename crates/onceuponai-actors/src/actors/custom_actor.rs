@@ -12,7 +12,7 @@ pub trait CustomActor: Send + Sync {
 }
 
 #[derive(Deserialize, Debug, Clone)]
-pub struct CustomActorConfig {
+pub struct CustomActorSpec {
     pub name: String,
 }
 

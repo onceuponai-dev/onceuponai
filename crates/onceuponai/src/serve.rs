@@ -15,10 +15,10 @@ use anyhow::Result;
 use base64::{engine::general_purpose, Engine as _};
 use log::{debug, warn};
 use num_traits::Zero;
-use onceuponai_actors::actors::main_actor::{MainActor, MainActorConfig};
+use onceuponai_actors::actors::main_actor::{MainActor, MainActorSpec};
 use onceuponai_core::common::ResultExt;
 
-fn get_secret_key(spec: &MainActorConfig) -> Result<Key> {
+fn get_secret_key(spec: &MainActorSpec) -> Result<Key> {
     let key = spec.session_key.clone().expect("SESSION_KEY");
     let k = general_purpose::STANDARD.decode(key)?;
     Ok(Key::from(&k))
@@ -26,13 +26,13 @@ fn get_secret_key(spec: &MainActorConfig) -> Result<Key> {
 
 pub struct AppState {
     pub addr: Addr<MainActor>,
-    pub spec: MainActorConfig,
+    pub spec: MainActorSpec,
 }
 
 // Handler for getting a session value
 
 #[allow(clippy::too_many_arguments)]
-pub(crate) async fn serve(spec: MainActorConfig, addr: Addr<MainActor>) -> std::io::Result<()> {
+pub(crate) async fn serve(spec: MainActorSpec, addr: Addr<MainActor>) -> std::io::Result<()> {
     let secret_key = get_secret_key(&spec).map_io_err()?;
     let mut sp = spec.clone();
     if let Some(v) = spec.log_level {

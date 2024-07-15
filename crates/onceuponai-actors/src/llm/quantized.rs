@@ -12,7 +12,7 @@ use crate::actors::{
     ActorInvokeResult,
 };
 
-pub fn start(spec: QuantizedConfig) -> Result<()> {
+pub fn start(spec: QuantizedSpec) -> Result<()> {
     QuantizedModel::lazy(
         spec.model_repo,
         spec.model_file,
@@ -234,7 +234,7 @@ pub async fn chat(prompt: &str) -> Result<impl Responder, Box<dyn std::error::Er
 */
 
 #[derive(Deserialize, Debug, Clone)]
-pub struct QuantizedConfig {
+pub struct QuantizedSpec {
     pub model_repo: Option<String>,
     pub model_file: Option<String>,
     pub model_revision: Option<String>,

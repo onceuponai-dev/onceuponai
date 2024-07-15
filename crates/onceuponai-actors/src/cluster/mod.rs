@@ -1,12 +1,12 @@
 use crate::actors::{
-    main_actor::{MainActor, MainActorConfig},
+    main_actor::{MainActor, MainActorSpec},
     ActorBuilder, ActorInstance, ActorObject,
 };
 use actix::prelude::*;
 use actix_telepathy::Cluster;
 use anyhow::Result;
 
-pub async fn start_cluster(file: &String) -> Result<Option<(MainActorConfig, Addr<MainActor>)>> {
+pub async fn start_cluster(file: &String) -> Result<Option<(MainActorSpec, Addr<MainActor>)>> {
     let actor = ActorBuilder::build(file).await?;
 
     println!("{}", LOGO);

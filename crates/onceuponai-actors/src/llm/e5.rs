@@ -11,12 +11,12 @@ use crate::actors::{
 };
 
 #[derive(Deserialize, Debug, Clone)]
-pub struct E5Config {
+pub struct E5Spec {
     pub model_repo: Option<String>,
     pub device: Option<String>,
 }
 
-pub fn start(spec: E5Config) -> Result<()> {
+pub fn start(spec: E5Spec) -> Result<()> {
     E5Model::lazy(spec.model_repo, spec.device)?;
     debug!("MODEL STARTED");
     Ok(())
