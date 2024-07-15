@@ -1,8 +1,10 @@
 [workspace]
 members = [
-    "onceuponai",
-    "onceuponai-core", "onceuponai-operator",
-    "onceuponai-py",
+    "crates/onceuponai", 
+    "crates/onceuponai-abstractions",
+    "crates/onceuponai-core", 
+    "crates/onceuponai-operator",
+    "crates/onceuponai-py",
     ]
 
 [workspace.package]
