@@ -1,4 +1,3 @@
-pub mod actors;
 use serde::{Deserialize, Serialize};
 use std::convert::TryFrom;
 use std::error::Error;
