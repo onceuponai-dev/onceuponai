@@ -2,7 +2,8 @@
 members = [
     "crates/onceuponai", 
     "crates/onceuponai-abstractions", 
-    "crates/onceuponai-actors", "crates/onceuponai-candle",
+    "crates/onceuponai-actors", 
+    "crates/onceuponai-candle",
     "crates/onceuponai-core", 
     "crates/onceuponai-operator",
     "crates/onceuponai-py",

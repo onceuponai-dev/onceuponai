@@ -6,14 +6,11 @@ edition = "2021"
 
 [dependencies]
 actix = { workspace = true }
-actix-broker = { workspace = true }
 actix-files = { workspace = true }
 actix-rt = { workspace = true }
 actix-session = { workspace = true }
-actix-telepathy = { workspace = true }
 actix-web = { workspace = true }
 anyhow = { workspace = true }
-async-stream = { workspace = true }
 base64 = { workspace = true }
 bytes = { workspace = true }
 clap = { workspace = true }
@@ -29,6 +26,7 @@ log = { workspace = true }
 num-traits = { workspace = true }
 once_cell = { workspace = true }
 onceuponai-actors= { path = "../onceuponai-actors" }
+onceuponai-candle= { path = "../onceuponai-candle" }
 onceuponai-core= { path = "../onceuponai-core" }
 openidconnect = { workspace = true }
 rand = { workspace = true }
@@ -44,5 +42,5 @@ linker = "/usr/bin/x86_64-w64-mingw32-gcc"
 
 [features]
 default = []
-cuda = ["onceuponai-core/cuda"]
+cuda = ["onceuponai-candle/cuda"]
 

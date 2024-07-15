@@ -1,10 +1,10 @@
 use super::parse_device;
-use crate::common::{hf_hub_get, OptionToResult, ResultExt};
 use anyhow::Result;
 use candle_core::{DType, Device, Tensor};
 use candle_nn::VarBuilder;
 use candle_transformers::models::bert::{BertModel, Config as BertConfig};
 use once_cell::sync::OnceCell;
+use onceuponai_core::common::{hf_hub_get, OptionToResult, ResultExt};
 use std::sync::{Arc, Mutex};
 use tokenizers::{PaddingParams, Tokenizer};
 

@@ -1,5 +1,4 @@
 use super::parse_device;
-use crate::common::{hf_hub_get, hf_hub_get_path, OptionToResult, ResultExt};
 use anyhow::Result;
 use candle_core::quantized::{ggml_file, gguf_file};
 use candle_core::{Device, Tensor};
@@ -7,6 +6,7 @@ use candle_transformers::generation::LogitsProcessor;
 use candle_transformers::models::quantized_llama as model;
 use model::ModelWeights;
 use once_cell::sync::OnceCell;
+use onceuponai_core::common::{hf_hub_get, hf_hub_get_path, OptionToResult, ResultExt};
 use std::sync::{Arc, Mutex};
 use tokenizers::Tokenizer;
 

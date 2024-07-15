@@ -1,11 +1,11 @@
 use super::parse_device;
-use crate::common::{hf_hub_get, hf_hub_get_multiple, ResultExt};
 use anyhow::Result;
 use candle_core::{DType, Device, Tensor};
 use candle_nn::VarBuilder;
 use candle_transformers::generation::LogitsProcessor;
 use candle_transformers::models::gemma::{Config, Model};
 use once_cell::sync::OnceCell;
+use onceuponai_core::common::{hf_hub_get, hf_hub_get_multiple, ResultExt};
 use std::sync::{Arc, Mutex};
 use tokenizers::Tokenizer;
 

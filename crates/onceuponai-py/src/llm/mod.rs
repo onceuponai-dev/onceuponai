@@ -2,14 +2,12 @@ extern crate onceuponai_core;
 use std::collections::HashMap;
 
 use crate::common::ResultExt;
-use onceuponai_core::{
-    common::OptionToResult,
-    llm::{
-        e5::{E5Model, E5_MODEL_REPO},
-        gemma::GemmaModel,
-        quantized::QuantizedModel,
-    },
+use onceuponai_candle::llm::{
+    e5::{E5Model, E5_MODEL_REPO},
+    gemma::GemmaModel,
+    quantized::QuantizedModel,
 };
+use onceuponai_core::common::OptionToResult;
 use pyo3::prelude::*;
 
 #[pyclass]

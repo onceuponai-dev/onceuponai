@@ -2,7 +2,8 @@ use std::collections::HashMap;
 // use actix_web::{HttpResponse, Responder};
 use anyhow::Result;
 // use async_stream::stream;
-use onceuponai_core::{common::ResultExt, common_models::EntityValue, llm::gemma::GemmaModel};
+use onceuponai_candle::llm::gemma::GemmaModel;
+use onceuponai_core::{common::ResultExt, common_models::EntityValue};
 use serde::Deserialize;
 use uuid::Uuid;
 

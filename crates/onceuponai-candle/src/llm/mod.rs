@@ -1,7 +1,7 @@
 pub mod e5;
 pub mod gemma;
 pub mod quantized;
-pub mod rag;
+// pub mod rag;
 use anyhow::Result;
 use candle_core::Device;
 
