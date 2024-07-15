@@ -7,6 +7,7 @@ use anyhow::{anyhow, Result};
 use custom_actor::{CustomActorRegistry, CustomActorSpec, CUSTOM_ACTOR_REGISTRY};
 use log::debug;
 use main_actor::{MainActor, MainActorSpec};
+use onceuponai_abstractions::actors::ActorMetadata;
 use onceuponai_core::{common::ResultExt, common_models::EntityValue, config::read_config_str};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -32,14 +33,6 @@ pub struct ActorInfo {
     pub metadata: ActorMetadata,
     pub source: RemoteAddr,
     pub kind: String,
-}
-
-#[derive(Serialize, Deserialize, Debug, Clone)]
-pub struct ActorMetadata {
-    pub name: String,
-    pub features: Option<Vec<String>>,
-    pub actor_host: String,
-    pub actor_seed: Option<String>,
 }
 
 #[derive(RemoteMessage, Serialize, Deserialize, Clone)]
