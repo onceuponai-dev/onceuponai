@@ -7,3 +7,12 @@ pub struct ActorMetadata {
     pub actor_host: String,
     pub actor_seed: Option<String>,
 }
+
+struct ActorConfig<T> {
+    metadata: ActorMetadata,
+    spec: T,
+}
+
+impl<T> ActorConfig<T> {
+    fn metadata(&self) {}
+}

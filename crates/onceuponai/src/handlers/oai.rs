@@ -4,7 +4,7 @@ use crate::serve::AppState;
 use actix_web::Responder;
 use actix_web::{web, HttpRequest};
 use anyhow::Result;
-use onceuponai_core::common_models::EntityValue;
+use onceuponai_abstractions::EntityValue;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::error::Error;

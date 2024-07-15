@@ -1,8 +1,6 @@
-use std::collections::HashMap;
-
-use derive_more::{Display, Error};
-use onceuponai_core::common_models::EntityValue;
+use onceuponai_abstractions::EntityValue;
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 
 #[derive(Deserialize, Serialize, Debug, Clone)]
 #[serde(tag = "type", rename_all = "camelCase")]

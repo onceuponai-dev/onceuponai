@@ -1,8 +1,9 @@
 // use actix_web::{HttpResponse, Responder};
 use anyhow::Result;
 // use async_stream::stream;
+use onceuponai_abstractions::EntityValue;
 use onceuponai_candle::llm::quantized::QuantizedModel;
-use onceuponai_core::{common::ResultExt, common_models::EntityValue};
+use onceuponai_core::common::ResultExt;
 use serde::Deserialize;
 use std::collections::HashMap;
 use uuid::Uuid;

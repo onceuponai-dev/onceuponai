@@ -1,7 +1,8 @@
 use anyhow::Result;
 use log::debug;
+use onceuponai_abstractions::EntityValue;
 use onceuponai_candle::llm::e5::E5Model;
-use onceuponai_core::{common::ResultExt, common_models::EntityValue};
+use onceuponai_core::common::ResultExt;
 use serde::Deserialize;
 use std::collections::HashMap;
 use uuid::Uuid;

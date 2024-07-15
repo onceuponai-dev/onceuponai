@@ -25,6 +25,7 @@ jsonwebtoken = { workspace = true }
 log = { workspace = true }
 num-traits = { workspace = true }
 once_cell = { workspace = true }
+onceuponai-abstractions= { path = "../onceuponai-abstractions" }
 onceuponai-actors= { path = "../onceuponai-actors" }
 onceuponai-candle= { path = "../onceuponai-candle" }
 onceuponai-core= { path = "../onceuponai-core" }
