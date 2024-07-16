@@ -192,7 +192,7 @@ impl Mappers {
     fn map(
         &mut self,
         request: InvokeRequest,
-        result: onceuponai_actors::actors::ActorInvokeResult,
+        result: onceuponai_actors_abstractions::ActorInvokeResult,
     ) -> serde_json::Value {
         match self {
             Mappers::Base => json!(result.data),

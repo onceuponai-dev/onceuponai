@@ -1,15 +1,13 @@
+use crate::actors::{ActorInvokeRequest, ActorInvokeResponse};
 use anyhow::Result;
 use log::debug;
 use onceuponai_abstractions::EntityValue;
+use onceuponai_actors_abstractions::{ActorError, ActorInvokeError, ActorInvokeResult};
 use onceuponai_candle::llm::e5::E5Model;
 use onceuponai_core::common::ResultExt;
 use serde::Deserialize;
 use std::collections::HashMap;
 use uuid::Uuid;
-
-use crate::actors::{
-    ActorError, ActorInvokeError, ActorInvokeRequest, ActorInvokeResponse, ActorInvokeResult,
-};
 
 #[derive(Deserialize, Debug, Clone)]
 pub struct E5Spec {

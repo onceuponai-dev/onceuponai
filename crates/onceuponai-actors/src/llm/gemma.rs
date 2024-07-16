@@ -2,15 +2,13 @@ use std::collections::HashMap;
 // use actix_web::{HttpResponse, Responder};
 use anyhow::Result;
 // use async_stream::stream;
+use crate::actors::{ActorInvokeRequest, ActorInvokeResponse};
 use onceuponai_abstractions::EntityValue;
+use onceuponai_actors_abstractions::{ActorError, ActorInvokeError, ActorInvokeResult};
 use onceuponai_candle::llm::gemma::GemmaModel;
 use onceuponai_core::common::ResultExt;
 use serde::Deserialize;
 use uuid::Uuid;
-
-use crate::actors::{
-    ActorError, ActorInvokeError, ActorInvokeRequest, ActorInvokeResponse, ActorInvokeResult,
-};
 
 pub fn start(spec: GemmaSpec) -> Result<()> {
     GemmaModel::lazy(

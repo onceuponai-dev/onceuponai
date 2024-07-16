@@ -1,9 +1,17 @@
 use actix_telepathy::RemoteAddr;
 use anyhow::Result;
+use onceuponai_abstractions::EntityValue;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::net::SocketAddr;
 use uuid::Uuid;
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub enum ActorError {
+    FatalError(String),
+    NetworkError(String),
+    BadRequest(String),
+}
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct ActorMetadata {
@@ -11,6 +19,29 @@ pub struct ActorMetadata {
     pub features: Option<Vec<String>>,
     pub actor_host: String,
     pub actor_seed: Option<String>,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct ActorInvokeResult {
+    pub uuid: Uuid,
+    pub task_id: Uuid,
+    pub stream: bool,
+    pub metadata: HashMap<String, EntityValue>,
+    pub data: HashMap<String, Vec<EntityValue>>,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct ActorInvokeFinish {
+    pub uuid: Uuid,
+    pub task_id: Uuid,
+    pub stream: bool,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct ActorInvokeError {
+    pub uuid: Uuid,
+    pub task_id: Uuid,
+    pub error: ActorError,
 }
 
 pub trait ActorActions {

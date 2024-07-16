@@ -8,20 +8,15 @@ use custom_actor::{CustomActorRegistry, CustomActorSpec, CUSTOM_ACTOR_REGISTRY};
 use log::debug;
 use main_actor::{MainActor, MainActorSpec};
 use onceuponai_abstractions::EntityValue;
-use onceuponai_actors_abstractions::ActorMetadata;
+use onceuponai_actors_abstractions::{
+    ActorError, ActorInvokeError, ActorInvokeFinish, ActorInvokeResult, ActorMetadata,
+};
 use onceuponai_core::{common::ResultExt, config::read_config_str};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::net::SocketAddr;
 use std::sync::mpsc;
 use uuid::Uuid;
-
-#[derive(Debug, Serialize, Deserialize, Clone)]
-pub enum ActorError {
-    FatalError(String),
-    NetworkError(String),
-    BadRequest(String),
-}
 
 // https://github.com/yummyml/yummy/blob/master/yummy-rs/yummy-delta/src/apply.rs
 // https://github.com/yummyml/yummy/blob/master/yummy-rs/yummy-core/src/config.rs
@@ -276,29 +271,6 @@ pub struct ActorInvokeRequest {
     pub stream: bool,
     pub config: HashMap<String, EntityValue>,
     pub data: HashMap<String, Vec<EntityValue>>,
-}
-
-#[derive(Serialize, Deserialize, Debug, Clone)]
-pub struct ActorInvokeResult {
-    pub uuid: Uuid,
-    pub task_id: Uuid,
-    pub stream: bool,
-    pub metadata: HashMap<String, EntityValue>,
-    pub data: HashMap<String, Vec<EntityValue>>,
-}
-
-#[derive(Serialize, Deserialize, Debug, Clone)]
-pub struct ActorInvokeFinish {
-    pub uuid: Uuid,
-    pub task_id: Uuid,
-    pub stream: bool,
-}
-
-#[derive(Serialize, Deserialize, Debug, Clone)]
-pub struct ActorInvokeError {
-    pub uuid: Uuid,
-    pub task_id: Uuid,
-    pub error: ActorError,
 }
 
 #[derive(RemoteMessage, Serialize, Deserialize, Debug, Clone)]
