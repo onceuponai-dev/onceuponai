@@ -9,6 +9,7 @@ categories.workspace = true
 license.workspace = true
 
 [dependencies]
+actix-telepathy = { workspace = true }
 anyhow = { workspace = true }
 onceuponai-abstractions= { path = "../onceuponai-abstractions" }
 serde = { workspace = true }
