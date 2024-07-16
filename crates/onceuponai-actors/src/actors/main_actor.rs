@@ -1,6 +1,4 @@
-use super::{
-    ActorInfo, ActorInfoRequest, ActorInvokeResponse, ActorObject, ActorStartInvokeRequest,
-};
+use super::{ActorInfo, ActorInfoRequest, ActorInvokeResponse, ActorKind, ActorStartInvokeRequest};
 use crate::actors::{ActorInvokeRequest, WorkerActor};
 use actix::prelude::*;
 use actix_broker::BrokerSubscribe;
@@ -27,7 +25,7 @@ pub struct InvokeTask {
 #[remote_messages(ActorInfo, ActorInvokeResponse)]
 pub struct MainActor {
     pub uuid: Uuid,
-    pub actor: ActorObject,
+    pub actor: ActorKind,
     pub own_addr: SocketAddr,
     pub remote_addr: RemoteAddr,
     pub connected_actors: HashMap<Uuid, ActorInfo>,

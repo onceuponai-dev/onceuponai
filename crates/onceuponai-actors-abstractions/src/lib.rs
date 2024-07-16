@@ -44,6 +44,22 @@ pub struct ActorInvokeError {
     pub error: ActorError,
 }
 
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct ActorInvokeInput {
+    pub task_id: Uuid,
+    pub source: RemoteAddr,
+    pub stream: bool,
+    pub config: HashMap<String, EntityValue>,
+    pub data: HashMap<String, Vec<EntityValue>>,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub enum ActorInvokeOutput {
+    Success(ActorInvokeResult),
+    Finish(ActorInvokeFinish),
+    Failure(ActorInvokeError),
+}
+
 pub trait ActorActions {
     fn actor_id(&self) -> &str;
     fn is_main(&self) -> bool;
@@ -53,15 +69,18 @@ pub trait ActorActions {
     fn remote_addr(&self) -> Result<RemoteAddr>;
     fn seed_addr(&self) -> Result<SocketAddr>;
     fn start(&self) -> Result<()>;
-    // fn invoke(&self, uuid: Uuid, request: ActorInvokeRequest) -> Result<ActorInvokeResponse>;
+    fn invoke(&self, uuid: Uuid, request: ActorInvokeInput) -> Result<ActorInvokeOutput>;
+    fn invoke_stream<F>(&self, uuid: Uuid, request: &ActorInvokeInput, callback: F) -> Result<()>
+    where
+        F: FnMut(ActorInvokeOutput);
 }
 
-struct ActorConfig<T> {
+struct ActorObject<T> {
     metadata: ActorMetadata,
     spec: T,
 }
 
-impl<T> ActorConfig<T> {
+impl<T> ActorObject<T> {
     fn actor_id(&self) -> &str {
         todo!()
     }

@@ -1,6 +1,6 @@
 use crate::actors::{
     main_actor::{MainActor, MainActorSpec},
-    ActorBuilder, ActorInstance, ActorObject,
+    ActorBuilder, ActorInstance, ActorKind,
 };
 use actix::prelude::*;
 use actix_telepathy::Cluster;
@@ -14,7 +14,7 @@ pub async fn start_cluster(file: &String) -> Result<Option<(MainActorSpec, Addr<
         ActorInstance::Main(main_actor) => {
             let _ = Cluster::new(main_actor.own_addr, Vec::new());
             let spec = match main_actor.actor.clone() {
-                ActorObject::Main { metadata: _, spec } => spec,
+                ActorKind::Main { metadata: _, spec } => spec,
                 _ => todo!(),
             };
 

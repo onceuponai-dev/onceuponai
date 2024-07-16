@@ -45,7 +45,7 @@ pub struct ModelResponse {
 
 #[derive(Deserialize, Debug, Clone)]
 #[serde(tag = "kind", rename_all = "camelCase")]
-pub enum ActorObject {
+pub enum ActorKind {
     Main {
         metadata: ActorMetadata,
         spec: MainActorSpec,
@@ -68,50 +68,50 @@ pub enum ActorObject {
     },
 }
 
-impl ActorObject {
+impl ActorKind {
     pub fn metadata(&self) -> ActorMetadata {
         match self {
-            ActorObject::Gemma { metadata, spec: _ } => {
+            ActorKind::Gemma { metadata, spec: _ } => {
                 let mut m = metadata.clone();
                 m.features = Some(vec!["chat".to_string()]);
                 m
             }
 
-            ActorObject::Quantized { metadata, spec: _ } => {
+            ActorKind::Quantized { metadata, spec: _ } => {
                 let mut m = metadata.clone();
 
                 m.features = Some(vec!["chat".to_string()]);
                 m
             }
-            ActorObject::E5 { metadata, spec: _ } => {
+            ActorKind::E5 { metadata, spec: _ } => {
                 let mut m = metadata.clone();
                 m.features = Some(vec!["embed".to_string()]);
                 m
             }
-            ActorObject::Main { metadata, spec: _ } => metadata.clone(),
-            ActorObject::Custom { metadata, spec: _ } => metadata.clone(),
+            ActorKind::Main { metadata, spec: _ } => metadata.clone(),
+            ActorKind::Custom { metadata, spec: _ } => metadata.clone(),
         }
     }
 
     pub fn kind(&self) -> String {
         match self {
-            ActorObject::Gemma {
+            ActorKind::Gemma {
                 metadata: _,
                 spec: _,
             } => "gemma".to_string(),
-            ActorObject::Quantized {
+            ActorKind::Quantized {
                 metadata: _,
                 spec: _,
             } => "quantized".to_string(),
-            ActorObject::E5 {
+            ActorKind::E5 {
                 metadata: _,
                 spec: _,
             } => "e5".to_string(),
-            ActorObject::Main {
+            ActorKind::Main {
                 metadata: _,
                 spec: _,
             } => "main".to_string(),
-            ActorObject::Custom {
+            ActorKind::Custom {
                 metadata: _,
                 spec: _,
             } => "main".to_string(),
@@ -120,7 +120,7 @@ impl ActorObject {
 
     fn actor_id(&self) -> &str {
         match self {
-            ActorObject::Main {
+            ActorKind::Main {
                 metadata: _,
                 spec: _,
             } => MainActor::ACTOR_ID,
@@ -131,7 +131,7 @@ impl ActorObject {
     fn is_main(&self) -> bool {
         let is_main = matches!(
             self,
-            ActorObject::Main {
+            ActorKind::Main {
                 metadata: _,
                 spec: _
             }
@@ -162,16 +162,16 @@ impl ActorObject {
 
     pub fn start(&self) -> Result<()> {
         match self {
-            ActorObject::Gemma { metadata: _, spec } => crate::llm::gemma::start(spec.clone()),
-            ActorObject::E5 { metadata: _, spec } => crate::llm::e5::start(spec.clone()),
-            ActorObject::Quantized { metadata: _, spec } => {
+            ActorKind::Gemma { metadata: _, spec } => crate::llm::gemma::start(spec.clone()),
+            ActorKind::E5 { metadata: _, spec } => crate::llm::e5::start(spec.clone()),
+            ActorKind::Quantized { metadata: _, spec } => {
                 crate::llm::quantized::start(spec.clone())
             }
-            ActorObject::Main {
+            ActorKind::Main {
                 metadata: _,
                 spec: _,
             } => Ok(()),
-            ActorObject::Custom { metadata: _, spec } => {
+            ActorKind::Custom { metadata: _, spec } => {
                 let registry = CUSTOM_ACTOR_REGISTRY.get_or_init(CustomActorRegistry::new);
                 let custom_actor = registry.create(&spec.name).expect("Custom actor not found");
                 custom_actor.start();
@@ -184,19 +184,19 @@ impl ActorObject {
 
     pub fn invoke(&self, uuid: Uuid, request: &ActorInvokeRequest) -> Result<ActorInvokeResponse> {
         let response = match self {
-            ActorObject::Gemma {
+            ActorKind::Gemma {
                 metadata: _,
                 spec: _,
             } => crate::llm::gemma::invoke(uuid, request.clone()),
-            ActorObject::Quantized {
+            ActorKind::Quantized {
                 metadata: _,
                 spec: _,
             } => crate::llm::quantized::invoke(uuid, request.clone()),
-            ActorObject::E5 {
+            ActorKind::E5 {
                 metadata: _,
                 spec: _,
             } => crate::llm::e5::invoke(uuid, request.clone()),
-            ActorObject::Main {
+            ActorKind::Main {
                 metadata: _,
                 spec: _,
             } => Ok(ActorInvokeResponse::Failure(ActorInvokeError {
@@ -204,7 +204,7 @@ impl ActorObject {
                 task_id: request.task_id,
                 error: ActorError::FatalError(String::from("MAIN ACTOR CAN'T BE INVOKED")),
             })),
-            ActorObject::Custom { metadata: _, spec } => {
+            ActorKind::Custom { metadata: _, spec } => {
                 let registry = CUSTOM_ACTOR_REGISTRY.get_or_init(CustomActorRegistry::new);
                 let custom_actor = registry.create(&spec.name).expect("Custom actor not found");
                 custom_actor.invoke(uuid, request.clone())
@@ -224,23 +224,23 @@ impl ActorObject {
         F: FnMut(ActorInvokeResponse),
     {
         match self {
-            ActorObject::Gemma {
+            ActorKind::Gemma {
                 metadata: _,
                 spec: _,
             } => todo!(),
-            ActorObject::Quantized {
+            ActorKind::Quantized {
                 metadata: _,
                 spec: _,
             } => crate::llm::quantized::invoke_stream(uuid, request.clone(), callback),
-            ActorObject::E5 {
+            ActorKind::E5 {
                 metadata: _,
                 spec: _,
             } => Err(anyhow!("E5 ACTOR NOT SUPPORT STREAM")),
-            ActorObject::Main {
+            ActorKind::Main {
                 metadata: _,
                 spec: _,
             } => Err(anyhow!("MAIN ACTOR NOT SUPPORT STREAM")),
-            ActorObject::Custom { metadata: _, spec } => {
+            ActorKind::Custom { metadata: _, spec } => {
                 Err(anyhow!("MAIN ACTOR NOT SUPPORT STREAM"))
             }
         }
@@ -292,7 +292,7 @@ impl ActorBuilder {
         let configuration_str = read_config_str(path, Some(true)).await.map_anyhow_err()?;
         // let mut actors = Vec::new();
 
-        let actor: ActorObject = serde_yaml::from_str(&configuration_str)?;
+        let actor: ActorKind = serde_yaml::from_str(&configuration_str)?;
         let remote_addr = actor.remote_addr()?;
 
         let actor_box = if actor.is_main() {
@@ -343,7 +343,7 @@ impl ActorBuilder {
 #[remote_messages(ActorInfoRequest, ActorInvokeRequest)]
 pub struct WorkerActor {
     pub uuid: Uuid,
-    pub actor: ActorObject,
+    pub actor: ActorKind,
     pub own_addr: SocketAddr,
     pub seed_addr: SocketAddr,
     pub remote_addr: RemoteAddr,
