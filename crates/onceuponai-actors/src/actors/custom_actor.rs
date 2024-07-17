@@ -35,15 +35,6 @@ impl ActorActions for CustomActorSpec {
         let custom_actor = registry.create(&self.name).expect("Custom actor not found");
         custom_actor.invoke(uuid, request)
     }
-
-    fn invoke_stream(
-        &self,
-        uuid: Uuid,
-        request: &onceuponai_actors_abstractions::ActorInvokeInput,
-        source: RemoteAddr,
-    ) -> Result<()> {
-        Err(anyhow!("MAIN ACTOR NOT SUPPORT STREAM"))
-    }
 }
 
 type CustomActorFactory = fn() -> Box<dyn CustomActor>;

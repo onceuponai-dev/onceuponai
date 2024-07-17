@@ -72,15 +72,6 @@ impl ActorActions for MainActorSpec {
     ) -> anyhow::Result<onceuponai_actors_abstractions::ActorInvokeOutput> {
         unreachable!("invoke method is not expected to be called.");
     }
-
-    fn invoke_stream(
-        &self,
-        _uuid: Uuid,
-        _request: &onceuponai_actors_abstractions::ActorInvokeInput,
-        _source: RemoteAddr,
-    ) -> anyhow::Result<()> {
-        unreachable!("invoke_stream method is not expected to be called.");
-    }
 }
 
 impl MainActorSpec {

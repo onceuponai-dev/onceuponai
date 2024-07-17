@@ -73,12 +73,16 @@ pub trait ActorActions: Send + Sync {
     fn kind(&self) -> String;
     fn start(&self) -> Result<()>;
     fn invoke(&self, uuid: Uuid, request: &ActorInvokeInput) -> Result<ActorInvokeOutput>;
+
+    #[allow(unused_variables)]
     fn invoke_stream(
         &self,
         uuid: Uuid,
         request: &ActorInvokeInput,
         source: RemoteAddr,
-    ) -> Result<()>;
+    ) -> Result<()> {
+        unreachable!("invoke_stream method is not expected to be called.");
+    }
 }
 
 #[derive(Deserialize, Debug, Clone)]
@@ -95,8 +99,8 @@ impl<T> ActorObject<T>
 where
     T: Clone + ActorActions,
 {
-    pub fn setup(mut self, actor_id: &str) -> Self {
-        self.metadata = self.metadata.setup(actor_id);
+    pub fn setup(mut self, actor_id: &str, features: Option<Vec<String>>) -> Self {
+        self.metadata = self.metadata.setup(actor_id, features);
         self
     }
 
@@ -140,8 +144,9 @@ where
 }
 
 impl ActorMetadata {
-    pub fn setup(mut self, actor_id: &str) -> Self {
+    pub fn setup(mut self, actor_id: &str, features: Option<Vec<String>>) -> Self {
         self.actor_id = Some(actor_id.to_string());
+        self.features = features;
         self
     }
 

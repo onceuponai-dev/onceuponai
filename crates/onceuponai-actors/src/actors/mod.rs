@@ -259,7 +259,7 @@ impl ActorBuilder {
         let actor_kind: ActorKind = serde_yaml::from_str(&configuration_str)?;
 
         let actor_box = if let ActorKind::Main(actor) = actor_kind.clone() {
-            let actor = actor.setup(MainActor::ACTOR_ID);
+            let actor = actor.setup(MainActor::ACTOR_ID, None);
             let remote_addr = actor.metadata().remote_addr()?;
             ActorInstance::Main(MainActor {
                 uuid: Uuid::new_v4(),
@@ -269,9 +269,12 @@ impl ActorBuilder {
                 actor,
             })
         } else {
-            let metadata = actor_kind.metadata().setup(WorkerActor::ACTOR_ID);
-            let remote_addr = metadata.remote_addr()?;
             let actor = actor_kind.clone().actor();
+            let metadata = actor_kind
+                .metadata()
+                .setup(WorkerActor::ACTOR_ID, actor.features());
+            let remote_addr = metadata.remote_addr()?;
+
             let act = actor_kind.actor();
             let (sender, rx) = mpsc::channel::<ActorInternalRequest>();
 
