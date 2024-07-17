@@ -17,6 +17,7 @@ pub enum ActorError {
 pub struct ActorMetadata {
     pub name: String,
     pub features: Option<Vec<String>>,
+    pub actor_id: Option<String>,
     pub actor_host: String,
     pub actor_seed: Option<String>,
 }
@@ -60,9 +61,7 @@ pub enum ActorInvokeOutput {
     Failure(ActorInvokeError),
 }
 
-pub trait ActorActions {
-    fn actor_id(&self) -> &str;
-
+pub trait ActorActions: Send + Sync {
     fn features(&self) -> Option<Vec<String>> {
         None
     }
@@ -73,10 +72,13 @@ pub trait ActorActions {
 
     fn kind(&self) -> String;
     fn start(&self) -> Result<()>;
-    fn invoke(&self, uuid: Uuid, request: ActorInvokeInput) -> Result<ActorInvokeOutput>;
-    fn invoke_stream<F>(&self, uuid: Uuid, request: &ActorInvokeInput, callback: F) -> Result<()>
-    where
-        F: FnMut(ActorInvokeOutput);
+    fn invoke(&self, uuid: Uuid, request: &ActorInvokeInput) -> Result<ActorInvokeOutput>;
+    fn invoke_stream(
+        &self,
+        uuid: Uuid,
+        request: &ActorInvokeInput,
+        source: RemoteAddr,
+    ) -> Result<()>;
 }
 
 #[derive(Deserialize, Debug, Clone)]
@@ -93,8 +95,13 @@ impl<T> ActorObject<T>
 where
     T: Clone + ActorActions,
 {
-    pub fn actor_id(&self) -> &str {
-        self.spec.actor_id()
+    pub fn setup(mut self, actor_id: &str) -> Self {
+        self.metadata = self.metadata.setup(actor_id);
+        self
+    }
+
+    pub fn actor_id(&self) -> String {
+        self.metadata.actor_id()
     }
 
     pub fn is_main(&self) -> bool {
@@ -112,24 +119,15 @@ where
     }
 
     pub fn own_addr(&self) -> Result<SocketAddr> {
-        let socket_addr: SocketAddr = self.metadata().actor_host.parse::<SocketAddr>()?;
-        Ok(socket_addr)
+        self.metadata.own_addr()
     }
 
     pub fn remote_addr(&self) -> Result<RemoteAddr> {
-        let socket_addr: SocketAddr = self.own_addr()?;
-        let remote_addr = RemoteAddr::new_from_id(socket_addr, self.actor_id());
-        Ok(remote_addr)
+        self.metadata.remote_addr()
     }
 
     pub fn seed_addr(&self) -> Result<SocketAddr> {
-        let socket_addr = self
-            .metadata()
-            .actor_seed
-            .clone()
-            .expect("SEED REQUIRED")
-            .parse::<SocketAddr>()?;
-        Ok(socket_addr)
+        self.metadata.seed_addr()
     }
 
     pub fn spec(&self) -> T {
@@ -139,20 +137,35 @@ where
     pub fn start(&self) -> Result<()> {
         self.spec.start()
     }
+}
 
-    pub fn invoke(&self, uuid: Uuid, request: ActorInvokeInput) -> Result<ActorInvokeOutput> {
-        self.spec.invoke(uuid, request)
+impl ActorMetadata {
+    pub fn setup(mut self, actor_id: &str) -> Self {
+        self.actor_id = Some(actor_id.to_string());
+        self
     }
 
-    pub fn invoke_stream<F>(
-        &self,
-        uuid: Uuid,
-        request: &ActorInvokeInput,
-        callback: F,
-    ) -> Result<()>
-    where
-        F: FnMut(ActorInvokeOutput),
-    {
-        self.spec.invoke_stream(uuid, request, callback)
+    pub fn actor_id(&self) -> String {
+        self.actor_id.clone().expect("ACTOR_ID")
+    }
+
+    pub fn own_addr(&self) -> Result<SocketAddr> {
+        let socket_addr: SocketAddr = self.actor_host.parse::<SocketAddr>()?;
+        Ok(socket_addr)
+    }
+
+    pub fn remote_addr(&self) -> Result<RemoteAddr> {
+        let socket_addr: SocketAddr = self.own_addr()?;
+        let remote_addr = RemoteAddr::new_from_id(socket_addr, &self.actor_id());
+        Ok(remote_addr)
+    }
+
+    pub fn seed_addr(&self) -> Result<SocketAddr> {
+        let socket_addr = self
+            .actor_seed
+            .clone()
+            .expect("SEED REQUIRED")
+            .parse::<SocketAddr>()?;
+        Ok(socket_addr)
     }
 }

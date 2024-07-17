@@ -55,6 +55,29 @@ pub enum ActorKind {
 }
 
 impl ActorKind {
+    pub fn actor(&self) -> Box<dyn ActorActions> {
+        match self {
+            ActorKind::Gemma(object) => Box::new(object.spec()),
+            ActorKind::Quantized(object) => Box::new(object.spec()),
+            ActorKind::E5(object) => Box::new(object.spec()),
+            ActorKind::Main(object) => Box::new(object.spec()),
+            ActorKind::Custom(object) => Box::new(object.spec()),
+        }
+    }
+
+    pub fn metadata(&self) -> ActorMetadata {
+        match self {
+            ActorKind::Gemma(object) => object.metadata(),
+            ActorKind::Quantized(object) => object.metadata(),
+            ActorKind::E5(object) => object.metadata(),
+            ActorKind::Main(object) => object.metadata(),
+            ActorKind::Custom(object) => object.metadata(),
+        }
+    }
+}
+
+/*
+impl ActorKind {
     pub fn metadata(&self) -> ActorMetadata {
         match self {
             ActorKind::Gemma(object) => object.metadata(),
@@ -80,11 +103,6 @@ impl ActorKind {
             ActorKind::Main(_) => MainActor::ACTOR_ID,
             _ => WorkerActor::ACTOR_ID,
         }
-    }
-
-    fn is_main(&self) -> bool {
-        let is_main = matches!(self, ActorKind::Main(_));
-        is_main
     }
 
     pub fn own_addr(&self) -> Result<SocketAddr> {
@@ -138,11 +156,12 @@ impl ActorKind {
                 error: ActorError::FatalError(String::from("MAIN ACTOR CAN'T BE INVOKED")),
             })),
             ActorKind::Custom(object) => {
-                let registry = CUSTOM_ACTOR_REGISTRY.get_or_init(CustomActorRegistry::new);
-                let custom_actor = registry
-                    .create(&object.spec().name)
-                    .expect("Custom actor not found");
-                custom_actor.invoke(uuid, request.clone())
+                todo!();
+                // let registry = CUSTOM_ACTOR_REGISTRY.get_or_init(CustomActorRegistry::new);
+                // let custom_actor = registry
+                // .create(&object.spec().name)
+                // .expect("Custom actor not found");
+                // custom_actor.invoke(uuid, request.clone())
             }
         }?;
 
@@ -169,6 +188,7 @@ impl ActorKind {
         }
     }
 }
+*/
 
 #[derive(RemoteMessage, Serialize, Deserialize, Debug)]
 #[with_source(source)]
@@ -235,12 +255,12 @@ pub struct ActorBuilder {}
 impl ActorBuilder {
     pub async fn build(path: &String) -> Result<ActorInstance> {
         let configuration_str = read_config_str(path, Some(true)).await.map_anyhow_err()?;
-        // let mut actors = Vec::new();
 
-        let actor: ActorKind = serde_yaml::from_str(&configuration_str)?;
-        let remote_addr = actor.remote_addr()?;
+        let actor_kind: ActorKind = serde_yaml::from_str(&configuration_str)?;
 
-        let actor_box = if actor.is_main() {
+        let actor_box = if let ActorKind::Main(actor) = actor_kind.clone() {
+            let actor = actor.setup(MainActor::ACTOR_ID);
+            let remote_addr = actor.metadata().remote_addr()?;
             ActorInstance::Main(MainActor {
                 uuid: Uuid::new_v4(),
                 remote_addr,
@@ -249,34 +269,35 @@ impl ActorBuilder {
                 actor,
             })
         } else {
+            let metadata = actor_kind.metadata().setup(WorkerActor::ACTOR_ID);
+            let remote_addr = metadata.remote_addr()?;
+            let actor = actor_kind.clone().actor();
+            let act = actor_kind.actor();
             let (sender, rx) = mpsc::channel::<ActorInternalRequest>();
 
-            let a = actor.clone();
             std::thread::spawn(move || {
                 while let Ok(request) = rx.recv() {
-                    if !request.message.stream {
-                        let response = a.invoke(request.task_id, &request.message).unwrap();
-                        request.message.source.do_send(response)
+                    let is_stream = request.message.stream;
+                    let source = request.message.source.clone();
+                    let req: &ActorInvokeInput = &request.message.into();
+                    if !is_stream {
+                        let response = actor.invoke(request.task_id, req).unwrap();
+                        let resp: ActorInvokeResponse = response.into();
+                        source.do_send(resp)
                     } else {
-                        a.invoke_stream(
-                            request.task_id,
-                            &request.message,
-                            |response: ActorInvokeResponse| {
-                                request.message.source.do_send(response);
-                            },
-                        )
-                        .unwrap();
+                        actor.invoke_stream(request.task_id, req, source).unwrap();
                     }
                 }
             });
 
             ActorInstance::Worker(WorkerActor {
                 uuid: Uuid::new_v4(),
-                own_addr: actor.own_addr()?,
-                seed_addr: actor.seed_addr()?,
+                own_addr: metadata.own_addr()?,
+                seed_addr: metadata.seed_addr()?,
                 remote_addr,
-                actor,
+                actor: act,
                 sender,
+                metadata,
             })
         };
 
@@ -284,15 +305,22 @@ impl ActorBuilder {
     }
 }
 
-#[derive(RemoteActor, Debug, Clone)]
+#[derive(RemoteActor)]
 #[remote_messages(ActorInfoRequest, ActorInvokeRequest)]
 pub struct WorkerActor {
     pub uuid: Uuid,
-    pub actor: ActorKind,
+    pub metadata: ActorMetadata,
+    pub actor: Box<dyn ActorActions>,
     pub own_addr: SocketAddr,
     pub seed_addr: SocketAddr,
     pub remote_addr: RemoteAddr,
     pub sender: mpsc::Sender<ActorInternalRequest>,
+}
+
+impl WorkerActor {
+    pub fn metadata(&self) -> ActorMetadata {
+        self.metadata.clone()
+    }
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -314,7 +342,7 @@ impl Handler<ActorInfoRequest> for WorkerActor {
     type Result = ();
 
     fn handle(&mut self, msg: ActorInfoRequest, _ctx: &mut Self::Context) -> Self::Result {
-        let metadata = self.actor.metadata();
+        let metadata = self.metadata();
         let model_info = ActorInfo {
             uuid: self.uuid,
             metadata: metadata.clone(),

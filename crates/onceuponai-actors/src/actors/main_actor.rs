@@ -4,7 +4,9 @@ use actix::prelude::*;
 use actix_broker::BrokerSubscribe;
 use actix_telepathy::prelude::*;
 use once_cell::sync::OnceCell;
-use onceuponai_actors_abstractions::ActorActions;
+use onceuponai_actors_abstractions::{
+    ActorActions, ActorInvokeInput, ActorInvokeOutput, ActorMetadata, ActorObject,
+};
 use rand::seq::SliceRandom;
 use serde::Deserialize;
 use std::sync::mpsc;
@@ -26,7 +28,7 @@ pub struct InvokeTask {
 #[remote_messages(ActorInfo, ActorInvokeResponse)]
 pub struct MainActor {
     pub uuid: Uuid,
-    pub actor: ActorKind,
+    pub actor: ActorObject<MainActorSpec>,
     pub own_addr: SocketAddr,
     pub remote_addr: RemoteAddr,
     pub connected_actors: HashMap<Uuid, ActorInfo>,
@@ -51,10 +53,6 @@ pub struct MainActorSpec {
 }
 
 impl ActorActions for MainActorSpec {
-    fn actor_id(&self) -> &str {
-        MainActor::ACTOR_ID
-    }
-
     fn is_main(&self) -> bool {
         true
     }
@@ -70,20 +68,17 @@ impl ActorActions for MainActorSpec {
     fn invoke(
         &self,
         _uuid: Uuid,
-        _request: onceuponai_actors_abstractions::ActorInvokeInput,
+        _request: &ActorInvokeInput,
     ) -> anyhow::Result<onceuponai_actors_abstractions::ActorInvokeOutput> {
         unreachable!("invoke method is not expected to be called.");
     }
 
-    fn invoke_stream<F>(
+    fn invoke_stream(
         &self,
         _uuid: Uuid,
         _request: &onceuponai_actors_abstractions::ActorInvokeInput,
-        _callback: F,
-    ) -> anyhow::Result<()>
-    where
-        F: FnMut(onceuponai_actors_abstractions::ActorInvokeOutput),
-    {
+        _source: RemoteAddr,
+    ) -> anyhow::Result<()> {
         unreachable!("invoke_stream method is not expected to be called.");
     }
 }

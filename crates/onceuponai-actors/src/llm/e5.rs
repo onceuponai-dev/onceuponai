@@ -1,11 +1,12 @@
 extern crate onceuponai_actors_abstractions;
-use crate::actors::{ActorInvokeRequest, ActorInvokeResponse, WorkerActor};
-use actix_telepathy::RemoteActor;
+use crate::actors::{ActorInvokeRequest, ActorInvokeResponse};
+use actix_telepathy::RemoteAddr;
 use anyhow::Result;
 use log::debug;
 use onceuponai_abstractions::EntityValue;
 use onceuponai_actors_abstractions::{
-    ActorActions, ActorError, ActorInvokeError, ActorInvokeResult, ActorObject,
+    ActorActions, ActorError, ActorInvokeError, ActorInvokeInput, ActorInvokeOutput,
+    ActorInvokeResult,
 };
 use onceuponai_candle::llm::e5::E5Model;
 use onceuponai_core::common::ResultExt;
@@ -20,10 +21,6 @@ pub struct E5Spec {
 }
 
 impl ActorActions for E5Spec {
-    fn actor_id(&self) -> &str {
-        WorkerActor::ACTOR_ID
-    }
-
     fn features(&self) -> Option<Vec<String>> {
         Some(vec!["embed".to_string()])
     }
@@ -36,23 +33,16 @@ impl ActorActions for E5Spec {
         todo!()
     }
 
-    fn invoke(
-        &self,
-        uuid: Uuid,
-        request: onceuponai_actors_abstractions::ActorInvokeInput,
-    ) -> Result<onceuponai_actors_abstractions::ActorInvokeOutput> {
+    fn invoke(&self, uuid: Uuid, request: &ActorInvokeInput) -> Result<ActorInvokeOutput> {
         todo!()
     }
 
-    fn invoke_stream<F>(
+    fn invoke_stream(
         &self,
-        uuid: Uuid,
-        request: &onceuponai_actors_abstractions::ActorInvokeInput,
-        callback: F,
-    ) -> Result<()>
-    where
-        F: FnMut(onceuponai_actors_abstractions::ActorInvokeOutput),
-    {
+        _uuid: Uuid,
+        _request: &onceuponai_actors_abstractions::ActorInvokeInput,
+        _source: RemoteAddr,
+    ) -> Result<()> {
         todo!()
     }
 }

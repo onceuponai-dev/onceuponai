@@ -1,9 +1,10 @@
 use crate::actors::{ActorInvokeRequest, ActorInvokeResponse, WorkerActor};
-use actix_telepathy::RemoteActor;
+use actix_telepathy::{RemoteActor, RemoteAddr};
 use anyhow::Result;
 use onceuponai_abstractions::EntityValue;
 use onceuponai_actors_abstractions::{
-    ActorActions, ActorError, ActorInvokeError, ActorInvokeResult,
+    ActorActions, ActorError, ActorInvokeError, ActorInvokeInput, ActorInvokeOutput,
+    ActorInvokeResult,
 };
 use onceuponai_candle::llm::gemma::GemmaModel;
 use onceuponai_core::common::ResultExt;
@@ -136,10 +137,6 @@ pub struct GemmaSpec {
 }
 
 impl ActorActions for GemmaSpec {
-    fn actor_id(&self) -> &str {
-        WorkerActor::ACTOR_ID
-    }
-
     fn features(&self) -> Option<Vec<String>> {
         Some(vec!["chat".to_string()])
     }
@@ -155,20 +152,17 @@ impl ActorActions for GemmaSpec {
     fn invoke(
         &self,
         uuid: Uuid,
-        request: onceuponai_actors_abstractions::ActorInvokeInput,
+        request: &ActorInvokeInput,
     ) -> Result<onceuponai_actors_abstractions::ActorInvokeOutput> {
         todo!()
     }
 
-    fn invoke_stream<F>(
+    fn invoke_stream(
         &self,
         uuid: Uuid,
         request: &onceuponai_actors_abstractions::ActorInvokeInput,
-        callback: F,
-    ) -> Result<()>
-    where
-        F: FnMut(onceuponai_actors_abstractions::ActorInvokeOutput),
-    {
+        source: RemoteAddr,
+    ) -> Result<()> {
         todo!()
     }
 }
