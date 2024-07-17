@@ -9,7 +9,8 @@ use log::debug;
 use main_actor::{MainActor, MainActorSpec};
 use onceuponai_abstractions::EntityValue;
 use onceuponai_actors_abstractions::{
-    ActorError, ActorInvokeError, ActorInvokeFinish, ActorInvokeResult, ActorMetadata,
+    ActorActions, ActorError, ActorInvokeError, ActorInvokeFinish, ActorInvokeInput,
+    ActorInvokeOutput, ActorInvokeResult, ActorMetadata, ActorObject,
 };
 use onceuponai_core::{common::ResultExt, config::read_config_str};
 use serde::{Deserialize, Serialize};
@@ -46,96 +47,43 @@ pub struct ModelResponse {
 #[derive(Deserialize, Debug, Clone)]
 #[serde(tag = "kind", rename_all = "camelCase")]
 pub enum ActorKind {
-    Main {
-        metadata: ActorMetadata,
-        spec: MainActorSpec,
-    },
-    Custom {
-        metadata: ActorMetadata,
-        spec: CustomActorSpec,
-    },
-    Gemma {
-        metadata: ActorMetadata,
-        spec: GemmaSpec,
-    },
-    Quantized {
-        metadata: ActorMetadata,
-        spec: QuantizedSpec,
-    },
-    E5 {
-        metadata: ActorMetadata,
-        spec: E5Spec,
-    },
+    Main(ActorObject<MainActorSpec>),
+    Custom(ActorObject<CustomActorSpec>),
+    Gemma(ActorObject<GemmaSpec>),
+    Quantized(ActorObject<QuantizedSpec>),
+    E5(ActorObject<E5Spec>),
 }
 
 impl ActorKind {
     pub fn metadata(&self) -> ActorMetadata {
         match self {
-            ActorKind::Gemma { metadata, spec: _ } => {
-                let mut m = metadata.clone();
-                m.features = Some(vec!["chat".to_string()]);
-                m
-            }
-
-            ActorKind::Quantized { metadata, spec: _ } => {
-                let mut m = metadata.clone();
-
-                m.features = Some(vec!["chat".to_string()]);
-                m
-            }
-            ActorKind::E5 { metadata, spec: _ } => {
-                let mut m = metadata.clone();
-                m.features = Some(vec!["embed".to_string()]);
-                m
-            }
-            ActorKind::Main { metadata, spec: _ } => metadata.clone(),
-            ActorKind::Custom { metadata, spec: _ } => metadata.clone(),
+            ActorKind::Gemma(object) => object.metadata(),
+            ActorKind::Quantized(object) => object.metadata(),
+            ActorKind::E5(object) => object.metadata(),
+            ActorKind::Main(object) => object.metadata(),
+            ActorKind::Custom(object) => object.metadata(),
         }
     }
 
     pub fn kind(&self) -> String {
         match self {
-            ActorKind::Gemma {
-                metadata: _,
-                spec: _,
-            } => "gemma".to_string(),
-            ActorKind::Quantized {
-                metadata: _,
-                spec: _,
-            } => "quantized".to_string(),
-            ActorKind::E5 {
-                metadata: _,
-                spec: _,
-            } => "e5".to_string(),
-            ActorKind::Main {
-                metadata: _,
-                spec: _,
-            } => "main".to_string(),
-            ActorKind::Custom {
-                metadata: _,
-                spec: _,
-            } => "main".to_string(),
+            ActorKind::Gemma(object) => object.kind(),
+            ActorKind::Quantized(object) => self.kind(),
+            ActorKind::E5(object) => object.kind(),
+            ActorKind::Main(object) => object.kind(),
+            ActorKind::Custom(object) => object.kind(),
         }
     }
 
     fn actor_id(&self) -> &str {
         match self {
-            ActorKind::Main {
-                metadata: _,
-                spec: _,
-            } => MainActor::ACTOR_ID,
+            ActorKind::Main(_) => MainActor::ACTOR_ID,
             _ => WorkerActor::ACTOR_ID,
         }
     }
 
     fn is_main(&self) -> bool {
-        let is_main = matches!(
-            self,
-            ActorKind::Main {
-                metadata: _,
-                spec: _
-            }
-        );
+        let is_main = matches!(self, ActorKind::Main(_));
         is_main
     }
 
@@ -162,18 +110,15 @@ impl ActorKind {
 
     pub fn start(&self) -> Result<()> {
         match self {
-            ActorKind::Gemma { metadata: _, spec } => crate::llm::gemma::start(spec.clone()),
-            ActorKind::E5 { metadata: _, spec } => crate::llm::e5::start(spec.clone()),
-            ActorKind::Quantized { metadata: _, spec } => {
-                crate::llm::quantized::start(spec.clone())
-            }
-            ActorKind::Main {
-                metadata: _,
-                spec: _,
-            } => Ok(()),
-            ActorKind::Custom { metadata: _, spec } => {
+            ActorKind::Gemma(object) => crate::llm::gemma::start(object.spec()),
+            ActorKind::E5(object) => crate::llm::e5::start(object.spec()),
+            ActorKind::Quantized(object) => crate::llm::quantized::start(object.spec()),
+            ActorKind::Main(_) => Ok(()),
+            ActorKind::Custom(object) => {
                 let registry = CUSTOM_ACTOR_REGISTRY.get_or_init(CustomActorRegistry::new);
-                let custom_actor = registry.create(&spec.name).expect("Custom actor not found");
+                let custom_actor = registry
+                    .create(&object.spec().name)
+                    .expect("Custom actor not found");
                 custom_actor.start();
                 Ok(())
             }
@@ -184,29 +129,19 @@ impl ActorKind {
 
     pub fn invoke(&self, uuid: Uuid, request: &ActorInvokeRequest) -> Result<ActorInvokeResponse> {
         let response = match self {
-            ActorKind::Gemma {
-                metadata: _,
-                spec: _,
-            } => crate::llm::gemma::invoke(uuid, request.clone()),
-            ActorKind::Quantized {
-                metadata: _,
-                spec: _,
-            } => crate::llm::quantized::invoke(uuid, request.clone()),
-            ActorKind::E5 {
-                metadata: _,
-                spec: _,
-            } => crate::llm::e5::invoke(uuid, request.clone()),
-            ActorKind::Main {
-                metadata: _,
-                spec: _,
-            } => Ok(ActorInvokeResponse::Failure(ActorInvokeError {
+            ActorKind::Gemma(_) => crate::llm::gemma::invoke(uuid, request.clone()),
+            ActorKind::Quantized(_) => crate::llm::quantized::invoke(uuid, request.clone()),
+            ActorKind::E5(_) => crate::llm::e5::invoke(uuid, request.clone()),
+            ActorKind::Main(_) => Ok(ActorInvokeResponse::Failure(ActorInvokeError {
                 uuid,
                 task_id: request.task_id,
                 error: ActorError::FatalError(String::from("MAIN ACTOR CAN'T BE INVOKED")),
             })),
-            ActorKind::Custom { metadata: _, spec } => {
+            ActorKind::Custom(object) => {
                 let registry = CUSTOM_ACTOR_REGISTRY.get_or_init(CustomActorRegistry::new);
-                let custom_actor = registry.create(&spec.name).expect("Custom actor not found");
+                let custom_actor = registry
+                    .create(&object.spec().name)
+                    .expect("Custom actor not found");
                 custom_actor.invoke(uuid, request.clone())
             }
         }?;
@@ -224,25 +159,13 @@ impl ActorKind {
         F: FnMut(ActorInvokeResponse),
     {
         match self {
-            ActorKind::Gemma {
-                metadata: _,
-                spec: _,
-            } => todo!(),
-            ActorKind::Quantized {
-                metadata: _,
-                spec: _,
-            } => crate::llm::quantized::invoke_stream(uuid, request.clone(), callback),
-            ActorKind::E5 {
-                metadata: _,
-                spec: _,
-            } => Err(anyhow!("E5 ACTOR NOT SUPPORT STREAM")),
-            ActorKind::Main {
-                metadata: _,
-                spec: _,
-            } => Err(anyhow!("MAIN ACTOR NOT SUPPORT STREAM")),
-            ActorKind::Custom { metadata: _, spec } => {
-                Err(anyhow!("MAIN ACTOR NOT SUPPORT STREAM"))
+            ActorKind::Gemma(_) => todo!(),
+            ActorKind::Quantized(_) => {
+                crate::llm::quantized::invoke_stream(uuid, request.clone(), callback)
             }
+            ActorKind::E5(_) => Err(anyhow!("E5 ACTOR NOT SUPPORT STREAM")),
+            ActorKind::Main(_) => Err(anyhow!("MAIN ACTOR NOT SUPPORT STREAM")),
+            ActorKind::Custom(_) => Err(anyhow!("MAIN ACTOR NOT SUPPORT STREAM")),
         }
     }
 }
@@ -278,6 +201,28 @@ pub enum ActorInvokeResponse {
     Success(ActorInvokeResult),
     Finish(ActorInvokeFinish),
     Failure(ActorInvokeError),
+}
+
+impl From<ActorInvokeRequest> for ActorInvokeInput {
+    fn from(value: ActorInvokeRequest) -> Self {
+        ActorInvokeInput {
+            task_id: value.task_id,
+            source: value.source,
+            stream: value.stream,
+            config: value.config,
+            data: value.data,
+        }
+    }
+}
+
+impl From<ActorInvokeOutput> for ActorInvokeResponse {
+    fn from(value: ActorInvokeOutput) -> Self {
+        match value {
+            ActorInvokeOutput::Success(val) => ActorInvokeResponse::Success(val),
+            ActorInvokeOutput::Finish(val) => ActorInvokeResponse::Finish(val),
+            ActorInvokeOutput::Failure(val) => ActorInvokeResponse::Failure(val),
+        }
+    }
 }
 
 pub enum ActorInstance {

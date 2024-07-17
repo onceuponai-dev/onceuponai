@@ -4,6 +4,7 @@ use actix::prelude::*;
 use actix_broker::BrokerSubscribe;
 use actix_telepathy::prelude::*;
 use once_cell::sync::OnceCell;
+use onceuponai_actors_abstractions::ActorActions;
 use rand::seq::SliceRandom;
 use serde::Deserialize;
 use std::sync::mpsc;
@@ -47,6 +48,44 @@ pub struct MainActorSpec {
     pub session_key: Option<String>,
     pub personal_access_token_secret: Option<String>,
     pub auth: Option<MainActorAuthConfig>,
+}
+
+impl ActorActions for MainActorSpec {
+    fn actor_id(&self) -> &str {
+        MainActor::ACTOR_ID
+    }
+
+    fn is_main(&self) -> bool {
+        true
+    }
+
+    fn kind(&self) -> String {
+        "main".to_string()
+    }
+
+    fn start(&self) -> anyhow::Result<()> {
+        todo!()
+    }
+
+    fn invoke(
+        &self,
+        _uuid: Uuid,
+        _request: onceuponai_actors_abstractions::ActorInvokeInput,
+    ) -> anyhow::Result<onceuponai_actors_abstractions::ActorInvokeOutput> {
+        unreachable!("invoke method is not expected to be called.");
+    }
+
+    fn invoke_stream<F>(
+        &self,
+        _uuid: Uuid,
+        _request: &onceuponai_actors_abstractions::ActorInvokeInput,
+        _callback: F,
+    ) -> anyhow::Result<()>
+    where
+        F: FnMut(onceuponai_actors_abstractions::ActorInvokeOutput),
+    {
+        unreachable!("invoke_stream method is not expected to be called.");
+    }
 }
 
 impl MainActorSpec {

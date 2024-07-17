@@ -14,7 +14,7 @@ pub async fn start_cluster(file: &String) -> Result<Option<(MainActorSpec, Addr<
         ActorInstance::Main(main_actor) => {
             let _ = Cluster::new(main_actor.own_addr, Vec::new());
             let spec = match main_actor.actor.clone() {
-                ActorKind::Main { metadata: _, spec } => spec,
+                ActorKind::Main(actor) => actor.spec(),
                 _ => todo!(),
             };
 

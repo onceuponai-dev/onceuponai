@@ -1,8 +1,9 @@
-use crate::actors::{ActorInvokeRequest, ActorInvokeResponse};
+use crate::actors::{ActorInvokeRequest, ActorInvokeResponse, WorkerActor};
+use actix_telepathy::RemoteActor;
 use anyhow::Result;
 use onceuponai_abstractions::EntityValue;
 use onceuponai_actors_abstractions::{
-    ActorError, ActorInvokeError, ActorInvokeFinish, ActorInvokeResult,
+    ActorActions, ActorError, ActorInvokeError, ActorInvokeFinish, ActorInvokeResult,
 };
 use onceuponai_candle::llm::quantized::QuantizedModel;
 use onceuponai_core::common::ResultExt;
@@ -244,4 +245,42 @@ pub struct QuantizedSpec {
     pub temp: Option<f64>,
     pub top_p: Option<f64>,
     pub sample_len: Option<usize>,
+}
+
+impl ActorActions for QuantizedSpec {
+    fn actor_id(&self) -> &str {
+        WorkerActor::ACTOR_ID
+    }
+
+    fn features(&self) -> Option<Vec<String>> {
+        Some(vec!["chat".to_string()])
+    }
+
+    fn kind(&self) -> String {
+        "quantized".to_string()
+    }
+
+    fn start(&self) -> Result<()> {
+        todo!()
+    }
+
+    fn invoke(
+        &self,
+        uuid: Uuid,
+        request: onceuponai_actors_abstractions::ActorInvokeInput,
+    ) -> Result<onceuponai_actors_abstractions::ActorInvokeOutput> {
+        todo!()
+    }
+
+    fn invoke_stream<F>(
+        &self,
+        uuid: Uuid,
+        request: &onceuponai_actors_abstractions::ActorInvokeInput,
+        callback: F,
+    ) -> Result<()>
+    where
+        F: FnMut(onceuponai_actors_abstractions::ActorInvokeOutput),
+    {
+        todo!()
+    }
 }

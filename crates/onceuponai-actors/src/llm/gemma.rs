@@ -1,13 +1,14 @@
-use std::collections::HashMap;
-// use actix_web::{HttpResponse, Responder};
+use crate::actors::{ActorInvokeRequest, ActorInvokeResponse, WorkerActor};
+use actix_telepathy::RemoteActor;
 use anyhow::Result;
-// use async_stream::stream;
-use crate::actors::{ActorInvokeRequest, ActorInvokeResponse};
 use onceuponai_abstractions::EntityValue;
-use onceuponai_actors_abstractions::{ActorError, ActorInvokeError, ActorInvokeResult};
+use onceuponai_actors_abstractions::{
+    ActorActions, ActorError, ActorInvokeError, ActorInvokeResult,
+};
 use onceuponai_candle::llm::gemma::GemmaModel;
 use onceuponai_core::common::ResultExt;
 use serde::Deserialize;
+use std::collections::HashMap;
 use uuid::Uuid;
 
 pub fn start(spec: GemmaSpec) -> Result<()> {
@@ -132,4 +133,42 @@ pub struct GemmaSpec {
     pub hf_token: Option<String>,
     pub use_flash_attn: Option<bool>,
     pub sample_len: Option<usize>,
+}
+
+impl ActorActions for GemmaSpec {
+    fn actor_id(&self) -> &str {
+        WorkerActor::ACTOR_ID
+    }
+
+    fn features(&self) -> Option<Vec<String>> {
+        Some(vec!["chat".to_string()])
+    }
+
+    fn kind(&self) -> String {
+        "gemma".to_string()
+    }
+
+    fn start(&self) -> Result<()> {
+        todo!()
+    }
+
+    fn invoke(
+        &self,
+        uuid: Uuid,
+        request: onceuponai_actors_abstractions::ActorInvokeInput,
+    ) -> Result<onceuponai_actors_abstractions::ActorInvokeOutput> {
+        todo!()
+    }
+
+    fn invoke_stream<F>(
+        &self,
+        uuid: Uuid,
+        request: &onceuponai_actors_abstractions::ActorInvokeInput,
+        callback: F,
+    ) -> Result<()>
+    where
+        F: FnMut(onceuponai_actors_abstractions::ActorInvokeOutput),
+    {
+        todo!()
+    }
 }
