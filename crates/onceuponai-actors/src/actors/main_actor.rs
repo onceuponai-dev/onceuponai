@@ -22,7 +22,7 @@ pub struct InvokeTask {
     pub sender: mpsc::Sender<ActorInvokeResponse>,
 }
 
-#[derive(RemoteActor, Clone)]
+#[derive(RemoteActor)]
 #[remote_messages(ActorInfo, ActorInvokeResponse)]
 pub struct MainActor {
     pub uuid: Uuid,
