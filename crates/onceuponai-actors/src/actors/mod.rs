@@ -99,55 +99,67 @@ pub enum ActorInstance {
 pub struct ActorBuilder {}
 
 impl ActorBuilder {
+    pub fn build_main(actor: ActorObject<MainActorSpec>) -> Result<MainActor> {
+        let actor = actor.setup(MainActor::ACTOR_ID, None);
+        let remote_addr = actor.metadata().remote_addr()?;
+        Ok(MainActor {
+            uuid: Uuid::new_v4(),
+            remote_addr,
+            connected_actors: HashMap::new(),
+            own_addr: actor.own_addr()?,
+            actor,
+        })
+    }
+
+    pub fn build_worker<T>(metadata: ActorMetadata, actor_factory: T) -> Result<WorkerActor>
+    where
+        T: Fn() -> Box<dyn ActorActions>,
+    {
+        let actor = actor_factory();
+        let metadata = metadata.setup(WorkerActor::ACTOR_ID, actor.features());
+        let remote_addr = metadata.remote_addr()?;
+
+        let (sender, rx) = mpsc::channel::<ActorInternalRequest>();
+
+        std::thread::spawn(move || {
+            while let Ok(request) = rx.recv() {
+                let is_stream = request.message.stream;
+                let source = request.message.source.clone();
+                if !is_stream {
+                    let response = actor.invoke(request.task_id, &request.message).unwrap();
+                    source.do_send(response)
+                } else {
+                    actor
+                        .invoke_stream(request.task_id, &request.message, source)
+                        .unwrap();
+                }
+            }
+        });
+
+        Ok(WorkerActor {
+            uuid: Uuid::new_v4(),
+            own_addr: metadata.own_addr()?,
+            seed_addr: metadata.seed_addr()?,
+            remote_addr,
+            actor: actor_factory(),
+            sender,
+            metadata,
+        })
+    }
+
     pub async fn build(path: &String) -> Result<ActorInstance> {
         let configuration_str = read_config_str(path, Some(true)).await.map_anyhow_err()?;
 
         let actor_kind: ActorKind = serde_yaml::from_str(&configuration_str)?;
 
         let actor_box = if let ActorKind::Main(actor) = actor_kind.clone() {
-            let actor = actor.setup(MainActor::ACTOR_ID, None);
-            let remote_addr = actor.metadata().remote_addr()?;
-            ActorInstance::Main(MainActor {
-                uuid: Uuid::new_v4(),
-                remote_addr,
-                connected_actors: HashMap::new(),
-                own_addr: actor.own_addr()?,
-                actor,
-            })
+            let main_actor = ActorBuilder::build_main(actor)?;
+            ActorInstance::Main(main_actor)
         } else {
-            let actor = actor_kind.clone().actor();
-            let metadata = actor_kind
-                .metadata()
-                .setup(WorkerActor::ACTOR_ID, actor.features());
-            let remote_addr = metadata.remote_addr()?;
+            let worker_actor =
+                ActorBuilder::build_worker(actor_kind.metadata(), || actor_kind.actor())?;
 
-            let act = actor_kind.actor();
-            let (sender, rx) = mpsc::channel::<ActorInternalRequest>();
-
-            std::thread::spawn(move || {
-                while let Ok(request) = rx.recv() {
-                    let is_stream = request.message.stream;
-                    let source = request.message.source.clone();
-                    if !is_stream {
-                        let response = actor.invoke(request.task_id, &request.message).unwrap();
-                        source.do_send(response)
-                    } else {
-                        actor
-                            .invoke_stream(request.task_id, &request.message, source)
-                            .unwrap();
-                    }
-                }
-            });
-
-            ActorInstance::Worker(WorkerActor {
-                uuid: Uuid::new_v4(),
-                own_addr: metadata.own_addr()?,
-                seed_addr: metadata.seed_addr()?,
-                remote_addr,
-                actor: act,
-                sender,
-                metadata,
-            })
+            ActorInstance::Worker(worker_actor)
         };
 
         Ok(actor_box)
