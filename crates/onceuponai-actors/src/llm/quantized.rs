@@ -1,5 +1,5 @@
-use crate::actors::{ActorInvokeRequest, ActorInvokeResponse, WorkerActor};
-use actix_telepathy::{RemoteActor, RemoteAddr};
+use crate::actors::ActorInvokeResponse;
+use actix_telepathy::RemoteAddr;
 use anyhow::Result;
 use onceuponai_abstractions::EntityValue;
 use onceuponai_actors_abstractions::{
@@ -54,11 +54,7 @@ impl ActorActions for QuantizedSpec {
         Ok(())
     }
 
-    fn invoke(
-        &self,
-        uuid: Uuid,
-        request: &ActorInvokeInput,
-    ) -> Result<onceuponai_actors_abstractions::ActorInvokeOutput> {
+    fn invoke(&self, uuid: Uuid, request: &ActorInvokeInput) -> Result<ActorInvokeOutput> {
         let input = request.data.get("message");
 
         if input.is_none() {
@@ -75,7 +71,7 @@ impl ActorActions for QuantizedSpec {
             .expect("MESSAGE")
             .iter()
             .map(|x| match x {
-                EntityValue::MESSAGE { role, content } => content.clone(),
+                EntityValue::MESSAGE { role: _, content } => content.clone(),
                 _ => todo!(),
             })
             .collect();
@@ -128,7 +124,7 @@ impl ActorActions for QuantizedSpec {
     fn invoke_stream(
         &self,
         uuid: Uuid,
-        request: &onceuponai_actors_abstractions::ActorInvokeInput,
+        request: &ActorInvokeInput,
         source: RemoteAddr,
     ) -> Result<()> {
         let input = request.data.get("message");
@@ -148,7 +144,7 @@ impl ActorActions for QuantizedSpec {
             .expect("MESSAGE")
             .iter()
             .map(|x| match x {
-                EntityValue::MESSAGE { role, content } => content.clone(),
+                EntityValue::MESSAGE { role: _, content } => content.clone(),
                 _ => todo!(),
             })
             .collect();

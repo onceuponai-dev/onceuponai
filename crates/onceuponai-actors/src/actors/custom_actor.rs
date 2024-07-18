@@ -1,6 +1,4 @@
-use super::WorkerActor;
-use actix_telepathy::{RemoteActor, RemoteAddr};
-use anyhow::{anyhow, Result};
+use anyhow::Result;
 use once_cell::sync::OnceCell;
 use onceuponai_actors_abstractions::{ActorActions, ActorInvokeInput, ActorInvokeOutput};
 use serde::Deserialize;

@@ -1,12 +1,10 @@
-use super::{ActorInfo, ActorInfoRequest, ActorInvokeResponse, ActorKind, ActorStartInvokeRequest};
+use super::{ActorInfo, ActorInfoRequest, ActorInvokeResponse, ActorStartInvokeRequest};
 use crate::actors::{ActorInvokeRequest, WorkerActor};
 use actix::prelude::*;
 use actix_broker::BrokerSubscribe;
 use actix_telepathy::prelude::*;
 use once_cell::sync::OnceCell;
-use onceuponai_actors_abstractions::{
-    ActorActions, ActorInvokeInput, ActorInvokeOutput, ActorMetadata, ActorObject,
-};
+use onceuponai_actors_abstractions::{ActorActions, ActorInvokeInput, ActorObject};
 use rand::seq::SliceRandom;
 use serde::Deserialize;
 use std::sync::mpsc;

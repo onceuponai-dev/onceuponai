@@ -1,6 +1,4 @@
 extern crate onceuponai_actors_abstractions;
-use crate::actors::{ActorInvokeRequest, ActorInvokeResponse};
-use actix_telepathy::RemoteAddr;
 use anyhow::Result;
 use log::debug;
 use onceuponai_abstractions::EntityValue;

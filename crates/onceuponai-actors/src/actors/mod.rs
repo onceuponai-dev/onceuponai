@@ -3,14 +3,14 @@ pub mod main_actor;
 use crate::llm::{e5::E5Spec, gemma::GemmaSpec, quantized::QuantizedSpec};
 use actix::prelude::*;
 use actix_telepathy::prelude::*;
-use anyhow::{anyhow, Result};
-use custom_actor::{CustomActorRegistry, CustomActorSpec, CUSTOM_ACTOR_REGISTRY};
+use anyhow::Result;
+use custom_actor::CustomActorSpec;
 use log::debug;
 use main_actor::{MainActor, MainActorSpec};
 use onceuponai_abstractions::EntityValue;
 use onceuponai_actors_abstractions::{
-    ActorActions, ActorError, ActorInvokeError, ActorInvokeFinish, ActorInvokeInput,
-    ActorInvokeOutput, ActorInvokeResult, ActorMetadata, ActorObject,
+    ActorActions, ActorInvokeError, ActorInvokeFinish, ActorInvokeInput, ActorInvokeOutput,
+    ActorInvokeResult, ActorMetadata, ActorObject,
 };
 use onceuponai_core::{common::ResultExt, config::read_config_str};
 use serde::{Deserialize, Serialize};
@@ -75,120 +75,6 @@ impl ActorKind {
         }
     }
 }
-
-/*
-impl ActorKind {
-    pub fn metadata(&self) -> ActorMetadata {
-        match self {
-            ActorKind::Gemma(object) => object.metadata(),
-            ActorKind::Quantized(object) => object.metadata(),
-            ActorKind::E5(object) => object.metadata(),
-            ActorKind::Main(object) => object.metadata(),
-            ActorKind::Custom(object) => object.metadata(),
-        }
-    }
-
-    pub fn kind(&self) -> String {
-        match self {
-            ActorKind::Gemma(object) => object.kind(),
-            ActorKind::Quantized(object) => self.kind(),
-            ActorKind::E5(object) => object.kind(),
-            ActorKind::Main(object) => object.kind(),
-            ActorKind::Custom(object) => object.kind(),
-        }
-    }
-
-    fn actor_id(&self) -> &str {
-        match self {
-            ActorKind::Main(_) => MainActor::ACTOR_ID,
-            _ => WorkerActor::ACTOR_ID,
-        }
-    }
-
-    pub fn own_addr(&self) -> Result<SocketAddr> {
-        let socket_addr: SocketAddr = self.metadata().actor_host.parse::<SocketAddr>()?;
-        Ok(socket_addr)
-    }
-
-    pub fn seed_addr(&self) -> Result<SocketAddr> {
-        let socket_addr = self
-            .metadata()
-            .actor_seed
-            .clone()
-            .expect("SEED REQUIRED")
-            .parse::<SocketAddr>()?;
-        Ok(socket_addr)
-    }
-
-    pub fn remote_addr(&self) -> Result<RemoteAddr> {
-        let socket_addr: SocketAddr = self.own_addr()?;
-        let remote_addr = RemoteAddr::new_from_id(socket_addr, self.actor_id());
-        Ok(remote_addr)
-    }
-
-    pub fn start(&self) -> Result<()> {
-        match self {
-            ActorKind::Gemma(object) => crate::llm::gemma::start(object.spec()),
-            ActorKind::E5(object) => crate::llm::e5::start(object.spec()),
-            ActorKind::Quantized(object) => crate::llm::quantized::start(object.spec()),
-            ActorKind::Main(_) => Ok(()),
-            ActorKind::Custom(object) => {
-                let registry = CUSTOM_ACTOR_REGISTRY.get_or_init(CustomActorRegistry::new);
-                let custom_actor = registry
-                    .create(&object.spec().name)
-                    .expect("Custom actor not found");
-                custom_actor.start();
-                Ok(())
-            }
-        }?;
-
-        Ok(())
-    }
-
-    pub fn invoke(&self, uuid: Uuid, request: &ActorInvokeRequest) -> Result<ActorInvokeResponse> {
-        let response = match self {
-            ActorKind::Gemma(_) => crate::llm::gemma::invoke(uuid, request.clone()),
-            ActorKind::Quantized(_) => crate::llm::quantized::invoke(uuid, request.clone()),
-            ActorKind::E5(_) => crate::llm::e5::invoke(uuid, request.clone()),
-            ActorKind::Main(_) => Ok(ActorInvokeResponse::Failure(ActorInvokeError {
-                uuid,
-                task_id: request.task_id,
-                error: ActorError::FatalError(String::from("MAIN ACTOR CAN'T BE INVOKED")),
-            })),
-            ActorKind::Custom(object) => {
-                todo!();
-                // let registry = CUSTOM_ACTOR_REGISTRY.get_or_init(CustomActorRegistry::new);
-                // let custom_actor = registry
-                // .create(&object.spec().name)
-                // .expect("Custom actor not found");
-                // custom_actor.invoke(uuid, request.clone())
-            }
-        }?;
-
-        Ok(response)
-    }
-
-    pub fn invoke_stream<F>(
-        &self,
-        uuid: Uuid,
-        request: &ActorInvokeRequest,
-        mut callback: F,
-    ) -> Result<()>
-    where
-        F: FnMut(ActorInvokeResponse),
-    {
-        match self {
-            ActorKind::Gemma(_) => todo!(),
-            ActorKind::Quantized(_) => {
-                crate::llm::quantized::invoke_stream(uuid, request.clone(), callback)
-            }
-            ActorKind::E5(_) => Err(anyhow!("E5 ACTOR NOT SUPPORT STREAM")),
-            ActorKind::Main(_) => Err(anyhow!("MAIN ACTOR NOT SUPPORT STREAM")),
-            ActorKind::Custom(_) => Err(anyhow!("MAIN ACTOR NOT SUPPORT STREAM")),
-        }
-    }
-}
-*/
 
 #[derive(RemoteMessage, Serialize, Deserialize, Debug)]
 #[with_source(source)]
