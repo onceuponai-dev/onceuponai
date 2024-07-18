@@ -43,9 +43,9 @@ impl E5Model {
     }
 
     pub fn load(e5_model_repo: &str, device_type: Option<String>) -> Result<E5Model> {
-        let weights = hf_hub_get(e5_model_repo, "model.safetensors", None, None, None)?;
-        let tokenizer = hf_hub_get(e5_model_repo, "tokenizer.json", None, None, None)?;
-        let candle_config = hf_hub_get(e5_model_repo, "config.json", None, None, None)?;
+        let weights = hf_hub_get(e5_model_repo, "model.safetensors", None, None)?;
+        let tokenizer = hf_hub_get(e5_model_repo, "tokenizer.json", None, None)?;
+        let candle_config = hf_hub_get(e5_model_repo, "config.json", None, None)?;
         let candle_config: BertConfig = serde_json::from_slice(&candle_config)?;
 
         let device = parse_device(device_type)?;

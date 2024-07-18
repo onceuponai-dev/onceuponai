@@ -163,7 +163,6 @@ impl GemmaModel {
         let paths = hf_hub_get_multiple(
             &base_repo_id,
             "model.safetensors.index.json",
-            None,
             hf_token.clone(),
         )?;
 
@@ -177,15 +176,9 @@ impl GemmaModel {
         let tokenizer_repo = tokenizer_repo.unwrap_or(base_repo_id.clone());
 
         let vb = unsafe { VarBuilder::from_mmaped_safetensors(&paths, dtype, &device)? };
-        let tokenizer = hf_hub_get(
-            &tokenizer_repo,
-            "tokenizer.json",
-            None,
-            hf_token.clone(),
-            None,
-        )?;
+        let tokenizer = hf_hub_get(&tokenizer_repo, "tokenizer.json", hf_token.clone(), None)?;
         let tokenizer = Tokenizer::from_bytes(&tokenizer).map_anyhow_err()?;
-        let candle_config = hf_hub_get(&base_repo_id, "config.json", None, hf_token, None)?;
+        let candle_config = hf_hub_get(&base_repo_id, "config.json", hf_token, None)?;
         let candle_config: Config = serde_json::from_slice(&candle_config)?;
         let model = Model::new(use_flash_attn, &candle_config, vb)?;
 

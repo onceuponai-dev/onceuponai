@@ -60,7 +60,6 @@ impl<T, E: std::fmt::Debug> ResultExt<T, E> for Result<T, E> {
 pub fn hf_hub_get_path(
     hf_repo_id: &str,
     filename: &str,
-    endpoint: Option<String>,
     hf_token: Option<String>,
     revision: Option<String>,
 ) -> Result<PathBuf> {
@@ -70,10 +69,6 @@ pub fn hf_hub_get_path(
 
     if let Some(token) = hf_token {
         api_builder = api_builder.with_token(Some(token));
-    }
-
-    if let Some(e) = endpoint {
-        api_builder = api_builder.with_endpoint(e);
     }
 
     let repo = if let Some(rev) = revision {
@@ -91,11 +86,10 @@ pub fn hf_hub_get_path(
 pub fn hf_hub_get(
     hf_repo_id: &str,
     filename: &str,
-    endpoint: Option<String>,
     hf_token: Option<String>,
     revision: Option<String>,
 ) -> Result<Vec<u8>> {
-    let path = hf_hub_get_path(hf_repo_id, filename, endpoint, hf_token, revision)?;
+    let path = hf_hub_get_path(hf_repo_id, filename, hf_token, revision)?;
     let data = fs::read(path)?;
     Ok(data)
 }
@@ -103,7 +97,6 @@ pub fn hf_hub_get(
 pub fn hf_hub_get_multiple(
     hf_repo_id: &str,
     json_file: &str,
-    endpoint: Option<String>,
     hf_token: Option<String>,
 ) -> Result<Vec<PathBuf>> {
     use hf_hub::{api::sync::ApiBuilder, Repo, RepoType};
@@ -112,10 +105,6 @@ pub fn hf_hub_get_multiple(
 
     if let Some(token) = hf_token {
         api_builder = api_builder.with_token(Some(token));
-    }
-
-    if let Some(e) = endpoint {
-        api_builder = api_builder.with_endpoint(e);
     }
 
     let api = api_builder

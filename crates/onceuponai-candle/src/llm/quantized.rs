@@ -205,7 +205,7 @@ impl QuantizedModel {
         let model_path = if model_file.starts_with("file://") {
             std::path::PathBuf::from(model_file.replace("file://", ""))
         } else {
-            hf_hub_get_path(base_repo_id.0, base_repo_id.1, None, None, model_revision)?
+            hf_hub_get_path(base_repo_id.0, base_repo_id.1, None, model_revision)?
         };
 
         let tokenizer_repo = tokenizer_repo.unwrap_or(model_repo.to_string());
@@ -213,7 +213,7 @@ impl QuantizedModel {
         let tokenizer = if tokenizer_repo.starts_with("file://") {
             std::fs::read(tokenizer_repo.replace("file://", ""))?
         } else {
-            hf_hub_get(&tokenizer_repo, "tokenizer.json", None, None, None)?
+            hf_hub_get(&tokenizer_repo, "tokenizer.json", None, None)?
         };
 
         let device = parse_device(device_type)?;
