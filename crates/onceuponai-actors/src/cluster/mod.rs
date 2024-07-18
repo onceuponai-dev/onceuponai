@@ -1,10 +1,15 @@
-use crate::actors::{
-    main_actor::{MainActor, MainActorSpec},
-    ActorBuilder, ActorInstance, WorkerActor,
+use crate::{
+    abstractions::{ActorKindActions, ActorObject},
+    actors::{
+        main_actor::{MainActor, MainActorSpec},
+        ActorBuilder, WorkerActor,
+    },
 };
 use actix::prelude::*;
 use actix_telepathy::Cluster;
 use anyhow::Result;
+use onceuponai_core::{common::ResultExt, config::read_config_str};
+use serde::de::DeserializeOwned;
 
 pub fn start_main_actor(main_actor: MainActor) -> Result<Option<(MainActorSpec, Addr<MainActor>)>> {
     println!("{}", LOGO);
@@ -26,14 +31,22 @@ pub async fn start_worker_actor(
     Ok(None)
 }
 
-pub async fn start_cluster(file: &String) -> Result<Option<(MainActorSpec, Addr<MainActor>)>> {
-    let actor = ActorBuilder::build(file).await?;
-    match actor {
-        ActorInstance::Main(main_actor) => start_main_actor(main_actor),
-        ActorInstance::Worker(worker_actor) => start_worker_actor(worker_actor).await,
-    }
-
+pub async fn start_main_cluster(file: &String) -> Result<Option<(MainActorSpec, Addr<MainActor>)>> {
+    let configuration_str = read_config_str(file, Some(true)).await.map_anyhow_err()?;
+    let actor: ActorObject<MainActorSpec> = serde_yaml::from_str(&configuration_str)?;
+    let main_actor = ActorBuilder::build_main(actor)?;
+    start_main_actor(main_actor)
     //System::current().stop();
+}
+
+pub async fn start_worker_cluster<T: ActorKindActions + DeserializeOwned>(
+    file: &String,
+) -> Result<()> {
+    let configuration_str = read_config_str(file, Some(true)).await.map_anyhow_err()?;
+    let actor_kind: T = serde_yaml::from_str(&configuration_str)?;
+    let worker_actor = ActorBuilder::build_worker(actor_kind.metadata(), || actor_kind.actor())?;
+    start_worker_actor(worker_actor).await?;
+    Ok(())
 }
 
 const LOGO: &str = r#"

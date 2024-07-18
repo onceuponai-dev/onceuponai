@@ -1,8 +1,8 @@
+pub mod llm;
+use crate::llm::ActorKind;
 use anyhow::Result;
 use clap::{arg, Command};
-use onceuponai_actors::cluster::start_main_cluster;
-
-use crate::serve::serve;
+use onceuponai_actors::cluster::start_worker_cluster;
 
 fn cli() -> Command {
     Command::new("onceuponai")
@@ -26,14 +26,15 @@ pub(crate) async fn commands() -> Result<()> {
     match matches.subcommand() {
         Some(("apply", sub_sub_matches)) => {
             let file = sub_sub_matches.get_one::<String>("file").expect("required");
-            let res = start_main_cluster(file).await?;
-            match res {
-                Some((spec, addr)) => serve(spec, addr).await?,
-                None => (),
-            };
+            start_worker_cluster::<ActorKind>(file).await?
         }
         _ => unreachable!(),
     }
 
     Ok(())
+}
+
+#[actix_rt::main]
+async fn main() -> Result<()> {
+    commands().await
 }

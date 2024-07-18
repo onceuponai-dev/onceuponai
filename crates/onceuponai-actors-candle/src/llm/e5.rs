@@ -1,10 +1,10 @@
-use crate::abstractions::{
-    ActorActions, ActorError, ActorInvokeError, ActorInvokeRequest, ActorInvokeResponse,
-    ActorInvokeResult,
-};
 use anyhow::Result;
 use log::debug;
 use onceuponai_abstractions::EntityValue;
+use onceuponai_actors::abstractions::{
+    ActorActions, ActorError, ActorInvokeError, ActorInvokeRequest, ActorInvokeResponse,
+    ActorInvokeResult,
+};
 use onceuponai_candle::llm::e5::E5Model;
 use onceuponai_core::common::ResultExt;
 use serde::Deserialize;

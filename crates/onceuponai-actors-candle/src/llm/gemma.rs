@@ -1,10 +1,10 @@
-use crate::abstractions::{
-    ActorActions, ActorError, ActorInvokeError, ActorInvokeRequest, ActorInvokeResponse,
-    ActorInvokeResult,
-};
 use actix_telepathy::RemoteAddr;
 use anyhow::Result;
 use onceuponai_abstractions::EntityValue;
+use onceuponai_actors::abstractions::{
+    ActorActions, ActorError, ActorInvokeError, ActorInvokeRequest, ActorInvokeResponse,
+    ActorInvokeResult,
+};
 use onceuponai_candle::llm::gemma::GemmaModel;
 use onceuponai_core::common::ResultExt;
 use serde::Deserialize;

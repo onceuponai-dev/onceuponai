@@ -63,6 +63,11 @@ pub struct ActorInvokeError {
     pub error: ActorError,
 }
 
+pub trait ActorKindActions {
+    fn actor(&self) -> Box<dyn ActorActions>;
+    fn metadata(&self) -> ActorMetadata;
+}
+
 pub trait ActorActions: Send + Sync {
     fn features(&self) -> Option<Vec<String>> {
         None

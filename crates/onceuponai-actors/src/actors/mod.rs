@@ -1,13 +1,10 @@
-pub mod custom_actor;
 pub mod main_actor;
 use crate::abstractions::{
     ActorActions, ActorInvokeRequest, ActorInvokeResponse, ActorMetadata, ActorObject,
 };
-use crate::llm::{e5::E5Spec, gemma::GemmaSpec, quantized::QuantizedSpec};
 use actix::prelude::*;
 use actix_telepathy::prelude::*;
 use anyhow::Result;
-use custom_actor::CustomActorSpec;
 use log::debug;
 use main_actor::{MainActor, MainActorSpec};
 use onceuponai_abstractions::EntityValue;
@@ -43,38 +40,6 @@ pub struct ModelResponse {
     pub response: String,
 }
 
-#[derive(Deserialize, Debug, Clone)]
-#[serde(tag = "kind", rename_all = "camelCase")]
-pub enum ActorKind {
-    Main(ActorObject<MainActorSpec>),
-    Custom(ActorObject<CustomActorSpec>),
-    Gemma(ActorObject<GemmaSpec>),
-    Quantized(ActorObject<QuantizedSpec>),
-    E5(ActorObject<E5Spec>),
-}
-
-impl ActorKind {
-    pub fn actor(&self) -> Box<dyn ActorActions> {
-        match self {
-            ActorKind::Gemma(object) => Box::new(object.spec()),
-            ActorKind::Quantized(object) => Box::new(object.spec()),
-            ActorKind::E5(object) => Box::new(object.spec()),
-            ActorKind::Main(object) => Box::new(object.spec()),
-            ActorKind::Custom(object) => Box::new(object.spec()),
-        }
-    }
-
-    pub fn metadata(&self) -> ActorMetadata {
-        match self {
-            ActorKind::Gemma(object) => object.metadata(),
-            ActorKind::Quantized(object) => object.metadata(),
-            ActorKind::E5(object) => object.metadata(),
-            ActorKind::Main(object) => object.metadata(),
-            ActorKind::Custom(object) => object.metadata(),
-        }
-    }
-}
-
 #[derive(RemoteMessage, Serialize, Deserialize, Debug)]
 #[with_source(source)]
 pub struct ActorInfoRequest {
@@ -89,11 +54,6 @@ pub struct ActorStartInvokeRequest {
     pub stream: bool,
     pub config: HashMap<String, EntityValue>,
     pub data: HashMap<String, Vec<EntityValue>>,
-}
-
-pub enum ActorInstance {
-    Main(MainActor),
-    Worker(WorkerActor),
 }
 
 pub struct ActorBuilder {}
@@ -145,24 +105,6 @@ impl ActorBuilder {
             sender,
             metadata,
         })
-    }
-
-    pub async fn build(path: &String) -> Result<ActorInstance> {
-        let configuration_str = read_config_str(path, Some(true)).await.map_anyhow_err()?;
-
-        let actor_kind: ActorKind = serde_yaml::from_str(&configuration_str)?;
-
-        let actor_box = if let ActorKind::Main(actor) = actor_kind.clone() {
-            let main_actor = ActorBuilder::build_main(actor)?;
-            ActorInstance::Main(main_actor)
-        } else {
-            let worker_actor =
-                ActorBuilder::build_worker(actor_kind.metadata(), || actor_kind.actor())?;
-
-            ActorInstance::Worker(worker_actor)
-        };
-
-        Ok(actor_box)
     }
 }
 
