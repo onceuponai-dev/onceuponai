@@ -1,11 +1,10 @@
-extern crate onceuponai_actors_abstractions;
+use crate::abstractions::{
+    ActorActions, ActorError, ActorInvokeError, ActorInvokeRequest, ActorInvokeResponse,
+    ActorInvokeResult,
+};
 use anyhow::Result;
 use log::debug;
 use onceuponai_abstractions::EntityValue;
-use onceuponai_actors_abstractions::{
-    ActorActions, ActorError, ActorInvokeError, ActorInvokeInput, ActorInvokeOutput,
-    ActorInvokeResult,
-};
 use onceuponai_candle::llm::e5::E5Model;
 use onceuponai_core::common::ResultExt;
 use serde::Deserialize;
@@ -33,11 +32,11 @@ impl ActorActions for E5Spec {
         Ok(())
     }
 
-    fn invoke(&self, uuid: Uuid, request: &ActorInvokeInput) -> Result<ActorInvokeOutput> {
+    fn invoke(&self, uuid: Uuid, request: &ActorInvokeRequest) -> Result<ActorInvokeResponse> {
         let input = request.data.get("input");
 
         if input.is_none() {
-            return Ok(ActorInvokeOutput::Failure(ActorInvokeError {
+            return Ok(ActorInvokeResponse::Failure(ActorInvokeError {
                 uuid,
                 task_id: request.task_id,
                 error: ActorError::BadRequest(
@@ -71,6 +70,6 @@ impl ActorActions for E5Spec {
             data: HashMap::from([(String::from("embeddings"), embeddings_data)]),
         };
 
-        Ok(ActorInvokeOutput::Success(result))
+        Ok(ActorInvokeResponse::Success(result))
     }
 }

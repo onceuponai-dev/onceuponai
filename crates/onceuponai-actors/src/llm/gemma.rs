@@ -1,10 +1,10 @@
+use crate::abstractions::{
+    ActorActions, ActorError, ActorInvokeError, ActorInvokeRequest, ActorInvokeResponse,
+    ActorInvokeResult,
+};
 use actix_telepathy::RemoteAddr;
 use anyhow::Result;
 use onceuponai_abstractions::EntityValue;
-use onceuponai_actors_abstractions::{
-    ActorActions, ActorError, ActorInvokeError, ActorInvokeInput, ActorInvokeOutput,
-    ActorInvokeResult,
-};
 use onceuponai_candle::llm::gemma::GemmaModel;
 use onceuponai_core::common::ResultExt;
 use serde::Deserialize;
@@ -52,15 +52,11 @@ impl ActorActions for GemmaSpec {
         Ok(())
     }
 
-    fn invoke(
-        &self,
-        uuid: Uuid,
-        request: &ActorInvokeInput,
-    ) -> Result<onceuponai_actors_abstractions::ActorInvokeOutput> {
+    fn invoke(&self, uuid: Uuid, request: &ActorInvokeRequest) -> Result<ActorInvokeResponse> {
         let input = request.data.get("prompt");
 
         if input.is_none() {
-            return Ok(ActorInvokeOutput::Failure(ActorInvokeError {
+            return Ok(ActorInvokeResponse::Failure(ActorInvokeError {
                 uuid,
                 task_id: request.task_id,
                 error: ActorError::BadRequest(
@@ -104,13 +100,13 @@ impl ActorActions for GemmaSpec {
             data: HashMap::from([(String::from("content"), results)]),
         };
 
-        Ok(ActorInvokeOutput::Success(result))
+        Ok(ActorInvokeResponse::Success(result))
     }
 
     fn invoke_stream(
         &self,
         uuid: Uuid,
-        request: &onceuponai_actors_abstractions::ActorInvokeInput,
+        request: &ActorInvokeRequest,
         source: RemoteAddr,
     ) -> Result<()> {
         todo!()

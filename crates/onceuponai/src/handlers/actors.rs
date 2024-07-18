@@ -6,6 +6,7 @@ use anyhow::Result;
 use futures::stream::Stream;
 use futures::task::{Context, Poll};
 use log::debug;
+use onceuponai_actors::abstractions::ActorInvokeResponse;
 use onceuponai_actors::actors::main_actor::{InvokeTask, CONNECTED_ACTORS, INVOKE_TASKS};
 use onceuponai_actors::actors::ActorStartInvokeRequest;
 use onceuponai_core::common::ResultExt;
@@ -102,15 +103,13 @@ pub async fn base_invoke(
             Ok(response) => {
                 remove_invoke_task(&task_id);
                 match response {
-                    onceuponai_actors::actors::ActorInvokeResponse::Success(result) => {
+                    ActorInvokeResponse::Success(result) => {
                         Ok(HttpResponse::Ok().json(mapper.map(invoke_request, result)))
                     }
-                    onceuponai_actors::actors::ActorInvokeResponse::Failure(result) => {
+                    ActorInvokeResponse::Failure(result) => {
                         Ok(HttpResponse::BadRequest().json(result.error))
                     }
-                    onceuponai_actors::actors::ActorInvokeResponse::Finish(_) => {
-                        Ok(HttpResponse::Ok().body(""))
-                    }
+                    ActorInvokeResponse::Finish(_) => Ok(HttpResponse::Ok().body("")),
                 }
             }
             Err(_) => {
@@ -134,7 +133,7 @@ pub async fn base_invoke(
 
 struct MpscStream {
     reqeust: InvokeRequest,
-    receiver: Arc<Mutex<mpsc::Receiver<onceuponai_actors::actors::ActorInvokeResponse>>>,
+    receiver: Arc<Mutex<mpsc::Receiver<ActorInvokeResponse>>>,
     task_id: Uuid,
     mapper: Mappers,
 }
@@ -146,20 +145,20 @@ impl Stream for MpscStream {
         let receiver = self.receiver.lock().unwrap();
         match receiver.try_recv() {
             Ok(response) => match response {
-                onceuponai_actors::actors::ActorInvokeResponse::Success(result) => {
+                ActorInvokeResponse::Success(result) => {
                     let mut mapper = self.mapper.clone();
                     let request = self.reqeust.clone();
                     let text = mapper.map(request, result).to_string();
                     let byte = bytes::Bytes::from(text);
                     Poll::Ready(Some(Ok(byte)))
                 }
-                onceuponai_actors::actors::ActorInvokeResponse::Failure(result) => {
+                ActorInvokeResponse::Failure(result) => {
                     let text = json!(result.error).to_string();
                     debug!("ERROR {text:?}");
                     remove_invoke_task(&self.task_id);
                     Poll::Ready(None)
                 }
-                onceuponai_actors::actors::ActorInvokeResponse::Finish(_) => {
+                ActorInvokeResponse::Finish(_) => {
                     remove_invoke_task(&self.task_id);
                     Poll::Ready(None)
                 }
@@ -191,8 +190,8 @@ pub enum Mappers {
 impl Mappers {
     fn map(
         &mut self,
-        request: InvokeRequest,
-        result: onceuponai_actors_abstractions::ActorInvokeResult,
+        _request: InvokeRequest,
+        result: onceuponai_actors::abstractions::ActorInvokeResult,
     ) -> serde_json::Value {
         match self {
             Mappers::Base => json!(result.data),

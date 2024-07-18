@@ -1,10 +1,10 @@
-use super::{ActorInfo, ActorInfoRequest, ActorInvokeResponse, ActorStartInvokeRequest};
-use crate::actors::{ActorInvokeRequest, WorkerActor};
+use super::{ActorInfo, ActorInfoRequest, ActorStartInvokeRequest};
+use crate::abstractions::{ActorActions, ActorInvokeRequest, ActorInvokeResponse, ActorObject};
+use crate::actors::WorkerActor;
 use actix::prelude::*;
 use actix_broker::BrokerSubscribe;
 use actix_telepathy::prelude::*;
 use once_cell::sync::OnceCell;
-use onceuponai_actors_abstractions::{ActorActions, ActorInvokeInput, ActorObject};
 use rand::seq::SliceRandom;
 use serde::Deserialize;
 use std::sync::mpsc;
@@ -66,8 +66,8 @@ impl ActorActions for MainActorSpec {
     fn invoke(
         &self,
         _uuid: Uuid,
-        _request: &ActorInvokeInput,
-    ) -> anyhow::Result<onceuponai_actors_abstractions::ActorInvokeOutput> {
+        _request: &ActorInvokeRequest,
+    ) -> anyhow::Result<ActorInvokeResponse> {
         unreachable!("invoke method is not expected to be called.");
     }
 }

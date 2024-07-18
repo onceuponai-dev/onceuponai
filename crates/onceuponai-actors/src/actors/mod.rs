@@ -1,5 +1,8 @@
 pub mod custom_actor;
 pub mod main_actor;
+use crate::abstractions::{
+    ActorActions, ActorInvokeRequest, ActorInvokeResponse, ActorMetadata, ActorObject,
+};
 use crate::llm::{e5::E5Spec, gemma::GemmaSpec, quantized::QuantizedSpec};
 use actix::prelude::*;
 use actix_telepathy::prelude::*;
@@ -8,10 +11,6 @@ use custom_actor::CustomActorSpec;
 use log::debug;
 use main_actor::{MainActor, MainActorSpec};
 use onceuponai_abstractions::EntityValue;
-use onceuponai_actors_abstractions::{
-    ActorActions, ActorInvokeError, ActorInvokeFinish, ActorInvokeInput, ActorInvokeOutput,
-    ActorInvokeResult, ActorMetadata, ActorObject,
-};
 use onceuponai_core::{common::ResultExt, config::read_config_str};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -92,45 +91,6 @@ pub struct ActorStartInvokeRequest {
     pub data: HashMap<String, Vec<EntityValue>>,
 }
 
-#[derive(RemoteMessage, Serialize, Deserialize, Debug, Clone)]
-#[with_source(source)]
-pub struct ActorInvokeRequest {
-    pub task_id: Uuid,
-    pub source: RemoteAddr,
-    pub stream: bool,
-    pub config: HashMap<String, EntityValue>,
-    pub data: HashMap<String, Vec<EntityValue>>,
-}
-
-#[derive(RemoteMessage, Serialize, Deserialize, Debug, Clone)]
-pub enum ActorInvokeResponse {
-    Success(ActorInvokeResult),
-    Finish(ActorInvokeFinish),
-    Failure(ActorInvokeError),
-}
-
-impl From<ActorInvokeRequest> for ActorInvokeInput {
-    fn from(value: ActorInvokeRequest) -> Self {
-        ActorInvokeInput {
-            task_id: value.task_id,
-            source: value.source,
-            stream: value.stream,
-            config: value.config,
-            data: value.data,
-        }
-    }
-}
-
-impl From<ActorInvokeOutput> for ActorInvokeResponse {
-    fn from(value: ActorInvokeOutput) -> Self {
-        match value {
-            ActorInvokeOutput::Success(val) => ActorInvokeResponse::Success(val),
-            ActorInvokeOutput::Finish(val) => ActorInvokeResponse::Finish(val),
-            ActorInvokeOutput::Failure(val) => ActorInvokeResponse::Failure(val),
-        }
-    }
-}
-
 pub enum ActorInstance {
     Main(MainActor),
     Worker(WorkerActor),
@@ -168,13 +128,13 @@ impl ActorBuilder {
                 while let Ok(request) = rx.recv() {
                     let is_stream = request.message.stream;
                     let source = request.message.source.clone();
-                    let req: &ActorInvokeInput = &request.message.into();
                     if !is_stream {
-                        let response = actor.invoke(request.task_id, req).unwrap();
-                        let resp: ActorInvokeResponse = response.into();
-                        source.do_send(resp)
+                        let response = actor.invoke(request.task_id, &request.message).unwrap();
+                        source.do_send(response)
                     } else {
-                        actor.invoke_stream(request.task_id, req, source).unwrap();
+                        actor
+                            .invoke_stream(request.task_id, &request.message, source)
+                            .unwrap();
                     }
                 }
             });

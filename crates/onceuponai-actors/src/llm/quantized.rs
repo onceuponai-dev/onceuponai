@@ -1,11 +1,10 @@
-use crate::actors::ActorInvokeResponse;
+use crate::abstractions::{
+    ActorActions, ActorError, ActorInvokeError, ActorInvokeFinish, ActorInvokeRequest,
+    ActorInvokeResponse, ActorInvokeResult,
+};
 use actix_telepathy::RemoteAddr;
 use anyhow::Result;
 use onceuponai_abstractions::EntityValue;
-use onceuponai_actors_abstractions::{
-    ActorActions, ActorError, ActorInvokeError, ActorInvokeFinish, ActorInvokeInput,
-    ActorInvokeOutput, ActorInvokeResult,
-};
 use onceuponai_candle::llm::quantized::QuantizedModel;
 use onceuponai_core::common::ResultExt;
 use serde::Deserialize;
@@ -54,11 +53,11 @@ impl ActorActions for QuantizedSpec {
         Ok(())
     }
 
-    fn invoke(&self, uuid: Uuid, request: &ActorInvokeInput) -> Result<ActorInvokeOutput> {
+    fn invoke(&self, uuid: Uuid, request: &ActorInvokeRequest) -> Result<ActorInvokeResponse> {
         let input = request.data.get("message");
 
         if input.is_none() {
-            return Ok(ActorInvokeOutput::Failure(ActorInvokeError {
+            return Ok(ActorInvokeResponse::Failure(ActorInvokeError {
             uuid,
             task_id: request.task_id,
             error: ActorError::BadRequest(
@@ -118,13 +117,13 @@ impl ActorActions for QuantizedSpec {
             data: HashMap::from([(String::from("content"), results)]),
         };
 
-        Ok(ActorInvokeOutput::Success(result))
+        Ok(ActorInvokeResponse::Success(result))
     }
 
     fn invoke_stream(
         &self,
         uuid: Uuid,
-        request: &ActorInvokeInput,
+        request: &ActorInvokeRequest,
         source: RemoteAddr,
     ) -> Result<()> {
         let input = request.data.get("message");

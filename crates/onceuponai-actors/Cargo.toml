@@ -16,7 +16,6 @@ anyhow = { workspace = true }
 env_logger = { workspace = true }
 log = { workspace = true }
 once_cell = { workspace = true }
-onceuponai-actors-abstractions= { path = "../onceuponai-actors-abstractions" }
 onceuponai-abstractions= { path = "../onceuponai-abstractions" }
 onceuponai-candle= { path = "../onceuponai-candle" }
 onceuponai-core= { path = "../onceuponai-core" }

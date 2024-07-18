@@ -3,7 +3,6 @@ members = [
     "crates/onceuponai", 
     "crates/onceuponai-abstractions", 
     "crates/onceuponai-actors", 
-    "crates/onceuponai-actors-abstractions", 
     "crates/onceuponai-candle",
     "crates/onceuponai-core", 
     "crates/onceuponai-operator",

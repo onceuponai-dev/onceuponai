@@ -1,6 +1,6 @@
+use crate::abstractions::{ActorActions, ActorInvokeRequest, ActorInvokeResponse};
 use anyhow::Result;
 use once_cell::sync::OnceCell;
-use onceuponai_actors_abstractions::{ActorActions, ActorInvokeInput, ActorInvokeOutput};
 use serde::Deserialize;
 use std::collections::HashMap;
 use std::sync::RwLock;
@@ -8,7 +8,7 @@ use uuid::Uuid;
 
 pub trait CustomActor: Send + Sync {
     fn start(&self);
-    fn invoke(&self, uuid: Uuid, request: &ActorInvokeInput) -> Result<ActorInvokeOutput>;
+    fn invoke(&self, uuid: Uuid, request: &ActorInvokeRequest) -> Result<ActorInvokeResponse>;
 }
 
 #[derive(Deserialize, Debug, Clone)]
@@ -28,7 +28,7 @@ impl ActorActions for CustomActorSpec {
         Ok(())
     }
 
-    fn invoke(&self, uuid: Uuid, request: &ActorInvokeInput) -> Result<ActorInvokeOutput> {
+    fn invoke(&self, uuid: Uuid, request: &ActorInvokeRequest) -> Result<ActorInvokeResponse> {
         let registry = CUSTOM_ACTOR_REGISTRY.get_or_init(CustomActorRegistry::new);
         let custom_actor = registry.create(&self.name).expect("Custom actor not found");
         custom_actor.invoke(uuid, request)
