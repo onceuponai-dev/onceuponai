@@ -17,6 +17,6 @@ use config::Config;
 
 #[actix_rt::main]
 async fn main() -> Result<()> {
-    Config::load()?;
+    //Config::load()?;
     commands().await
 }

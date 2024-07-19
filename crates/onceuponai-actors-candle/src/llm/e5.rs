@@ -23,7 +23,7 @@ impl ActorActions for E5Spec {
     }
 
     fn kind(&self) -> String {
-        todo!()
+        "e5".to_string()
     }
 
     fn start(&self) -> Result<()> {

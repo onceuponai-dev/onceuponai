@@ -5,12 +5,12 @@ pub mod chat;
 pub mod oai;
 pub mod users;
 
-pub const ASSETS_CSS_HASH: &str = "4a47f803";
-pub const ASSETS_JS_HASH: &str = "e1b29641";
+pub const ASSETS_CSS_HASH: &str = "5956cac1";
+pub const ASSETS_JS_HASH: &str = "7663bc6a";
 
 const INDEX_HTML: &str = include_str!("../../ui/index.html");
-const ASSETS_JS: &str = include_str!("../../ui/assets/index-e1b29641.js");
-const ASSETS_CSS: &str = include_str!("../../ui/assets/index-4a47f803.css");
+const ASSETS_JS: &str = include_str!("../../ui/assets/index-7663bc6a.js");
+const ASSETS_CSS: &str = include_str!("../../ui/assets/index-5956cac1.css");
 
 pub async fn index_html() -> impl Responder {
     HttpResponse::Ok()
