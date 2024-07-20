@@ -11,11 +11,28 @@ edition = "2021"
 tauri-build = { version = "1", features = [] }
 
 [dependencies]
+actix = { workspace = true }
 actix-rt = { workspace = true }
+actix-session = { workspace = true }
 actix-web = { workspace = true }
-tauri = { workspace = true }
+anyhow = { workspace = true }
+base64 = { workspace = true }
+bytes = { workspace = true }
+clap = { workspace = true }
+chrono = { workspace = true }
+futures = { workspace = true }
+jsonwebtoken = { workspace = true }
+log = { workspace = true }
+onceuponai-abstractions= { path = "../../onceuponai-abstractions" }
+onceuponai-actors= { path = "../../onceuponai-actors" }
+onceuponai-core= { path = "../../onceuponai-core" }
+openidconnect = { workspace = true }
+rand = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
+tauri = { workspace = true }
+tokio = { workspace = true }
+uuid = { workspace = true }
 
 [features]
 # This feature is used for production builds or when a dev server is not specified, DO NOT REMOVE!!

@@ -2,7 +2,6 @@
 import { ref } from "vue";
 import { useRouter } from 'vue-router'
 
-const drawer = ref(true);
 
 const subtitle = ref("");
 

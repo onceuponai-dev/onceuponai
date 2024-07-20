@@ -35,7 +35,7 @@
     "bundle": {
       "active": true,
       "targets": "all",
-      "identifier": "com.tauri.dev",
+      "identifier": "dev.onceuponai.dev",
       "icon": [
         "icons/logo50.png",
         "icons/logo100.png",

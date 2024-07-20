@@ -1,7 +1,9 @@
 // Prevents additional console window on Windows in release, DO NOT REMOVE!!
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
+use server::TauriAppState;
 use std::thread;
+use tauri::{AppHandle, Manager, State};
 
 pub mod server;
 
@@ -9,6 +11,15 @@ pub mod server;
 #[tauri::command]
 fn greet(name: &str) -> String {
     format!("Hello, {}! You've been greeted from Rust1!", name)
+}
+
+#[tauri::command]
+fn config(handle: AppHandle) -> TauriAppState {
+    let state: State<TauriAppState> = handle.state();
+    TauriAppState {
+        personal_token: state.personal_token.clone(),
+        base_url: state.base_url.clone(),
+    }
 }
 
 fn main() {
@@ -22,7 +33,7 @@ fn main() {
 
             Ok(())
         })
-        .invoke_handler(tauri::generate_handler![greet])
+        .invoke_handler(tauri::generate_handler![greet, config])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }
