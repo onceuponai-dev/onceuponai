@@ -1,10 +1,7 @@
 <script setup lang="ts">
 import { ref } from "vue";
 import { invoke } from "@tauri-apps/api/tauri";
-// import axios from 'axios';
 import {axios_client} from "../common";
-// import axiosTauriApiAdapter from 'axios-tauri-api-adapter';
-// const client = axios.create({ adapter: axiosTauriApiAdapter });
 const client = await axios_client();
 
 const greetMsg = ref("");

@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { ref, onMounted } from "vue";
-import { invoke } from "@tauri-apps/api/tauri";
 import { axios_client } from "../common";
 const client = await axios_client();
 

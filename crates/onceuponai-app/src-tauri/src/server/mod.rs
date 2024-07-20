@@ -2,6 +2,7 @@ mod handlers;
 mod models;
 mod session;
 use actix::Addr;
+use actix_web::middleware::Logger;
 use actix_web::{web, App, HttpResponse, HttpServer, Responder};
 use handlers::actors::{connected_actors, invoke};
 use handlers::auth::generate_pat_token;
@@ -61,6 +62,10 @@ pub fn init(app: AppHandle) -> io::Result<()> {
             base_url: String::from("http://localhost:8080"),
         });
 
+        if let Some(v) = res.0.log_level.clone() {
+            env_logger::init_from_env(env_logger::Env::new().default_filter_or(v));
+        }
+
         let app_state = web::Data::new(AppState {
             spec: res.0,
             addr: res.1,
@@ -68,6 +73,7 @@ pub fn init(app: AppHandle) -> io::Result<()> {
 
         HttpServer::new(move || {
             let mut app = App::new()
+                .wrap(Logger::default())
                 .app_data(tauri_app.clone())
                 .app_data(app_state.clone())
                 .route("/health", web::get().to(health))

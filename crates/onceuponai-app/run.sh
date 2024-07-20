@@ -5,4 +5,4 @@ nvm install 20
 npm install -g npm@latest
  
 npm install
-npm run tauri dev
+RUST_LOG=debug npm run tauri dev

@@ -4,6 +4,5 @@
 </script>
 
 <template>
-  FOOTER
    
 </template>
