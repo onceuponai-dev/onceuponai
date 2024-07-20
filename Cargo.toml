@@ -2,11 +2,13 @@
 members = [
     "crates/onceuponai", 
     "crates/onceuponai-abstractions", 
-    "crates/onceuponai-actors", "crates/onceuponai-actors-candle", 
+    "crates/onceuponai-actors", 
+    "crates/onceuponai-actors-candle", 
     "crates/onceuponai-candle",
     "crates/onceuponai-core", 
     "crates/onceuponai-operator",
     "crates/onceuponai-py",
+    "crates/onceuponai-app/src-tauri"
     ]
 
 [workspace.package]
@@ -70,6 +72,7 @@ schemars = "0.8.21"
 serde = { version = "1.0.171", features = ["derive"] }
 serde_json = "1.0.99"
 serde_yaml = "0.9"
+tauri = { version = "1", features = ["shell-open", "http-all"] }
 thiserror = "1"
 tokenizers = { version = "0.19.1", features = [
     "unstable_wasm",
@@ -80,6 +83,7 @@ uuid = "1.6.1"
 #accelerate-src = { version = "0.3.2", optional = true }
 #intel-mkl-src = { version = "0.8.1", features = ["mkl-static-lp64-iomp"], optional = true }
 #metal = { version = "0.27.0", features = ["mps"], optional = true }
+
 
 [profile.release-with-debug]
 inherits = "release"
