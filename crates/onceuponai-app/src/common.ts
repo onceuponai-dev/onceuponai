@@ -6,6 +6,7 @@ export async function axios_client() {
   const config: any = await invoke("config");
   const instance = axios.create({ adapter: axiosTauriApiAdapter, baseURL: config.base_url });
   instance.defaults.headers.common['Authorization'] = `Bearer ${config.personal_token}`;
+  instance.defaults.timeout = 20000;
   return instance;
 }
 

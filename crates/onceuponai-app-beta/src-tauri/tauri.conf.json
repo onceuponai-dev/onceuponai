@@ -1,0 +1,32 @@
+{
+  "productName": "onceuponai-app-beta",
+  "version": "0.0.0",
+  "identifier": "dev.onceuponai.dev",
+  "build": {
+    "beforeDevCommand": "npm run dev",
+    "devUrl": "http://localhost:1420",
+    "beforeBuildCommand": "npm run build",
+    "frontendDist": "../dist"
+  },
+  "app": {
+    "windows": [
+      {
+        "title": "onceuponai-app-beta",
+        "width": 800,
+        "height": 600
+      }
+    ],
+    "security": {
+      "csp": null
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": "all",
+    "icon": [
+      "icons/logo50.png",
+      "icons/logo100.png",
+      "icons/favicon.ico"
+    ]
+  }
+}

@@ -42,84 +42,81 @@ client.get(`/api/actors`)
   });
 
 
-async function sendMessage() {
-  try {
-    const controller = new AbortController();
-    const signal = controller.signal;
+function sendMessage() {
+  const controller = new AbortController();
+  const signal = controller.signal;
 
-    const response = await client.post(
-      '/v1/chat/completions',
-      {
-        stream: isStream.value,
-        model: selectedActor.value,
-        messages: [{ "content": inputMessage.value, "role": "user" }]
+
+  client.post(
+    '/v1/chat/completions',
+    {
+      stream: isStream.value,
+      model: selectedActor.value,
+      messages: [{ "content": inputMessage.value, "role": "user" }]
+    },
+    {
+      headers: {
+        'Content-Type': 'application/json'
       },
-      {
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        responseType: 'stream',
-        signal: signal
-      }
-    );
-
-
-    const reader = response.data.getReader();
-    const decoder = new TextDecoder('utf-8');
-    let resultText = '';
-    let done: boolean | undefined;
-    let value: Uint8Array | undefined;
-    let ix = 0;
-
-    if (reader) {
-      while ({ done, value } = await reader.read(), !done) {
-        showProgress.value = false;
-        let textChunk = decoder.decode(value, { stream: true });
-        resultText += textChunk;
-        const messagesToSend = resultText.split('\n').filter(message => message.trim().length > 0);
-
-        for (let message of messagesToSend) {
-          try {
-            if (isStream.value) {
-              const regex = /}{/g;
-              message = message.replace(regex, "},{");
-              message = `[${message}]`;
-              let m: ChatResponse[] = JSON.parse(message);
-              let role = m[0].choices[0].message.role;
-              let content = m.map((x) => x.choices[0].message.content).join("");
-              if (ix === 0) {
-                messages.value.push({ "content": content, "role": role });
-              } else {
-                let lastMessage = messages.value[messages.value.length - 1];
-                lastMessage.content = content;
-              }
-            } else {
-              let m: ChatResponse = JSON.parse(message);
-              let choice = m.choices[0];
-              messages.value.push(choice.message);
-            }
-          } catch (e) {
-            console.warn('Failed to parse message', e);
-          }
-        }
-
-        nextTick(() => {
-          setTimeout(() => {
-            var chatDiv = document.getElementsByClassName("chat-area")[0];
-            chatDiv.scrollTop = chatDiv.scrollHeight;
-          }, 100);
-        });
-
-        ix++;
-      }
-
-      reader.releaseLock();
+      responseType: isStream.value ? 'text' : 'text',
     }
-  } catch (error) {
+  ).then(response => {
+    console.log(response);
+    /*
+ const stream = response.data;
+ const decoder = new TextDecoder('utf-8');
+ let resultText = '';
+ let ix = 0;
+
+   for (const chunk of stream) {
+     showProgress.value = false;
+     console.log(textChunk);
+     let textChunk = decoder.decode(chunk, { stream: true });
+     console.log(textChunk)
+     resultText += textChunk;
+     const messagesToSend = resultText.split('\n').filter(message => message.trim().length > 0);
+
+     for (let message of messagesToSend) {
+       try {
+         if (isStream.value) {
+           const regex = /}{/g;
+           message = message.replace(regex, "},{");
+           message = `[${message}]`;
+           let m: ChatResponse[] = JSON.parse(message);
+           let role = m[0].choices[0].message.role;
+           let content = m.map((x) => x.choices[0].message.content).join("");
+           if (ix === 0) {
+             messages.value.push({ "content": content, "role": role });
+           } else {
+             let lastMessage = messages.value[messages.value.length - 1];
+             lastMessage.content = content;
+           }
+         } else {
+           let m: ChatResponse = JSON.parse(message);
+           let choice = m.choices[0];
+           messages.value.push(choice.message);
+         }
+       } catch (e) {
+         console.warn('Failed to parse message', e);
+       }
+     }
+
+     nextTick(() => {
+       setTimeout(() => {
+         var chatDiv = document.getElementsByClassName("chat-area")[0];
+         chatDiv.scrollTop = chatDiv.scrollHeight;
+       }, 100);
+     });
+
+     ix++;
+   }
+     */
+
+  }).catch(error => {
     messages.value.push({ content: "😿 Error " + error, role: 'assistant' });
     showProgress.value = false;
     console.log(error);
-  }
+  });
 }
 
 
