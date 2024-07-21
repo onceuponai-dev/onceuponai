@@ -28,7 +28,7 @@ pub(crate) async fn commands() -> Result<()> {
             let file = sub_sub_matches.get_one::<String>("file").expect("required");
             let res = start_main_cluster(file).await?;
             match res {
-                Some((spec, addr)) => serve(spec, addr).await?,
+                Some((spec, addr, _metadata)) => serve(spec, addr).await?,
                 None => (),
             };
         }

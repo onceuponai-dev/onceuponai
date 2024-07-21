@@ -38,6 +38,7 @@ pub struct ActorMetadata {
     pub actor_id: Option<String>,
     pub actor_host: String,
     pub actor_seed: Option<String>,
+    pub sidecar_id: Option<Uuid>,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]

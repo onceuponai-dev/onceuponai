@@ -1,5 +1,5 @@
 use crate::{
-    abstractions::{ActorKindActions, ActorObject},
+    abstractions::{ActorKindActions, ActorMetadata, ActorObject},
     actors::{
         main_actor::{MainActor, MainActorSpec},
         ActorBuilder, WorkerActor,
@@ -31,12 +31,16 @@ pub async fn start_worker_actor(
     Ok(None)
 }
 
-pub async fn start_main_cluster(file: &String) -> Result<Option<(MainActorSpec, Addr<MainActor>)>> {
+pub async fn start_main_cluster(
+    file: &String,
+) -> Result<Option<(MainActorSpec, Addr<MainActor>, ActorMetadata)>> {
     let configuration_str = read_config_str(file, Some(true)).await.map_anyhow_err()?;
     let actor: ActorObject<MainActorSpec> = serde_yaml::from_str(&configuration_str)?;
+    let metadata = actor.metadata();
     let main_actor = ActorBuilder::build_main(actor)?;
-    start_main_actor(main_actor)
+    let res = start_main_actor(main_actor)?.expect("MAIN_ACTOR_SPEC");
     //System::current().stop();
+    Ok(Some((res.0, res.1, metadata)))
 }
 
 pub async fn start_worker_cluster<T: ActorKindActions + DeserializeOwned>(

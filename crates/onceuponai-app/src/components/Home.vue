@@ -2,26 +2,26 @@
 import { ref } from "vue";
 import { invoke } from "@tauri-apps/api/core";
 import { Command } from '@tauri-apps/plugin-shell';
-import { getCurrentWindow } from '@tauri-apps/api/window';
-import { exit } from '@tauri-apps/plugin-process';
+// import { getCurrentWindow } from '@tauri-apps/api/window';
+// import { exit } from '@tauri-apps/plugin-process';
 import { fetch } from "../common";
 
-const appWindow = getCurrentWindow();
-appWindow.onCloseRequested(async (event) => {
-  event.preventDefault();
-  console.log('Cleaning up resources...');
+// const appWindow = getCurrentWindow();
+// appWindow.onCloseRequested(async (event) => {
+//   event.preventDefault();
+//   console.log('Cleaning up resources...');
 
-  // Example cleanup task
-  try {
-    bielik.value.kill();
-  } catch (e) {
-    console.warn('Failed to parse message', e);
-  }
+//   // Example cleanup task
+//   try {
+//     bielik.value.kill();
+//   } catch (e) {
+//     console.warn('Failed to parse message', e);
+//   }
 
-  // await someCleanupFunction();
+//   // await someCleanupFunction();
 
-  await exit(0);
-});
+//   await exit(0);
+// });
 
 const greetMsg = ref("");
 
@@ -32,13 +32,19 @@ const bielik: any = ref(null);
 async function greet() {
   greetMsg.value = await invoke("config");
   console.log(greetMsg.value)
-  const command = Command.sidecar('binaries/sidecar/onceuponai-actors-candle', [
-    'apply',
-    '-f',
-    "/home/jovyan/rust-src/onceuponai/examples/bielik.yaml"
-  ]);
-  bielik.value = await command.spawn();
-  console.log(bielik.value.pid);
+
+
+  const act = await invoke("spawn_actor");
+  console.log(act);
+
+
+  // const command = Command.sidecar('binaries/sidecar/onceuponai-actors-candle', [
+  //   'apply',
+  //   '-f',
+  //   "/home/jovyan/rust-src/onceuponai/examples/bielik.yaml"
+  // ]);
+  // bielik.value = await command.spawn();
+  // console.log(bielik.value.pid);
 }
 
 

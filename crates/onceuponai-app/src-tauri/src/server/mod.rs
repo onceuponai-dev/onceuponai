@@ -25,6 +25,7 @@ pub struct TauriAppState {
 pub struct TauriAppConfig {
     pub personal_token: String,
     pub base_url: String,
+    pub actor_seed: String,
 }
 
 pub struct AppState {
@@ -61,8 +62,9 @@ pub fn init(config: Arc<Mutex<TauriAppConfig>>) -> io::Result<()> {
             .expect("PERSONAL_ACCESS_TOKEN_SECRET");
 
         let personal_token = generate_pat_token(&secret, "root", 30);
-        shared_config.base_url = "http://localhost:8080".to_string();
+        shared_config.base_url = format!("http://localhost:{}", res.0.server_port);
         shared_config.personal_token = personal_token;
+        shared_config.actor_seed = res.2.actor_host;
         drop(shared_config);
 
         if let Some(v) = res.0.log_level.clone() {
