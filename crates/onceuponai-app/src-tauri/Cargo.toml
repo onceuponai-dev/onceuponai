@@ -27,6 +27,7 @@ log = { workspace = true }
 onceuponai-abstractions= { path = "../../onceuponai-abstractions" }
 onceuponai-actors= { path = "../../onceuponai-actors" }
 onceuponai-core= { path = "../../onceuponai-core" }
+once_cell = { workspace = true }
 openidconnect = { workspace = true }
 rand = { workspace = true }
 serde = { workspace = true }
