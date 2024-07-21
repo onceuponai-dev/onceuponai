@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { ref, nextTick, onMounted } from "vue";
-import { axios_client } from "../common";
-const client = await axios_client();
+import { fetch } from "../common";
 
 interface Message {
   content: string;
@@ -25,10 +24,11 @@ const actors: any = ref([]);
 const selectedActor: any = ref(null);
 const isStream: any = ref(true);
 
-client.get(`/api/actors`)
-  .then(function (response) {
-    var values = Object.keys(response.data).map((key) => {
-      return response.data[key];
+fetch(`/api/actors`)
+  .then(async (response: any) => {
+    const data = await response.json();
+    var values = Object.keys(data).map((key) => {
+      return data[key];
     }).filter((v) => v.metadata.features.includes("chat")).map((v) => `${v.kind}/${v.metadata.name}`);
 
     actors.value = values;
@@ -37,17 +37,18 @@ client.get(`/api/actors`)
     }
 
   })
-  .catch(function (error) {
+  .catch(function (error: any) {
     console.log(error);
   });
 
 
 function sendMessage() {
+  /*
   const controller = new AbortController();
   const signal = controller.signal;
 
 
-  client.post(
+  fetch(
     '/v1/chat/completions',
     {
       stream: isStream.value,
@@ -60,63 +61,66 @@ function sendMessage() {
       },
       responseType: isStream.value ? 'text' : 'text',
     }
-  ).then(response => {
+  ).then((response: any) => {
     console.log(response);
-    /*
- const stream = response.data;
- const decoder = new TextDecoder('utf-8');
- let resultText = '';
- let ix = 0;
 
-   for (const chunk of stream) {
-     showProgress.value = false;
-     console.log(textChunk);
-     let textChunk = decoder.decode(chunk, { stream: true });
-     console.log(textChunk)
-     resultText += textChunk;
-     const messagesToSend = resultText.split('\n').filter(message => message.trim().length > 0);
+    */
+  /*
+const stream = response.data;
+const decoder = new TextDecoder('utf-8');
+let resultText = '';
+let ix = 0;
 
-     for (let message of messagesToSend) {
-       try {
-         if (isStream.value) {
-           const regex = /}{/g;
-           message = message.replace(regex, "},{");
-           message = `[${message}]`;
-           let m: ChatResponse[] = JSON.parse(message);
-           let role = m[0].choices[0].message.role;
-           let content = m.map((x) => x.choices[0].message.content).join("");
-           if (ix === 0) {
-             messages.value.push({ "content": content, "role": role });
-           } else {
-             let lastMessage = messages.value[messages.value.length - 1];
-             lastMessage.content = content;
-           }
+ for (const chunk of stream) {
+   showProgress.value = false;
+   console.log(textChunk);
+   let textChunk = decoder.decode(chunk, { stream: true });
+   console.log(textChunk)
+   resultText += textChunk;
+   const messagesToSend = resultText.split('\n').filter(message => message.trim().length > 0);
+
+   for (let message of messagesToSend) {
+     try {
+       if (isStream.value) {
+         const regex = /}{/g;
+         message = message.replace(regex, "},{");
+         message = `[${message}]`;
+         let m: ChatResponse[] = JSON.parse(message);
+         let role = m[0].choices[0].message.role;
+         let content = m.map((x) => x.choices[0].message.content).join("");
+         if (ix === 0) {
+           messages.value.push({ "content": content, "role": role });
          } else {
-           let m: ChatResponse = JSON.parse(message);
-           let choice = m.choices[0];
-           messages.value.push(choice.message);
+           let lastMessage = messages.value[messages.value.length - 1];
+           lastMessage.content = content;
          }
-       } catch (e) {
-         console.warn('Failed to parse message', e);
+       } else {
+         let m: ChatResponse = JSON.parse(message);
+         let choice = m.choices[0];
+         messages.value.push(choice.message);
        }
+     } catch (e) {
+       console.warn('Failed to parse message', e);
      }
-
-     nextTick(() => {
-       setTimeout(() => {
-         var chatDiv = document.getElementsByClassName("chat-area")[0];
-         chatDiv.scrollTop = chatDiv.scrollHeight;
-       }, 100);
-     });
-
-     ix++;
    }
-     */
 
-  }).catch(error => {
-    messages.value.push({ content: "😿 Error " + error, role: 'assistant' });
-    showProgress.value = false;
-    console.log(error);
-  });
+   nextTick(() => {
+     setTimeout(() => {
+       var chatDiv = document.getElementsByClassName("chat-area")[0];
+       chatDiv.scrollTop = chatDiv.scrollHeight;
+     }, 100);
+   });
+
+   ix++;
+ }
+   */
+  /*
+    }).catch((error:any) => {
+      messages.value.push({ content: "😿 Error " + error, role: 'assistant' });
+      showProgress.value = false;
+      console.log(error);
+    });
+    */
 }
 
 
@@ -150,11 +154,11 @@ onMounted(() => {
     <v-bottom-navigation color="primary" horizontal height="75">
       <v-row>
         <v-col cols="2" offset="1">
-          <v-select label="Actor" menu-icon="mdi-brain" bg-color="white" density="comfortable" v-model="selectedActor"
+          <v-select label="Actor" menu-icon="$brain" bg-color="white" density="comfortable" v-model="selectedActor"
             :items="actors"></v-select>
         </v-col>
         <v-col cols="7">
-          <v-text-field clearable v-model="inputMessage" @keyup.enter="sendMessage" label="🗯️ Message"
+          <v-text-field clearable v-model="inputMessage" @keyup.enter="sendMessage" label="Message"
             variant="underlined" :disabled="actors == 0" required></v-text-field>
         </v-col>
         <v-col cols="1">

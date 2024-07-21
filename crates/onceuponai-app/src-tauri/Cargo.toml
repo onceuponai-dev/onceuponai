@@ -1,5 +1,5 @@
 [package]
-name = "onceuponai-app"
+name = "onceuponai-app-beta"
 version = "0.0.0"
 description = "A Tauri App"
 authors = ["you"]
@@ -8,7 +8,7 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [build-dependencies]
-tauri-build = { version = "1", features = [] }
+tauri-build = { workspace = true }
 
 [dependencies]
 actix = { workspace = true }
@@ -32,9 +32,13 @@ rand = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
 tauri = { workspace = true }
+tauri-plugin-shell = { workspace = true }
 tokio = { workspace = true }
 uuid = { workspace = true }
+tauri-plugin-http = "2.0.0-beta.12"
 
-[features]
-# This feature is used for production builds or when a dev server is not specified, DO NOT REMOVE!!
-custom-protocol = ["tauri/custom-protocol"]
+
+
+
+
+

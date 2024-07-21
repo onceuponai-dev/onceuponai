@@ -8,8 +8,7 @@ members = [
     "crates/onceuponai-core", 
     "crates/onceuponai-operator",
     "crates/onceuponai-py",
-    # "crates/onceuponai-app/src-tauri",
-    "crates/onceuponai-app-beta/src-tauri"
+    "crates/onceuponai-app/src-tauri"
     ]
 
 [workspace.package]

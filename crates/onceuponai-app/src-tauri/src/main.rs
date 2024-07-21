@@ -1,7 +1,8 @@
 // Prevents additional console window on Windows in release, DO NOT REMOVE!!
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
-use server::TauriAppState;
+use server::{TauriAppConfig, TauriAppState};
+use std::sync::{Arc, Mutex};
 use std::thread;
 use tauri::{AppHandle, Manager, State};
 
@@ -14,25 +15,29 @@ fn greet(name: &str) -> String {
 }
 
 #[tauri::command]
-fn config(handle: AppHandle) -> TauriAppState {
+fn config(handle: AppHandle) -> TauriAppConfig {
     let state: State<TauriAppState> = handle.state();
-    TauriAppState {
-        personal_token: state.personal_token.clone(),
-        base_url: state.base_url.clone(),
+    let config = state.config.lock().unwrap();
+    TauriAppConfig {
+        personal_token: config.personal_token.clone(),
+        base_url: config.base_url.clone(),
     }
 }
 
 fn main() {
     tauri::Builder::default()
         .setup(|app| {
-            let handle = app.handle();
-            let box_handle = Box::new(handle);
+            let config = Arc::new(Mutex::new(TauriAppConfig::default()));
+            let shared_config = Arc::clone(&config);
+            app.manage(TauriAppState { config });
             thread::spawn(move || {
-                server::init(*box_handle).unwrap();
+                server::init(shared_config).unwrap();
             });
 
             Ok(())
         })
+        .plugin(tauri_plugin_shell::init())
+        .plugin(tauri_plugin_http::init())
         .invoke_handler(tauri::generate_handler![greet, config])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

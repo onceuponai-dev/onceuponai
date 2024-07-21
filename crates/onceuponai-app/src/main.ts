@@ -5,9 +5,11 @@ import router from './router';
 
 // Vuetify
 import 'vuetify/styles'
+import { aliases, mdi } from 'vuetify/iconsets/mdi-svg'
 import { createVuetify } from 'vuetify'
 import * as components from 'vuetify/components'
 import * as directives from 'vuetify/directives'
+import { mdiHome, mdiBrain, mdiChat, mdiPuzzle, mdiDatabase, mdiVectorTriangle, mdiCodeBrackets, mdiViewDashboard, mdiAccountKey, mdiHelpCircle } from '@mdi/js'
 
 const vuetify = createVuetify({
     components,
@@ -21,6 +23,25 @@ const vuetify = createVuetify({
                     secondary: "#F5F5F5", // colors.red.lighten4, // #FFCDD2
                 }
             },
+        },
+    },
+    icons: {
+        defaultSet: 'mdi',
+        aliases: {
+            ...aliases,
+            home: mdiHome,
+            brain: mdiBrain,
+            puzzle: mdiPuzzle,
+            chat: mdiChat,
+            database: mdiDatabase,
+            embeddings: mdiVectorTriangle,
+            prompts: mdiCodeBrackets,
+            dashboard: mdiViewDashboard,
+            tokens: mdiAccountKey,
+            support: mdiHelpCircle
+        },
+        sets: {
+            mdi,
         },
     },
 })

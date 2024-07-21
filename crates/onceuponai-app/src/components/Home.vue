@@ -1,8 +1,7 @@
 <script setup lang="ts">
 import { ref } from "vue";
-import { invoke } from "@tauri-apps/api/tauri";
-import {axios_client} from "../common";
-const client = await axios_client();
+import { invoke } from "@tauri-apps/api/core";
+import { fetch } from "../common";
 
 const greetMsg = ref("");
 const name = ref("");
@@ -10,16 +9,18 @@ const name = ref("");
 const hello_api = ref("");
 
 async function greet() {
-  // Learn more about Tauri commands at https://tauri.app/v1/guides/features/command
   greetMsg.value = await invoke("config");
+  console.log(greetMsg.value)
 }
 
-client.get(`/api/hello`)
-  .then(function (response) {
-    hello_api.value = response.data;
+fetch(`/health`)
+  .then(async (response: any) => {
+    const t = await response.text();
+    console.log(t);
+    hello_api.value = t;
   })
-  .catch(function (error) {
-
+  .catch(function (error: any) {
+    console.log(error);
     hello_api.value = error;
   });
 
@@ -29,10 +30,8 @@ client.get(`/api/hello`)
 <template>
 
 
-  <form class="row" @submit.prevent="greet">
-    <input id="greet-input" v-model="name" placeholder="Enter a name..." />
-    <v-btn type="submit">HOME</v-btn>
-  </form>
+  <input id="greet-input" v-model="name" placeholder="Enter a name..." />
+  <v-btn @click="greet">HOME</v-btn>
 
   <p>{{ greetMsg }}</p>
 

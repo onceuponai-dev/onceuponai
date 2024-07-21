@@ -11,15 +11,18 @@ use onceuponai_actors::actors::main_actor::{MainActor, MainActorSpec};
 use onceuponai_actors::cluster::start_main_cluster;
 use serde::{Deserialize, Serialize};
 use serde_json::json;
-use std::{io, sync::Mutex};
-use tauri::{AppHandle, Manager};
+use std::{
+    io,
+    sync::{Arc, Mutex},
+};
 
-pub struct TauriAppHandle {
-    pub app: Mutex<AppHandle>,
+#[derive(Debug)]
+pub struct TauriAppState {
+    pub config: Arc<Mutex<TauriAppConfig>>,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
-pub struct TauriAppState {
+#[derive(Debug, Serialize, Deserialize, Default)]
+pub struct TauriAppConfig {
     pub personal_token: String,
     pub base_url: String,
 }
@@ -37,10 +40,12 @@ async fn index() -> impl Responder {
     HttpResponse::Ok().json(json!({"hello": "world"}))
 }
 
-pub fn init(app: AppHandle) -> io::Result<()> {
-    let tauri_app = web::Data::new(TauriAppHandle {
-        app: Mutex::new(app),
+pub fn init(config: Arc<Mutex<TauriAppConfig>>) -> io::Result<()> {
+    let tauri_state = web::Data::new(TauriAppState {
+        config: config.clone(),
     });
+
+    let mut shared_config = config.lock().unwrap();
 
     actix_rt::System::new().block_on(async {
         let file = String::from("/home/jovyan/rust-src/onceuponai/examples/main.yaml");
@@ -56,11 +61,9 @@ pub fn init(app: AppHandle) -> io::Result<()> {
             .expect("PERSONAL_ACCESS_TOKEN_SECRET");
 
         let personal_token = generate_pat_token(&secret, "root", 30);
-
-        tauri_app.app.lock().unwrap().manage(TauriAppState {
-            personal_token,
-            base_url: String::from("http://localhost:8080"),
-        });
+        shared_config.base_url = "http://localhost:8080".to_string();
+        shared_config.personal_token = personal_token;
+        drop(shared_config);
 
         if let Some(v) = res.0.log_level.clone() {
             env_logger::init_from_env(env_logger::Env::new().default_filter_or(v));
@@ -74,7 +77,7 @@ pub fn init(app: AppHandle) -> io::Result<()> {
         HttpServer::new(move || {
             let mut app = App::new()
                 .wrap(Logger::default())
-                .app_data(tauri_app.clone())
+                .app_data(tauri_state.clone())
                 .app_data(app_state.clone())
                 .route("/health", web::get().to(health))
                 .route("/api/hello", web::get().to(index));

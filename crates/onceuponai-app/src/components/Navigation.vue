@@ -7,15 +7,15 @@ const subtitle = ref("");
 
 const title = ref("Once Upon ... AI");
 const items = ref([
-  { title: 'HOME', icon: 'mdi-home', route: '/' },
-  { title: 'ACTORS', icon: 'mdi-puzzle', route: '/actors' },
-  { title: 'CHAT', icon: 'mdi-chat', route: '/chat' },
-  { title: 'DATASETS', icon: 'mdi-database', route: '/stores' },
-  { title: 'EMBEDDINGS', icon: 'mdi-vector-triangle', route: '/embeddings' },
-  { title: 'PROMPTS', icon: 'mdi-code-brackets', route: '/prompts' },
-  { title: 'DASHBOARD', icon: 'mdi-view-dashboard', route: '/dashboard' },
-  { title: 'PERSONAL TOKENS', icon: 'mdi-account-key', route: '/personal-tokens' },
-  { title: 'SUPPORT', icon: 'mdi-help-circle', route: '/support' },
+  { title: 'HOME', icon: '$home', route: '/' },
+  { title: 'ACTORS', icon: '$brain', route: '/actors' },
+  { title: 'CHAT', icon: '$chat', route: '/chat' },
+  { title: 'DATASETS', icon: '$database', route: '/stores' },
+  { title: 'EMBEDDINGS', icon: '$embeddings', route: '/embeddings' },
+  { title: 'PROMPTS', icon: '$prompts', route: '/prompts' },
+  { title: 'DASHBOARD', icon: '$dashboard', route: '/dashboard' },
+  { title: 'PERSONAL TOKENS', icon: '$tokens', route: '/personal-tokens' },
+  { title: 'SUPPORT', icon: '$support', route: '/support' },
 ]);
 
 

@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { ref, onMounted } from "vue";
-import { axios_client } from "../common";
-const client = await axios_client();
+import { fetch } from "../common";
 
 interface Actor {
   uuid: string;
@@ -20,16 +19,17 @@ const selectedModel: any = ref<Actor | null>(null);
 const actors: any = ref<Actor[]>([]);
 
 async function refresh() {
-  client.get(`/api/actors`)
-    .then(function (response) {
-      var values = Object.keys(response.data).map(function (key) {
-        return response.data[key];
+  fetch(`/api/actors`)
+    .then(async (response: any) => {
+      const data = await response.json();
+      var values = Object.keys(data).map(function (key) {
+        return data[key];
       });
 
       console.log(values);
       actors.value = values;
     })
-    .catch(function (error) {
+    .catch(function (error: any) {
       console.log(error);
     });
 
