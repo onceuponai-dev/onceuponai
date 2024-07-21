@@ -12,14 +12,18 @@ appWindow.onCloseRequested(async (event) => {
   console.log('Cleaning up resources...');
 
   // Example cleanup task
-  bielik.value.kill();
+  try {
+    bielik.value.kill();
+  } catch (e) {
+    console.warn('Failed to parse message', e);
+  }
+
   // await someCleanupFunction();
 
   await exit(0);
 });
 
 const greetMsg = ref("");
-const name = ref("");
 
 const hello_api = ref("");
 
