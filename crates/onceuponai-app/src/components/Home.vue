@@ -1,16 +1,46 @@
 <script setup lang="ts">
 import { ref } from "vue";
 import { invoke } from "@tauri-apps/api/core";
+import { Command } from '@tauri-apps/plugin-shell';
+import { getCurrentWindow } from '@tauri-apps/api/window';
+import { exit } from '@tauri-apps/plugin-process';
 import { fetch } from "../common";
+
+const appWindow = getCurrentWindow();
+appWindow.onCloseRequested(async (event) => {
+  event.preventDefault();
+  console.log('Cleaning up resources...');
+
+  // Example cleanup task
+  bielik.value.kill();
+  // await someCleanupFunction();
+
+  await exit(0);
+});
 
 const greetMsg = ref("");
 const name = ref("");
 
 const hello_api = ref("");
 
+const bielik: any = ref(null);
+
 async function greet() {
   greetMsg.value = await invoke("config");
   console.log(greetMsg.value)
+  const command = Command.sidecar('binaries/sidecar/onceuponai-actors-candle', [
+    'apply',
+    '-f',
+    "/home/jovyan/rust-src/onceuponai/examples/bielik.yaml"
+  ]);
+  bielik.value = await command.spawn();
+  console.log(bielik.value.pid);
+}
+
+
+async function bielik_kill() {
+
+  bielik.value.kill();
 }
 
 fetch(`/health`)
@@ -30,10 +60,6 @@ fetch(`/health`)
 <template>
 
 
-  <input id="greet-input" v-model="name" placeholder="Enter a name..." />
-  <v-btn @click="greet">HOME</v-btn>
-
-  <p>{{ greetMsg }}</p>
-
-  <p>API: {{ hello_api }}</p>
+  <v-btn @click="greet">SPAWN</v-btn>
+  <v-btn @click="bielik_kill">KILL</v-btn>
 </template>

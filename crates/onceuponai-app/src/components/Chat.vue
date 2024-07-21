@@ -41,87 +41,99 @@ fetch(`/api/actors`)
     console.log(error);
   });
 
+const sendMessage = () => {
+  if (inputMessage.value.trim() === '') return;
 
-function sendMessage() {
-  /*
+  var text = inputMessage.value;
+  messages.value.push({ content: text, role: 'user' });
+  inputMessage.value = '';
+  showProgress.value = true;
+
   const controller = new AbortController();
   const signal = controller.signal;
 
-
-  fetch(
-    '/v1/chat/completions',
-    {
+  fetch(`/v1/chat/completions`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
       stream: isStream.value,
       model: selectedActor.value,
-      messages: [{ "content": inputMessage.value, "role": "user" }]
-    },
-    {
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      responseType: isStream.value ? 'text' : 'text',
-    }
-  ).then((response: any) => {
-    console.log(response);
+      messages: [{ "content": text, "role": "user" }]
+    }),
+    signal: signal
+  })
+    .then(async (response: any) => {
 
-    */
-  /*
-const stream = response.data;
-const decoder = new TextDecoder('utf-8');
-let resultText = '';
-let ix = 0;
+      if (!response.ok) {
+        throw new Error('Network response was not ok');
+      }
 
- for (const chunk of stream) {
-   showProgress.value = false;
-   console.log(textChunk);
-   let textChunk = decoder.decode(chunk, { stream: true });
-   console.log(textChunk)
-   resultText += textChunk;
-   const messagesToSend = resultText.split('\n').filter(message => message.trim().length > 0);
 
-   for (let message of messagesToSend) {
-     try {
-       if (isStream.value) {
-         const regex = /}{/g;
-         message = message.replace(regex, "},{");
-         message = `[${message}]`;
-         let m: ChatResponse[] = JSON.parse(message);
-         let role = m[0].choices[0].message.role;
-         let content = m.map((x) => x.choices[0].message.content).join("");
-         if (ix === 0) {
-           messages.value.push({ "content": content, "role": role });
-         } else {
-           let lastMessage = messages.value[messages.value.length - 1];
-           lastMessage.content = content;
-         }
-       } else {
-         let m: ChatResponse = JSON.parse(message);
-         let choice = m.choices[0];
-         messages.value.push(choice.message);
-       }
-     } catch (e) {
-       console.warn('Failed to parse message', e);
-     }
-   }
+      const reader = response.body?.getReader();
+      const decoder = new TextDecoder('utf-8');
+      let resultText = '';
+      let done, value;
+      let ix = 0;
+      if (reader) {
+        while ({ done, value } = await reader.read(), !done) {
 
-   nextTick(() => {
-     setTimeout(() => {
-       var chatDiv = document.getElementsByClassName("chat-area")[0];
-       chatDiv.scrollTop = chatDiv.scrollHeight;
-     }, 100);
-   });
+          showProgress.value = false;
+          let textChunk = decoder.decode(value, { stream: true });
+          resultText += textChunk;
+          console.log(textChunk);
+          const messagesToSend = resultText.split('\n').filter(message => message.trim().length > 0);
+          for (let message of messagesToSend) {
+            try {
+              if (isStream.value) {
+                const regex = /}{/g;
+                message = message.replace(regex, "},{");
+                message = `[${message}]`;
+                let m: ChatResponse[] = JSON.parse(message);
+                let role = m[0].choices[0].message.role;
+                let content = m.map((x) => x.choices[0].message.content).join("");
+                if (ix === 0) {
+                  messages.value.push({ "content": content, "role": role });
+                } else {
+                  let lastMessage = messages.value[messages.value.length - 1];
+                  lastMessage.content = content;
+                }
+              } else {
+                let m: ChatResponse = JSON.parse(message);
+                let choice = m.choices[0];
+                messages.value.push(choice.message);
+              }
 
-   ix++;
- }
-   */
-  /*
-    }).catch((error:any) => {
-      messages.value.push({ content: "😿 Error " + error, role: 'assistant' });
+            } catch (e) {
+              console.warn('Failed to parse message', e);
+            }
+          }
+
+          nextTick(() => {
+            setTimeout(() => {
+              var chatDiv = document.getElementsByClassName("chat-area")[0];
+              chatDiv.scrollTop = chatDiv.scrollHeight;
+            }, 100);
+          });
+          ix++;
+        }
+
+        reader.releaseLock();
+      }
+
+
+    })
+    .catch(error => {
+      messages.value.push({ content: "😿 Error", role: 'assistant' });
       showProgress.value = false;
       console.log(error);
     });
-    */
-}
+
+  // Optional: Abort the request if needed
+  // controller.abort();
+};
+
 
 
 
@@ -158,12 +170,12 @@ onMounted(() => {
             :items="actors"></v-select>
         </v-col>
         <v-col cols="7">
-          <v-text-field clearable v-model="inputMessage" @keyup.enter="sendMessage" label="Message"
-            variant="underlined" :disabled="actors == 0" required></v-text-field>
+          <v-text-field clearable v-model="inputMessage" @keyup.enter="sendMessage" label="Message" variant="underlined"
+            :disabled="actors == 0" required></v-text-field>
         </v-col>
         <v-col cols="1">
           <v-btn @click="sendMessage" :disabled="actors == 0">
-            <v-icon>mdi-send</v-icon>
+            <v-icon>$send</v-icon>
 
           </v-btn>
         </v-col>

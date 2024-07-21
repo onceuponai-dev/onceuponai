@@ -5,6 +5,7 @@ use server::{TauriAppConfig, TauriAppState};
 use std::sync::{Arc, Mutex};
 use std::thread;
 use tauri::{AppHandle, Manager, State};
+use tauri_plugin_shell::ShellExt;
 
 pub mod server;
 
@@ -26,6 +27,7 @@ fn config(handle: AppHandle) -> TauriAppConfig {
 
 fn main() {
     tauri::Builder::default()
+        .plugin(tauri_plugin_process::init())
         .setup(|app| {
             let config = Arc::new(Mutex::new(TauriAppConfig::default()));
             let shared_config = Arc::clone(&config);

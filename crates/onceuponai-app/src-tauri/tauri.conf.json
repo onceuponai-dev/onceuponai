@@ -23,6 +23,9 @@
   "bundle": {
     "active": true,
     "targets": "all",
+    "externalBin": [
+      "binaries/sidecar/onceuponai-actors-candle"
+    ],
     "icon": [
       "icons/logo50.png",
       "icons/logo100.png",

@@ -23,6 +23,41 @@
         }
       ],
       "deny": []
-    }
+    },
+    {
+      "identifier": "shell:allow-spawn",
+      "allow": [
+        {
+          "args": [
+            "apply",
+            "-f",
+            {
+              "validator": "\\S+"
+            }
+          ],
+          "cmd": "",
+          "name": "binaries/sidecar/onceuponai-actors-candle",
+          "sidecar": true
+        }
+      ]
+    },
+    {
+      "identifier": "shell:allow-kill",
+      "allow": [
+        {
+          "args": [
+            "apply",
+            "-f",
+            {
+              "validator": "\\S+"
+            }
+          ],
+          "cmd": "",
+          "name": "binaries/sidecar/onceuponai-actors-candle",
+          "sidecar": true
+        }
+      ]
+    },
+    "process:default"
   ]
 }
