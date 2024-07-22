@@ -39,7 +39,7 @@ async function greet() {
 
 
   // const command = Command.sidecar('binaries/sidecar/onceuponai-actors-candle', [
-  //   'apply',
+  //   'spawn',
   //   '-f',
   //   "/home/jovyan/rust-src/onceuponai/examples/bielik.yaml"
   // ]);

@@ -29,7 +29,7 @@
       "allow": [
         {
           "args": [
-            "apply",
+            "spawn",
             "-f",
             {
               "validator": "\\S+"
@@ -46,7 +46,7 @@
       "allow": [
         {
           "args": [
-            "apply",
+            "spawn",
             "-f",
             {
               "validator": "\\S+"
