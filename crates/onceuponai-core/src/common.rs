@@ -1,5 +1,7 @@
 use anyhow::{anyhow, Result};
+use base64::{engine::general_purpose, Engine as _};
 use once_cell::sync::OnceCell;
+use serde::de::DeserializeOwned;
 use std::io::{self, Result as IoResult};
 use std::{fs, path::PathBuf};
 
@@ -161,4 +163,78 @@ impl<T> std::ops::Deref for LateInit<T> {
 
 pub fn print_type_of<T>(_: &T) {
     println!("{}", std::any::type_name::<T>())
+}
+
+pub enum SerializationType {
+    JSON,
+    YAML,
+}
+
+pub fn decode_and_deserialize<T>(b64_data: &str, serialization_type: SerializationType) -> Result<T>
+where
+    T: DeserializeOwned,
+{
+    let decoded_data = general_purpose::STANDARD.decode(b64_data)?;
+    let object = match serialization_type {
+        SerializationType::JSON => serde_json::from_slice(&decoded_data)?,
+        SerializationType::YAML => serde_yaml::from_slice(&decoded_data)?,
+    };
+
+    Ok(object)
+}
+
+pub fn serialize_and_encode<T>(object: T, serialization_type: SerializationType) -> Result<String>
+where
+    T: serde::Serialize,
+{
+    let object_str = match serialization_type {
+        SerializationType::JSON => serde_json::to_string(&object)?,
+        SerializationType::YAML => serde_yaml::to_string(&object)?,
+    };
+
+    let encoded_data = general_purpose::STANDARD.encode(object_str);
+    Ok(encoded_data)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use serde::{Deserialize, Serialize};
+
+    #[derive(Serialize, Deserialize, Debug, Clone)]
+    struct Person {
+        name: String,
+    }
+
+    #[tokio::test]
+    async fn test_decode_and_deserialize_json() -> Result<()> {
+        let b64_data = serialize_and_encode(
+            Person {
+                name: "___".to_string(),
+            },
+            SerializationType::JSON,
+        )?;
+
+        let person: Person = decode_and_deserialize(&b64_data, SerializationType::JSON)?;
+
+        assert_eq!(person.name, "___");
+
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_decode_and_deserialize_yaml() -> Result<()> {
+        let b64_data = serialize_and_encode(
+            Person {
+                name: "___".to_string(),
+            },
+            SerializationType::YAML,
+        )?;
+
+        let person: Person = decode_and_deserialize(&b64_data, SerializationType::YAML)?;
+
+        assert_eq!(person.name, "___");
+
+        Ok(())
+    }
 }

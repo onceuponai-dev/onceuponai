@@ -10,6 +10,7 @@ license.workspace = true
 
 [dependencies]
 anyhow = { workspace = true }
+base64 = { workspace = true }
 hf-hub = { workspace = true }
 once_cell = { workspace = true }
 onceuponai-abstractions= { path = "../onceuponai-abstractions" }
