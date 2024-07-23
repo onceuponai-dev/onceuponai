@@ -6,5 +6,5 @@ npm install -g npm@latest
  
 npm install
 
-#RUST_LOG=debug npm run tauri dev
-npm run tauri dev
+RUST_LOG=debug npm run tauri dev
+#npm run tauri dev

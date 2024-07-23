@@ -75,6 +75,6 @@ fetch(`/health`)
 <template>
 
 
-  <v-btn @click="greet">SPAWN</v-btn>
-  <v-btn @click="bielik_kill">KILL</v-btn>
+  <!-- <v-btn @click="greet">SPAWN</v-btn> -->
+  <!-- <v-btn @click="bielik_kill">KILL</v-btn> -->
 </template>

@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, onMounted } from "vue";
 import { fetch } from "../common";
+import { invoke } from "@tauri-apps/api/core";
 
 interface Actor {
   uuid: string;
@@ -34,6 +35,37 @@ async function refresh() {
     });
 
 }
+
+const sidecar_id: any = ref(null);
+
+async function spawn() {
+
+  const bielik = {
+    "kind": "quantized",
+    "metadata": {
+      "name": "bielik",
+      "actor_host": ""
+    },
+    "spec": {
+      "model_repo": "speakleash/Bielik-7B-Instruct-v0.1-GGUF",
+      "model_file": "bielik-7b-instruct-v0.1.Q4_K_S.gguf",
+      "tokenizer_repo": "speakleash/Bielik-7B-Instruct-v0.1",
+      "device": "cuda"
+    }
+  };
+  
+  const jsonString = JSON.stringify(bielik);
+  const specJsonBase64 = btoa(jsonString);
+  const act: any = await invoke("spawn_actor", { "name": "bielik", "specJsonBase64": specJsonBase64 });
+  console.log(act);
+  sidecar_id.value = act.sidecar_id;
+}
+
+async function kill() {
+  const act = await invoke("kill_actor", { "sidecarId": sidecar_id.value });
+  console.log(act);
+}
+
 
 
 
@@ -69,6 +101,9 @@ onMounted(() => {
   <v-container>
     <h1>Active Actors</h1>
     <v-btn @click="refresh">REFRESH</v-btn>
+    <v-btn @click="spawn">SPAWN</v-btn>
+    <v-btn @click="kill">KILL</v-btn>
+
     <v-divider></v-divider>
     <v-data-table :headers="headers" :items="actors" item-key="kind">
       <template v-slot:[`item.actions`]="{ item }">

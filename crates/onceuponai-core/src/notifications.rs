@@ -18,14 +18,14 @@ const NOTIFICATION_PREFIX: &str = "@=@=@=>";
 #[derive(Serialize, Deserialize, Clone)]
 pub struct Notification {
     message: String,
-    notification_level: NotificationLevel,
+    level: NotificationLevel,
 }
 
 impl Notification {
-    fn build(message: &str, notification_level: NotificationLevel) -> Result<String> {
+    pub fn build(message: &str, level: NotificationLevel) -> Result<String> {
         let notification = Notification {
             message: message.to_string(),
-            notification_level,
+            level,
         };
         serde_json::to_string(&notification).map_anyhow_err()
     }

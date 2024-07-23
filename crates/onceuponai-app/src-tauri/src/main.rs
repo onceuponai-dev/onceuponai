@@ -4,8 +4,9 @@
 use anyhow::Result;
 use once_cell::sync::OnceCell;
 use onceuponai_actors::abstractions::ActorMetadata;
-use onceuponai_core::common::ResultExt;
-use onceuponai_core::notifications::Notification;
+use onceuponai_core::common::{serialize_and_encode, ResultExt, SerializationType};
+use onceuponai_core::notifications::{Notification, NotificationLevel};
+use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 use server::{TauriAppConfig, TauriAppState};
 use std::collections::HashMap;
@@ -24,6 +25,12 @@ struct SpawnedActor {
 }
 
 static SPAWNED_ACTORS: OnceCell<Arc<Mutex<HashMap<Uuid, SpawnedActor>>>> = OnceCell::new();
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct SpawnActorRequest {
+    pub name: String,
+    pub spec_json_base64: String,
+}
 
 // Learn more about Tauri commands at https://tauri.app/v1/guides/features/command
 #[tauri::command]
@@ -45,25 +52,31 @@ fn kill_actor(sidecar_id: Uuid) {
 }
 
 #[tauri::command]
-async fn spawn_actor(app: tauri::AppHandle) -> Result<Value, ()> {
-    // let metadata = ActorMetadata {
-    //     name: todo!(),
-    //     features: todo!(),
-    //     actor_id: todo!(),
-    //     actor_host: todo!(),
-    //     actor_seed: todo!(),
-    //     sidecar_id: todo!(),
-    // };
+async fn spawn_actor(
+    app: tauri::AppHandle,
+    name: String,
+    spec_json_base64: String,
+) -> Result<Value, ()> {
+    let a = app.clone();
+    let state: State<TauriAppState> = a.state::<TauriAppState>();
+    let mut config = state.config.lock().unwrap();
+    config.actor_next_port += 1;
+    let sidecar_id = Uuid::new_v4();
+    let metadata = ActorMetadata {
+        name,
+        features: None,
+        actor_id: None,
+        actor_host: format!("{}:{}", config.actor_base_host, config.actor_next_port),
+        actor_seed: Some(config.actor_seed.clone()),
+        sidecar_id: Some(sidecar_id),
+    };
+    let metadata = serialize_and_encode(metadata, SerializationType::YAML).unwrap();
 
     let sidecar_command = app
         .shell()
         .sidecar("onceuponai-actors-candle")
         .unwrap()
-        .args([
-            "spawn",
-            "-f",
-            "/home/jovyan/rust-src/onceuponai/examples/bielik.yaml",
-        ]);
+        .args(["spawn", "-j", &spec_json_base64, "-m", &metadata]);
     let (mut rx, child) = sidecar_command.spawn().unwrap();
 
     tauri::async_runtime::spawn(async move {
@@ -91,25 +104,15 @@ async fn spawn_actor(app: tauri::AppHandle) -> Result<Value, ()> {
                 }
                 CommandEvent::Terminated(_) => {
                     println!("TERMINATED");
-                    app.emit("message", "ACTOR TERMINATED").unwrap();
+                    let message =
+                        Notification::build("ACTOR TERMINATED", NotificationLevel::Info).unwrap();
+                    app.emit("message", message).unwrap();
                 }
                 _ => println!("OTHER"),
             }
         }
-        /*
-            tauri::WindowBuilder::new(
-                &app_handle,
-                "main",
-                tauri::WindowUrl::App("index.html".into()),
-            )
-            .build()
-            .unwrap()
-            .emit("message", message)
-            .unwrap();
-        */
     });
 
-    let sidecar_id = Uuid::new_v4();
     SPAWNED_ACTORS
         .get()
         .expect("SPAWNED_ACTORS")
@@ -127,7 +130,9 @@ fn config(handle: AppHandle) -> TauriAppConfig {
     TauriAppConfig {
         personal_token: config.personal_token.clone(),
         base_url: config.base_url.clone(),
-        actor_seed: String::from(""),
+        actor_seed: config.actor_seed.clone(),
+        actor_base_host: "".to_string(),
+        actor_next_port: 0,
     }
 }
 

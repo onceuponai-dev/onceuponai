@@ -6,8 +6,27 @@ import { listen } from '@tauri-apps/api/event';
 import { ref } from "vue";
 
 listen('message', (event) => {
-  console.log(event.payload);
-  snackbarText.value = event.payload;
+  const ev: any = event.payload;
+  const payload: any = JSON.parse(ev);
+  snackbarText.value = payload.message;
+  console.log(payload);
+  console.log(snackbarText.value)
+  switch(payload.level) {
+    case 'Success':
+      snackbarColor.value = "success";
+      break;
+    case 'Info':
+      snackbarColor.value = "white";
+      break;
+    case 'Error':
+      snackbarColor.value = "red";
+      break;
+    default:
+      snackbarColor.value = "white";
+  }
+
+
+  console.log(snackbarColor.value)
   snackbar.value = true;
 });
 
@@ -16,6 +35,7 @@ listen('message', (event) => {
 
 const snackbar: any = ref(null);
 const snackbarText: any = ref(null);
+const snackbarColor: any = ref(null);
 
 </script>
 
@@ -25,11 +45,11 @@ const snackbarText: any = ref(null);
     <v-main>
       <router-view />
       <router-view name="footer" />
-      <v-snackbar v-model="snackbar" :timeout="3000" color="white" bottom>
+      <v-snackbar v-model="snackbar" :timeout="3000" :color="snackbarColor" bottom>
         {{ snackbarText }}
-        <v-btn color="white" @click="snackbar = false">
+        <!-- <v-btn color="white" @click="snackbar = false">
           Close
-        </v-btn>
+        </v-btn> -->
       </v-snackbar>
 
     </v-main>
