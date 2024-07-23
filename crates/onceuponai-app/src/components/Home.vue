@@ -28,14 +28,16 @@ const greetMsg = ref("");
 const hello_api = ref("");
 
 const bielik: any = ref(null);
+const sidecar_id: any = ref(null);
 
 async function greet() {
   greetMsg.value = await invoke("config");
   console.log(greetMsg.value)
 
 
-  const act = await invoke("spawn_actor");
+  const act: any = await invoke("spawn_actor");
   console.log(act);
+  sidecar_id.value = act.sidecar_id;
 
 
   // const command = Command.sidecar('binaries/sidecar/onceuponai-actors-candle', [
@@ -49,8 +51,11 @@ async function greet() {
 
 
 async function bielik_kill() {
+  const act = await invoke("kill_actor", {"sidecarId": sidecar_id.value});
+  console.log(act);
 
-  bielik.value.kill();
+
+  // bielik.value.kill();
 }
 
 fetch(`/health`)

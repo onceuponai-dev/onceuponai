@@ -2,6 +2,18 @@
 // This starter template is using Vue 3 <script setup> SFCs
 // Check out https://vuejs.org/api/sfc-script-setup.html#script-setup
 import Navigation from "./components/Navigation.vue";
+import { listen } from '@tauri-apps/api/event';
+import { ref } from "vue";
+
+listen('message', (event) => {
+  console.log(event.payload);
+  snackbarText.value = event.payload;
+  snackbar.value = true;
+});
+
+
+const snackbar: any = ref(null);
+const snackbarText: any = ref(null);
 
 </script>
 
@@ -11,6 +23,13 @@ import Navigation from "./components/Navigation.vue";
     <v-main>
       <router-view />
       <router-view name="footer" />
+      <v-snackbar v-model="snackbar" :timeout="3000" bottom>
+        {{ snackbarText }}
+        <v-btn color="red" @click="snackbar = false">
+          Close
+        </v-btn>
+      </v-snackbar>
+
     </v-main>
   </v-app>
 </template>
@@ -136,8 +155,3 @@ button {
   }
 }
 </style>
-
-
-
-
-

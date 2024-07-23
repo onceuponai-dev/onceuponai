@@ -10,17 +10,15 @@ use server::{TauriAppConfig, TauriAppState};
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 use std::thread;
-use tauri::{AppHandle, Manager, RunEvent, State};
+use tauri::{AppHandle, Emitter, Manager, RunEvent, State};
 use tauri_plugin_shell::process::{CommandChild, CommandEvent};
 use tauri_plugin_shell::ShellExt;
-use tokio::sync::mpsc::Receiver;
 use uuid::Uuid;
 
 pub mod server;
 
 #[derive(Debug)]
 struct SpawnedActor {
-    rx: Receiver<CommandEvent>,
     child: CommandChild,
 }
 
@@ -61,18 +59,55 @@ async fn spawn_actor(app: tauri::AppHandle) -> Result<Value, ()> {
         .sidecar("onceuponai-actors-candle")
         .unwrap()
         .args([
-            "apply",
+            "spawn",
             "-f",
             "/home/jovyan/rust-src/onceuponai/examples/bielik.yaml",
         ]);
-    let (rx, child) = sidecar_command.spawn().unwrap();
+    let (mut rx, child) = sidecar_command.spawn().unwrap();
+
+    tauri::async_runtime::spawn(async move {
+        while let Some(message) = rx.recv().await {
+            match message {
+                CommandEvent::Stderr(buf) => {
+                    let text = std::str::from_utf8(&buf).unwrap();
+                    log::info!("{}", text);
+                    if text.to_string().contains("MODEL INFO REQUEST") {
+                        app.emit("message", text).unwrap();
+                    }
+                }
+                CommandEvent::Stdout(buf) => {
+                    let text = std::str::from_utf8(&buf).unwrap();
+                    log::info!("{}", text);
+                    // app.emit("message", text).unwrap();
+                }
+                CommandEvent::Error(error) => {
+                    log::info!("ERROR {}", &error);
+                    app.emit("message", error).unwrap();
+                }
+                CommandEvent::Terminated(_) => log::info!("TERMINATED"),
+                _ => log::info!("OTHER"),
+            }
+        }
+        /*
+            tauri::WindowBuilder::new(
+                &app_handle,
+                "main",
+                tauri::WindowUrl::App("index.html".into()),
+            )
+            .build()
+            .unwrap()
+            .emit("message", message)
+            .unwrap();
+        */
+    });
+
     let sidecar_id = Uuid::new_v4();
     SPAWNED_ACTORS
         .get()
         .expect("SPAWNED_ACTORS")
         .lock()
         .unwrap()
-        .insert(sidecar_id, SpawnedActor { rx, child });
+        .insert(sidecar_id, SpawnedActor { child });
 
     Ok(json!({"sidecar_id": sidecar_id}))
 }
