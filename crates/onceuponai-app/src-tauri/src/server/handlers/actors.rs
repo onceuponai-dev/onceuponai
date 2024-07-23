@@ -5,7 +5,7 @@ use actix_web::{web, HttpRequest, HttpResponse};
 use anyhow::Result;
 use futures::stream::Stream;
 use futures::task::{Context, Poll};
-use log::debug;
+use log::info;
 use onceuponai_actors::abstractions::ActorInvokeResponse;
 use onceuponai_actors::actors::main_actor::{InvokeTask, CONNECTED_ACTORS, INVOKE_TASKS};
 use onceuponai_actors::actors::ActorStartInvokeRequest;
@@ -154,7 +154,7 @@ impl Stream for MpscStream {
                 }
                 ActorInvokeResponse::Failure(result) => {
                     let text = json!(result.error).to_string();
-                    debug!("ERROR {text:?}");
+                    info!("ERROR {text:?}");
                     remove_invoke_task(&self.task_id);
                     Poll::Ready(None)
                 }

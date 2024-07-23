@@ -25,7 +25,7 @@ pub fn start_main_actor(main_actor: MainActor) -> Result<Option<(MainActorSpec, 
 pub async fn start_worker_actor(
     worker_actor: WorkerActor,
 ) -> Result<Option<(MainActorSpec, Addr<MainActor>)>> {
-    println!("{}", LOGO);
+    // println!("{}", LOGO);
     env_logger::init();
     let _ = Cluster::new(worker_actor.own_addr, vec![worker_actor.seed_addr]);
     worker_actor.start();

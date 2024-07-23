@@ -128,7 +128,7 @@ impl Handler<ActorInfo> for MainActor {
     type Result = ();
 
     fn handle(&mut self, actor_info: ActorInfo, _ctx: &mut Self::Context) -> Self::Result {
-        debug!("Received model state: {:?}", actor_info);
+        info!("Received model state: {:?}", actor_info);
         self.connected_actors
             .insert(actor_info.uuid, actor_info.clone());
         CONNECTED_ACTORS
@@ -144,10 +144,10 @@ impl Handler<ActorStartInvokeRequest> for MainActor {
     type Result = ();
 
     fn handle(&mut self, msg: ActorStartInvokeRequest, _ctx: &mut Self::Context) -> Self::Result {
-        debug!("START INVOKE REQUEST: {:?}", msg);
+        info!("START INVOKE REQUEST: {:?}", msg);
         let kind = msg.kind;
         let name = msg.name;
-        debug!("KIND/NAME: {kind:?}/{name:?}");
+        info!("KIND/NAME: {kind:?}/{name:?}");
 
         let actors: Vec<ActorInfo> = self
             .connected_actors
@@ -173,7 +173,7 @@ impl Handler<ActorInvokeResponse> for MainActor {
     type Result = ();
 
     fn handle(&mut self, msg: ActorInvokeResponse, _ctx: &mut Self::Context) -> Self::Result {
-        //debug!("Received invoke response: {:?}", msg);
+        //info!("Received invoke response: {:?}", msg);
 
         tokio::spawn(async move {
             match &msg {
@@ -211,7 +211,7 @@ impl Handler<ClusterLog> for MainActor {
     fn handle(&mut self, msg: ClusterLog, _ctx: &mut Self::Context) -> Self::Result {
         match msg {
             ClusterLog::NewMember(node) => {
-                debug!("New model joined the cluster. Node: {node:?}");
+                info!("New model joined the cluster. Node: {node:?}");
                 if self.own_addr != node.socket_addr {
                     let model_addr = node.get_remote_addr(WorkerActor::ACTOR_ID.to_string());
                     model_addr.do_send(ActorInfoRequest {
@@ -220,7 +220,7 @@ impl Handler<ClusterLog> for MainActor {
                 }
             }
             ClusterLog::MemberLeft(addr) => {
-                debug!("MEMBER LEFT {:?}", addr);
+                info!("MEMBER LEFT {:?}", addr);
                 let actors: Vec<Uuid> = CONNECTED_ACTORS
                     .get()
                     .expect("CONNECTED_MODELS")

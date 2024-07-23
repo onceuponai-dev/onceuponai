@@ -1,5 +1,5 @@
 use anyhow::Result;
-use log::debug;
+use log::info;
 use onceuponai_abstractions::EntityValue;
 use onceuponai_actors::abstractions::{
     ActorActions, ActorError, ActorInvokeError, ActorInvokeRequest, ActorInvokeResponse,
@@ -28,7 +28,7 @@ impl ActorActions for E5Spec {
 
     fn start(&self) -> Result<()> {
         E5Model::lazy(self.model_repo.clone(), self.device.clone())?;
-        debug!("MODEL STARTED");
+        info!("MODEL STARTED");
         Ok(())
     }
 

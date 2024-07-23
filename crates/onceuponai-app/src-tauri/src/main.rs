@@ -5,6 +5,7 @@ use anyhow::Result;
 use once_cell::sync::OnceCell;
 use onceuponai_actors::abstractions::ActorMetadata;
 use onceuponai_core::common::ResultExt;
+use onceuponai_core::notifications::Notification;
 use serde_json::{json, Value};
 use server::{TauriAppConfig, TauriAppState};
 use std::collections::HashMap;
@@ -70,25 +71,29 @@ async fn spawn_actor(app: tauri::AppHandle) -> Result<Value, ()> {
             match message {
                 CommandEvent::Stderr(buf) => {
                     let text = std::str::from_utf8(&buf).unwrap();
-                    log::info!("{}", text);
-                    if text.to_string().contains("MODEL INFO REQUEST") {
-                        app.emit("message", text).unwrap();
+                    println!("STDERR {}", text);
+                    let text = Notification::read(text);
+                    if let Some(message) = text {
+                        app.emit("message", message).unwrap();
                     }
                 }
                 CommandEvent::Stdout(buf) => {
                     let text = std::str::from_utf8(&buf).unwrap();
-                    log::info!("{}", text);
-                    // app.emit("message", text).unwrap();
+                    println!("STDOUT {}", text);
+                    let text = Notification::read(text);
+                    if let Some(message) = text {
+                        app.emit("message", message).unwrap();
+                    }
                 }
                 CommandEvent::Error(error) => {
-                    log::info!("ERROR {}", &error);
+                    println!("ERROR {}", &error);
                     app.emit("message", error).unwrap();
                 }
                 CommandEvent::Terminated(_) => {
-                    log::info!("TERMINATED");
+                    println!("TERMINATED");
                     app.emit("message", "ACTOR TERMINATED").unwrap();
                 }
-                _ => log::info!("OTHER"),
+                _ => println!("OTHER"),
             }
         }
         /*

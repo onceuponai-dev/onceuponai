@@ -5,10 +5,12 @@ use crate::abstractions::{
 use actix::prelude::*;
 use actix_telepathy::prelude::*;
 use anyhow::Result;
-use log::debug;
+use log::info;
 use main_actor::{MainActor, MainActorSpec};
 use onceuponai_abstractions::EntityValue;
+use onceuponai_core::notifications::{Notification, NotificationLevel};
 use onceuponai_core::{common::ResultExt, config::read_config_str};
+use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::net::SocketAddr;
@@ -40,7 +42,7 @@ pub struct ModelResponse {
     pub response: String,
 }
 
-#[derive(RemoteMessage, Serialize, Deserialize, Debug)]
+#[derive(RemoteMessage, Serialize, Deserialize, Debug, Clone)]
 #[with_source(source)]
 pub struct ActorInfoRequest {
     pub source: RemoteAddr,
@@ -152,7 +154,16 @@ impl Handler<ActorInfoRequest> for WorkerActor {
             source: self.remote_addr.clone(),
             kind: self.actor.kind(),
         };
-        debug!("MODEL INFO REQUEST: {:?}", msg);
+        info!("MODEL INFO REQUEST: {:?}", msg);
+        Notification::publish(
+            &format!(
+                "ACTOR {}/{} ({}) CONNECTED",
+                metadata.name,
+                self.actor.kind(),
+                self.uuid
+            ),
+            NotificationLevel::Success,
+        );
         msg.source.do_send(model_info)
     }
 }
@@ -161,7 +172,7 @@ impl Handler<ActorInvokeRequest> for WorkerActor {
     type Result = ();
 
     fn handle(&mut self, msg: ActorInvokeRequest, _ctx: &mut Self::Context) -> Self::Result {
-        debug!("MODEL INVOKE REQUEST: {:?}", msg);
+        info!("MODEL INVOKE REQUEST: {:?}", msg);
 
         self.sender
             .send(ActorInternalRequest {
