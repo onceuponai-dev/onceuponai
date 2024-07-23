@@ -84,7 +84,10 @@ async fn spawn_actor(app: tauri::AppHandle) -> Result<Value, ()> {
                     log::info!("ERROR {}", &error);
                     app.emit("message", error).unwrap();
                 }
-                CommandEvent::Terminated(_) => log::info!("TERMINATED"),
+                CommandEvent::Terminated(_) => {
+                    log::info!("TERMINATED");
+                    app.emit("message", "ACTOR TERMINATED").unwrap();
+                }
                 _ => log::info!("OTHER"),
             }
         }

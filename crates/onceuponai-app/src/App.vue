@@ -12,6 +12,8 @@ listen('message', (event) => {
 });
 
 
+//unlisten()
+
 const snackbar: any = ref(null);
 const snackbarText: any = ref(null);
 
@@ -23,9 +25,9 @@ const snackbarText: any = ref(null);
     <v-main>
       <router-view />
       <router-view name="footer" />
-      <v-snackbar v-model="snackbar" :timeout="3000" bottom>
+      <v-snackbar v-model="snackbar" :timeout="3000" color="white" bottom>
         {{ snackbarText }}
-        <v-btn color="red" @click="snackbar = false">
+        <v-btn color="white" @click="snackbar = false">
           Close
         </v-btn>
       </v-snackbar>
