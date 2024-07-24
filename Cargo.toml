@@ -1,6 +1,6 @@
 [workspace]
 members = [
-    "crates/onceuponai", 
+    "crates/onceuponai-server", 
     "crates/onceuponai-abstractions", 
     "crates/onceuponai-actors", 
     "crates/onceuponai-actors-candle", 
@@ -8,7 +8,7 @@ members = [
     "crates/onceuponai-core", 
     "crates/onceuponai-operator",
     "crates/onceuponai-py",
-    "crates/onceuponai-app/src-tauri"
+    "crates/onceuponai/src-tauri"
     ]
 
 [workspace.package]
