@@ -2,40 +2,6 @@
 // This starter template is using Vue 3 <script setup> SFCs
 // Check out https://vuejs.org/api/sfc-script-setup.html#script-setup
 import Navigation from "./components/Navigation.vue";
-import { listen } from '@tauri-apps/api/event';
-import { ref } from "vue";
-
-listen('message', (event) => {
-  const ev: any = event.payload;
-  const payload: any = JSON.parse(ev);
-  snackbarText.value = payload.message;
-  console.log(payload);
-  console.log(snackbarText.value)
-  switch(payload.level) {
-    case 'Success':
-      snackbarColor.value = "success";
-      break;
-    case 'Info':
-      snackbarColor.value = "white";
-      break;
-    case 'Error':
-      snackbarColor.value = "red";
-      break;
-    default:
-      snackbarColor.value = "white";
-  }
-
-
-  console.log(snackbarColor.value)
-  snackbar.value = true;
-});
-
-
-//unlisten()
-
-const snackbar: any = ref(null);
-const snackbarText: any = ref(null);
-const snackbarColor: any = ref(null);
 
 </script>
 
@@ -45,12 +11,6 @@ const snackbarColor: any = ref(null);
     <v-main>
       <router-view />
       <router-view name="footer" />
-      <v-snackbar v-model="snackbar" :timeout="3000" :color="snackbarColor" bottom>
-        {{ snackbarText }}
-        <!-- <v-btn color="white" @click="snackbar = false">
-          Close
-        </v-btn> -->
-      </v-snackbar>
 
     </v-main>
   </v-app>

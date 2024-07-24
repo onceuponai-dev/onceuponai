@@ -7,7 +7,7 @@ const subtitle = ref("");
 
 const title = ref("Once Upon ... AI");
 const items = ref([
-  { title: 'HOME', icon: '$home', route: '/' },
+  // { title: 'HOME', icon: '$home', route: '/' },
   { title: 'ACTORS', icon: '$brain', route: '/actors' },
   { title: 'CHAT', icon: '$chat', route: '/chat' },
   { title: 'DATASETS', icon: '$database', route: '/stores' },

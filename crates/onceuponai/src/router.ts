@@ -10,7 +10,7 @@ const routes: Array<any> = [
     path: '/',
     name: 'Home',
     components: {
-      default: HomeComponent,
+      default: ActorsComponent,
       footer: FooterComponent
     },
   },
