@@ -11,6 +11,13 @@ interface Actor {
   metadata: ActorMetadata;
 }
 
+interface ActorSpecItem {
+  key: string;
+  value: any;
+  type: string;
+}
+
+
 interface ActorMetadata {
   name: string;
   actor_id: string;
@@ -41,25 +48,33 @@ async function refresh() {
 
 }
 
+
 async function spawn() {
-  const bielik = {
-    "kind": "quantized",
+
+
+  const spec: any = {};
+  spawnActorSpec.value.forEach((pair : ActorSpecItem) => {
+    spec[pair.key] = pair.value;
+  });
+
+  spec["device"] = spawnActorDevice.value;
+
+  const actorConfig = {
+    "kind": spawnActorKind.value,
     "metadata": {
-      "name": "bielik",
+      "name": spawnActorName.value,
       "actor_host": ""
     },
-    "spec": {
-      "model_repo": "speakleash/Bielik-7B-Instruct-v0.1-GGUF",
-      "model_file": "bielik-7b-instruct-v0.1.Q4_K_S.gguf",
-      "tokenizer_repo": "speakleash/Bielik-7B-Instruct-v0.1",
-      "device": "cuda"
-    }
+    "spec": spec
   };
 
-  const jsonString = JSON.stringify(bielik);
+  console.log('Configuration data:', actorConfig);
+  const jsonString = JSON.stringify(actorConfig);
   const specJsonBase64 = btoa(jsonString);
   const act: any = await invoke("spawn_actor", { "name": "bielik", "specJsonBase64": specJsonBase64 });
   console.log(act);
+
+  spawnDialog.value = false;
 }
 
 async function kill(actor: Actor) {
@@ -68,13 +83,6 @@ async function kill(actor: Actor) {
     console.log(act);
   }
 }
-
-const headers = [
-  { title: 'Kind', value: 'kind' },
-  { title: 'Name', value: 'metadata.name' },
-  { title: 'Host', value: 'metadata.actor_host' },
-  { text: 'Actions', value: 'actions', sortable: false },
-];
 
 
 const openDialog = (model: Actor) => {
@@ -128,13 +136,59 @@ const snackbar: any = ref(null);
 const snackbarText: any = ref(null);
 const snackbarColor: any = ref(null);
 
+
+const spawnDialog: any = ref(null);
+const spawnActorName: any = ref("");
+const spawnActorKind: any = ref("");
+const spawnActorSpec: any = ref([
+  { "key": "model_repo", "value": "speakleash/Bielik-7B-Instruct-v0.1-GGUF", "type": "string" },
+  { "key": "model_file", "value": "bielik-7b-instruct-v0.1.Q4_K_S.gguf", "type": "string" },
+  { "key": "tokenizer_repo", "value": "speakleash/Bielik-7B-Instruct-v0.1", "type": "string" },
+  { "key": "repeat_last_n", "value": 64, "type": "number" },
+  { "key": "repeat_last_nttt", "value": true, "type": "bool" }
+]);
+const spawnActorDevice: any = ref("cpu");
+
+const addPair = () => {
+  spawnActorSpec.value.push({ key: '', value: '' });
+};
+
+const removePair = (index: any) => {
+  spawnActorSpec.value.splice(index, 1);
+};
+
+const getInputComponent = (type: any) => {
+  switch (type) {
+    case 'number':
+      return 'v-text-field';
+    case 'bool':
+      return 'v-checkbox';
+    default:
+      return 'v-text-field';
+  }
+};
+const getInputLabel = (type: any) => {
+  switch (type) {
+    case 'number':
+      return 'Number';
+    case 'bool':
+      return 'Boolean';
+    default:
+      return 'Value';
+  }
+};
+
+const spawnActorDevices = ['cpu', 'cuda'];
+const spawnActorsTypes = ['string', 'number', 'bool'];
+const spawnActorNewPairType = ref("string");
+
 </script>
 
 <template>
   <v-container>
     <h1>Active Actors</h1>
     <v-btn @click="refresh">REFRESH</v-btn>
-    <v-btn @click="spawn">SPAWN</v-btn>
+    <v-btn @click="spawnDialog = true">SPAWN</v-btn>
 
     <v-divider></v-divider>
 
@@ -172,8 +226,6 @@ const snackbarColor: any = ref(null);
     </v-container>
 
 
-
-
     <v-dialog v-model="dialog" max-width="500px">
       <v-card>
         <v-card-title>Actor Details</v-card-title>
@@ -194,6 +246,53 @@ const snackbarColor: any = ref(null);
         </v-card-actions>
       </v-card>
     </v-dialog>
+
+    <v-dialog v-model="spawnDialog" width="90%">
+      <v-card>
+        <v-card-title>
+          <span class="headline">Spawn Actor</span>
+        </v-card-title>
+        <v-card-text>
+          <v-form>
+
+            <v-divider></v-divider>
+            <br />
+            <v-text-field v-model="spawnActorKind" label="Kind" required></v-text-field>
+            <v-text-field v-model="spawnActorName" label="Name" required></v-text-field>
+
+            <v-divider></v-divider>
+            <br />
+            <div v-for="(pair, index) in spawnActorSpec" :key="index" class="d-flex align-center mb-2">
+              <v-text-field v-model="pair.key" label="Key" class="mr-2 key-field" required></v-text-field>
+              <!-- <v-text-field v-model="pair.value" label="Value" required></v-text-field> -->
+              <component :is="getInputComponent(pair.type)" v-model="pair.value" :label="getInputLabel(pair.type)"
+                :type="pair.type === 'number' ? 'number' : 'text'" required class="flex-grow-1 mr-2"></component>
+              <v-btn icon @click="removePair(index)" variant="text">
+                <v-icon color="red">$delete</v-icon>
+              </v-btn>
+            </div>
+            <div class="d-flex align-center mb-2">
+              <v-select v-model="spawnActorNewPairType" :items="spawnActorsTypes" max-width="300px" label="Select Type"
+                class="ml-2"></v-select>
+              <v-btn color="primary" @click="addPair" variant="text" size="large" style="margin-top: -15px;">Add Spec
+                Item</v-btn>
+            </div>
+            <br /><br />
+            <v-divider></v-divider>
+            <br />
+
+            <v-select v-model="spawnActorDevice" :items="spawnActorDevices" label="Device" required></v-select>
+          </v-form>
+        </v-card-text>
+        <v-card-actions>
+          <v-spacer></v-spacer>
+          <v-btn color="blue darken-1" @click="spawn">Spawn</v-btn>
+          <v-btn color="grey darken-1" @click="spawnDialog = false">Cancel</v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
+
+
     <v-snackbar v-model="snackbar" :timeout="3000" :color="snackbarColor" bottom>
       {{ snackbarText }}
       <!-- <v-btn color="white" @click="snackbar = false">
@@ -203,3 +302,10 @@ const snackbarColor: any = ref(null);
 
   </v-container>
 </template>
+
+
+<style scoped>
+.key-field {
+  max-width: 200px !important;
+}
+</style>
