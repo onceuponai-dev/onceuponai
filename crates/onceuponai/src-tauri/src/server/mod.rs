@@ -31,7 +31,7 @@ pub fn init(config: Arc<Mutex<TauriAppConfig>>) -> io::Result<()> {
     let mut shared_config = config.lock().unwrap();
 
     actix_rt::System::new().block_on(async {
-        let file = String::from("/home/jovyan/rust-src/onceuponai/examples/main.yaml");
+        let file = String::from("main.yaml");
         let res = start_main_cluster(&file)
             .await
             .unwrap()

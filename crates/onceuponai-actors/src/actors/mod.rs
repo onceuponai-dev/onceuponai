@@ -1,7 +1,5 @@
 pub mod main_actor;
-use crate::abstractions::{
-    ActorActions, ActorInvokeRequest, ActorInvokeResponse, ActorMetadata, ActorObject,
-};
+use crate::abstractions::{ActorActions, ActorInvokeRequest, ActorMetadata, ActorObject};
 use actix::prelude::*;
 use actix_telepathy::prelude::*;
 use anyhow::Result;
@@ -9,8 +7,6 @@ use log::info;
 use main_actor::{MainActor, MainActorSpec};
 use onceuponai_abstractions::EntityValue;
 use onceuponai_core::notifications::{Notification, NotificationLevel};
-use onceuponai_core::{common::ResultExt, config::read_config_str};
-use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::net::SocketAddr;

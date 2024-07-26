@@ -191,7 +191,7 @@ const getInputLabel = (type: any) => {
   }
 };
 
-const onSearch = (searchText: string) => {
+const onSearch = () => {
 };
 
 

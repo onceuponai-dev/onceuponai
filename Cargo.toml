@@ -6,8 +6,8 @@ members = [
     "crates/onceuponai-actors-candle", 
     "crates/onceuponai-candle",
     "crates/onceuponai-core", 
-    "crates/onceuponai-operator",
-    "crates/onceuponai-py",
+    #"crates/onceuponai-operator",
+    #"crates/onceuponai-py",
     "crates/onceuponai/src-tauri"
     ]
 

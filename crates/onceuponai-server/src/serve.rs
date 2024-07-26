@@ -2,7 +2,6 @@ use crate::guards::AuthGuard;
 use crate::handlers::actors::{connected_actors, invoke};
 use crate::handlers::auth::generate_token;
 use crate::handlers::oai::v1_chat_completions;
-use crate::handlers::users::user;
 use crate::handlers::{
     self, assets_css, assets_js, health, index_html, ASSETS_CSS_HASH, ASSETS_JS_HASH,
 };
@@ -13,7 +12,6 @@ use actix_web::HttpResponse;
 use actix_web::{cookie::Key, web, App, HttpServer};
 use anyhow::Result;
 use base64::{engine::general_purpose, Engine as _};
-use log::{debug, warn};
 use num_traits::Zero;
 use onceuponai_actors::actors::main_actor::{MainActor, MainActorSpec};
 use onceuponai_core::common::ResultExt;

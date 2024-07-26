@@ -1,8 +1,8 @@
 use super::actors::{base_invoke, Mappers};
 use crate::models::InvokeRequest;
 use crate::serve::AppState;
+use actix_web::web;
 use actix_web::Responder;
-use actix_web::{web, HttpRequest};
 use anyhow::Result;
 use onceuponai_abstractions::EntityValue;
 use serde::{Deserialize, Serialize};

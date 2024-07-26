@@ -1,5 +1,5 @@
 use anyhow::Result;
-use serde::{de::DeserializeOwned, Deserialize, Serialize};
+use serde::{Deserialize, Serialize};
 
 use crate::common::ResultExt;
 
