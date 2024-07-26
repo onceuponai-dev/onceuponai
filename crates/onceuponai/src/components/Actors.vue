@@ -1,10 +1,11 @@
 <script setup lang="ts">
-import { ref, onMounted } from "vue";
+import { ref, onMounted, watch } from "vue";
 import { fetch } from "../common";
 import { useRouter } from 'vue-router'
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from '@tauri-apps/api/event';
 
+// interfaces
 interface Actor {
   uuid: string;
   kind: string;
@@ -27,11 +28,42 @@ interface ActorMetadata {
   features: string[];
 }
 
+const router = useRouter();
+
+// refs
 const dialog: any = ref(false);
 const selectedModel = ref<Actor | null>(null);
 const actors = ref<Actor[]>([]);
+const snackbar: any = ref(null);
+const snackbarText: any = ref(null);
+const snackbarColor: any = ref(null);
 
-async function refresh() {
+
+const actorsGallery: any = ref(null);
+
+const spawnDialog: any = ref(null);
+const spawnActorName: any = ref("");
+const spawnActorKind: any = ref("");
+const spawnActorSpec: any = ref([
+  { "key": "model_repo", "value": "speakleash/Bielik-7B-Instruct-v0.1-GGUF", "type": "string" },
+  { "key": "model_file", "value": "bielik-7b-instruct-v0.1.Q4_K_S.gguf", "type": "string" },
+  { "key": "tokenizer_repo", "value": "speakleash/Bielik-7B-Instruct-v0.1", "type": "string" },
+  { "key": "repeat_last_n", "value": 64, "type": "number" },
+  { "key": "repeat_last_nttt", "value": true, "type": "bool" }
+]);
+const spawnActorDevice: any = ref("cpu");
+const spawnActorDevices = ['cpu', 'cuda'];
+const spawnActorsTypes = ['string', 'number', 'bool'];
+const spawnActorNewPairType = ref("string");
+
+const spawnSearchResults: any = ref([]);
+const spawnSelectedSearch = ref('');
+const spawnInProgress = ref(false);
+
+
+// functions 
+
+const refresh = async () => {
   fetch(`/api/actors`)
     .then(async (response: any) => {
       const data = await response.json();
@@ -46,14 +78,11 @@ async function refresh() {
       console.log(error);
     });
 
-}
+};
 
-
-async function spawn() {
-
-
+const spawn = async () => {
   const spec: any = {};
-  spawnActorSpec.value.forEach((pair : ActorSpecItem) => {
+  spawnActorSpec.value.forEach((pair: ActorSpecItem) => {
     spec[pair.key] = pair.value;
   });
 
@@ -71,19 +100,19 @@ async function spawn() {
   console.log('Configuration data:', actorConfig);
   const jsonString = JSON.stringify(actorConfig);
   const specJsonBase64 = btoa(jsonString);
-  const act: any = await invoke("spawn_actor", { "name": "bielik", "specJsonBase64": specJsonBase64 });
+  const act: any = await invoke("spawn_actor", { "name": spawnActorName.value, "device": spawnActorDevice.value, "specJsonBase64": specJsonBase64 });
   console.log(act);
 
   spawnDialog.value = false;
-}
+  spawnInProgress.value = true;
+};
 
-async function kill(actor: Actor) {
+const kill = async (actor: Actor) => {
   if (actor?.metadata?.sidecar_id != null) {
     const act = await invoke("kill_actor", { "sidecarId": actor.metadata?.sidecar_id });
     console.log(act);
   }
-}
-
+};
 
 const openDialog = (model: Actor) => {
   selectedModel.value = model;
@@ -94,9 +123,11 @@ const closeDialog = () => {
   dialog.value = false;
 };
 
-
-onMounted(() => {
+onMounted(async () => {
   refresh();
+  const ag: string = await invoke("actors_gallery");
+  actorsGallery.value = JSON.parse(ag);
+  spawnSearchResults.value = actorsGallery.value.map((a: any) => a.id);
 });
 
 listen('message', async (event) => {
@@ -122,32 +153,14 @@ listen('message', async (event) => {
   console.log(snackbarColor.value)
   snackbar.value = true;
   await new Promise(r => setTimeout(r, 2000));
+  spawnInProgress.value = false;
   await refresh();
 });
 
-const router = useRouter();
-// router.push("/")
 const navigate = (route: string) => {
   router.push(route);
 };
-//unlisten()
 
-const snackbar: any = ref(null);
-const snackbarText: any = ref(null);
-const snackbarColor: any = ref(null);
-
-
-const spawnDialog: any = ref(null);
-const spawnActorName: any = ref("");
-const spawnActorKind: any = ref("");
-const spawnActorSpec: any = ref([
-  { "key": "model_repo", "value": "speakleash/Bielik-7B-Instruct-v0.1-GGUF", "type": "string" },
-  { "key": "model_file", "value": "bielik-7b-instruct-v0.1.Q4_K_S.gguf", "type": "string" },
-  { "key": "tokenizer_repo", "value": "speakleash/Bielik-7B-Instruct-v0.1", "type": "string" },
-  { "key": "repeat_last_n", "value": 64, "type": "number" },
-  { "key": "repeat_last_nttt", "value": true, "type": "bool" }
-]);
-const spawnActorDevice: any = ref("cpu");
 
 const addPair = () => {
   spawnActorSpec.value.push({ key: '', value: '' });
@@ -178,9 +191,21 @@ const getInputLabel = (type: any) => {
   }
 };
 
-const spawnActorDevices = ['cpu', 'cuda'];
-const spawnActorsTypes = ['string', 'number', 'bool'];
-const spawnActorNewPairType = ref("string");
+const onSearch = (searchText: string) => {
+};
+
+
+watch(spawnSelectedSearch, (newValue) => {
+  console.log("NEW ITEM" + newValue);
+  const selectedItem = actorsGallery.value.find((item: any) => item.id === newValue);
+  if (selectedItem) {
+    spawnActorKind.value = selectedItem.kind;
+    spawnActorName.value = selectedItem.metadata.name;
+    spawnActorSpec.value = selectedItem.spec;
+    spawnActorDevice.value = selectedItem.device;
+    console.log(selectedItem)
+  }
+});
 
 </script>
 
@@ -195,6 +220,33 @@ const spawnActorNewPairType = ref("string");
 
     <v-container fluid>
       <v-row>
+        <v-col cols="12" sm="6" md="4" v-if="spawnInProgress">
+          <v-card>
+            <v-card-text class="text-center">
+              <div>{{ spawnActorKind.value }}</div>
+
+              <p class="text-h4 font-weight-black">{{ spawnActorName.value }}</p>
+              <br />
+              <br />
+              <br />
+              <br />
+              ACTOR LOADING ...
+              <br/>
+              <br/>
+              <v-icon icon="$brain" size="x-large" class="rotating"></v-icon>
+              <!-- <v-img src="/images/brain.gif" width="100" class="centered-image"></v-img> -->
+              <br />
+              <br />
+              <br />
+              <br />
+              <br />
+
+            </v-card-text>
+
+
+          </v-card>
+        </v-col>
+
         <v-col v-for="item in actors" :key="item.kind" cols="12" sm="6" md="4">
           <v-card>
             <!-- <v-card-title>
@@ -254,7 +306,9 @@ const spawnActorNewPairType = ref("string");
         </v-card-title>
         <v-card-text>
           <v-form>
-
+            <v-autocomplete v-model="spawnSelectedSearch" :items="spawnSearchResults" label="Search"
+              placeholder="Type to search..." @input="onSearch" item-text="name" item-value="name"
+              class="mb-4"></v-autocomplete>
             <v-divider></v-divider>
             <br />
             <v-text-field v-model="spawnActorKind" label="Kind" required></v-text-field>
@@ -286,8 +340,8 @@ const spawnActorNewPairType = ref("string");
         </v-card-text>
         <v-card-actions>
           <v-spacer></v-spacer>
-          <v-btn color="blue darken-1" @click="spawn">Spawn</v-btn>
-          <v-btn color="grey darken-1" @click="spawnDialog = false">Cancel</v-btn>
+          <v-btn color="blue darken-1" @click="spawn"><b>Spawn</b></v-btn>
+          <v-btn color="grey darken-1" @click="spawnDialog = false"><b>Cancel</b></v-btn>
         </v-card-actions>
       </v-card>
     </v-dialog>
@@ -307,5 +361,42 @@ const spawnActorNewPairType = ref("string");
 <style scoped>
 .key-field {
   max-width: 200px !important;
+}
+
+@keyframes blink {
+  0% {
+    opacity: 1;
+  }
+
+  50% {
+    opacity: 0.5;
+  }
+
+  100% {
+    opacity: 1;
+  }
+}
+
+.blinking {
+  animation: blink 2s infinite;
+}
+
+@keyframes rotate {
+  0% {
+    transform: rotate(0deg);
+  }
+
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+.rotating {
+  animation: rotate 2s linear infinite;
+}
+
+.centered-image {
+  display: block;
+  margin: 0 auto;
 }
 </style>

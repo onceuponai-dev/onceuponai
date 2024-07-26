@@ -1,5 +1,5 @@
 import { createRouter, createWebHashHistory } from 'vue-router';
-import HomeComponent from './components/Home.vue';
+// import HomeComponent from './components/Home.vue';
 import ActorsComponent from './components/Actors.vue';
 import ChatComponent from './components/Chat.vue';
 import PersonalTokensComponent from './components/PersonalTokens.vue';

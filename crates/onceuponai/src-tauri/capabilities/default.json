@@ -36,7 +36,24 @@
             }
           ],
           "cmd": "",
-          "name": "binaries/sidecar/onceuponai-actors-candle",
+          "name": "binaries/sidecar/onceuponai-actors-candle-cuda",
+          "sidecar": true
+        }
+      ]
+    },
+    {
+      "identifier": "shell:allow-spawn",
+      "allow": [
+        {
+          "args": [
+            "spawn",
+            "-f",
+            {
+              "validator": "\\S+"
+            }
+          ],
+          "cmd": "",
+          "name": "binaries/sidecar/onceuponai-actors-candle-cpu",
           "sidecar": true
         }
       ]
@@ -53,11 +70,29 @@
             }
           ],
           "cmd": "",
-          "name": "binaries/sidecar/onceuponai-actors-candle",
+          "name": "binaries/sidecar/onceuponai-actors-candle-cuda",
           "sidecar": true
         }
       ]
     },
+    {
+      "identifier": "shell:allow-kill",
+      "allow": [
+        {
+          "args": [
+            "spawn",
+            "-f",
+            {
+              "validator": "\\S+"
+            }
+          ],
+          "cmd": "",
+          "name": "binaries/sidecar/onceuponai-actors-candle-cpu",
+          "sidecar": true
+        }
+      ]
+    },
+
     "process:default"
   ]
 }

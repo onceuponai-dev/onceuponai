@@ -12,6 +12,7 @@ use server::{TauriAppConfig, TauriAppState};
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 use std::thread;
+use tauri::path::BaseDirectory;
 use tauri::{AppHandle, Emitter, Manager, RunEvent, State};
 use tauri_plugin_shell::process::{CommandChild, CommandEvent};
 use tauri_plugin_shell::ShellExt;
@@ -39,6 +40,17 @@ fn greet(name: &str) -> String {
 }
 
 #[tauri::command]
+fn actors_gallery(handle: tauri::AppHandle) -> Result<String, ()> {
+    let resource_path = handle
+        .path()
+        .resolve("resources/actors_gallery.json", BaseDirectory::Resource)
+        .unwrap();
+
+    let file = std::fs::read_to_string(resource_path).unwrap();
+    Ok(file)
+}
+
+#[tauri::command]
 fn kill_actor(sidecar_id: Uuid) {
     if let Some(actors_mutex) = SPAWNED_ACTORS.get() {
         let mut actors = actors_mutex.lock().map_anyhow_err().unwrap();
@@ -55,6 +67,7 @@ fn kill_actor(sidecar_id: Uuid) {
 async fn spawn_actor(
     app: tauri::AppHandle,
     name: String,
+    device: String,
     spec_json_base64: String,
 ) -> Result<Value, ()> {
     let a = app.clone();
@@ -74,7 +87,7 @@ async fn spawn_actor(
 
     let sidecar_command = app
         .shell()
-        .sidecar("onceuponai-actors-candle")
+        .sidecar(format!("onceuponai-actors-candle-{}", device))
         .unwrap()
         .args(["spawn", "-j", &spec_json_base64, "-m", &metadata]);
     let (mut rx, child) = sidecar_command.spawn().unwrap();
@@ -159,7 +172,8 @@ fn main() {
             greet,
             config,
             spawn_actor,
-            kill_actor
+            kill_actor,
+            actors_gallery
         ])
         .build(tauri::generate_context!())
         .expect("error while running tauri application");

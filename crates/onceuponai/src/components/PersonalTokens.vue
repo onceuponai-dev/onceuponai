@@ -8,9 +8,9 @@ const patToken = ref("");
 const patTokenDisplay = ref("");
 const tooltipVisible = ref(false);
 
-const openDialog = () => {
-  dialog.value = true;
-};
+// const openDialog = () => {
+//   dialog.value = true;
+// };
 
 const closeDialog = () => {
   dialog.value = false;

@@ -1,0 +1,160 @@
+[
+    {
+        "id": "quantized/bielik",
+        "sidecar": "onceuponai-actors-candle",
+        "kind": "quantized",
+        "device": "cuda",
+        "metadata": {
+            "name": "bielik",
+            "description": "",
+            "url": ""
+        },
+        "spec": [
+            {
+                "key": "model_repo",
+                "value": "speakleash/Bielik-7B-Instruct-v0.1-GGUF",
+                "type": "string"
+            },
+            {
+                "key": "model_file",
+                "value": "bielik-7b-instruct-v0.1.Q4_K_S.gguf",
+                "type": "string"
+            },
+            {
+                "key": "tokenizer_repo",
+                "value": "speakleash/Bielik-7B-Instruct-v0.1",
+                "type": "string"
+            },
+            {
+                "key": "seed",
+                "value": 299792458,
+                "type": "number"
+            },
+            {
+                "key": "repeat_last_n",
+                "value": 64,
+                "type": "number"
+            },
+            {
+                "key": "repeat_penalty",
+                "value": 1.1,
+                "type": "number"
+            },
+            {
+                "key": "temp",
+                "value": 0.8,
+                "type": "number"
+            },
+            {
+                "key": "sample_len",
+                "value": 1000,
+                "type": "number"
+            }
+        ]
+    },
+    {
+        "id": "quantized/llama3",
+        "sidecar": "onceuponai-actors-candle",
+        "kind": "quantized",
+        "device": "cuda",
+        "metadata": {
+            "name": "llama3",
+            "description": "",
+            "url": ""
+        },
+        "spec": [
+            {
+                "key": "model_repo",
+                "value": "speakleash/Bielik-7B-Instruct-v0.1-GGUF",
+                "type": "string"
+            },
+            {
+                "key": "model_file",
+                "value": "bielik-7b-instruct-v0.1.Q4_K_S.gguf",
+                "type": "string"
+            },
+            {
+                "key": "tokenizer_repo",
+                "value": "speakleash/Bielik-7B-Instruct-v0.1",
+                "type": "string"
+            },
+            {
+                "key": "seed",
+                "value": 299792458,
+                "type": "number"
+            },
+            {
+                "key": "repeat_last_n",
+                "value": 64,
+                "type": "number"
+            },
+            {
+                "key": "repeat_penalty",
+                "value": 1.1,
+                "type": "number"
+            },
+            {
+                "key": "temp",
+                "value": 0.8,
+                "type": "number"
+            },
+            {
+                "key": "sample_len",
+                "value": 1000,
+                "type": "number"
+            }
+        ]
+    },
+    {
+        "id": "gemma/gemma-3b",
+        "kind": "gemma",
+        "device": "cpu",
+        "metadata": {
+            "name": "gemma-3b",
+            "description": "",
+            "url": ""
+        },
+        "spec": [
+            {
+                "key": "model_repo",
+                "value": "speakleash/Bielik-7B-Instruct-v0.1-GGUF",
+                "type": "string"
+            },
+            {
+                "key": "model_file",
+                "value": "bielik-7b-instruct-v0.1.Q4_K_S.gguf",
+                "type": "string"
+            },
+            {
+                "key": "tokenizer_repo",
+                "value": "speakleash/Bielik-7B-Instruct-v0.1",
+                "type": "string"
+            },
+            {
+                "key": "seed",
+                "value": 299792458,
+                "type": "number"
+            },
+            {
+                "key": "repeat_last_n",
+                "value": 64,
+                "type": "number"
+            },
+            {
+                "key": "repeat_penalty",
+                "value": 1.1,
+                "type": "number"
+            },
+            {
+                "key": "temp",
+                "value": 0.8,
+                "type": "number"
+            },
+            {
+                "key": "sample_len",
+                "value": 1000,
+                "type": "number"
+            }
+        ]
+    }
+]
