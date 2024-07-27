@@ -1,24 +1,21 @@
 // Prevents additional console window on Windows in release, DO NOT REMOVE!!
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
+pub mod commands;
+pub mod server;
 use anyhow::Result;
+use clap::Parser;
+use commands::{actors_gallery, config, kill_actor, spawn_actor};
 use once_cell::sync::OnceCell;
-use onceuponai_actors::abstractions::ActorMetadata;
-use onceuponai_core::common::{serialize_and_encode, ResultExt, SerializationType};
-use onceuponai_core::notifications::{Notification, NotificationLevel};
+use onceuponai_core::common::ResultExt;
 use serde::{Deserialize, Serialize};
-use serde_json::{json, Value};
 use server::{TauriAppConfig, TauriAppState};
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 use std::thread;
-use tauri::path::BaseDirectory;
-use tauri::{AppHandle, Emitter, Manager, RunEvent, State};
-use tauri_plugin_shell::process::{CommandChild, CommandEvent};
-use tauri_plugin_shell::ShellExt;
+use tauri::{Manager, RunEvent};
+use tauri_plugin_shell::process::CommandChild;
 use uuid::Uuid;
-
-pub mod server;
 
 #[derive(Debug)]
 struct SpawnedActor {
@@ -33,157 +30,75 @@ pub struct SpawnActorRequest {
     pub spec_json_base64: String,
 }
 
-// Learn more about Tauri commands at https://tauri.app/v1/guides/features/command
-#[tauri::command]
-fn greet(name: &str) -> String {
-    format!("Hello, {}! You've been greeted from Rust1!", name)
+#[derive(Parser, Debug)]
+#[clap(author, version, about)]
+pub struct MainArgs {
+    #[clap(long, default_value = "127.0.0.1:1992")]
+    actor_host: String,
+    #[clap(long, default_value = "0.0.0.0")]
+    host: String,
+    #[clap(long, default_value = "8080")]
+    port: u16,
+    #[clap(long, default_value = "info")]
+    log_level: String,
+    #[clap(long, default_value = "4")]
+    workers: usize,
+    #[clap(long, default_value = "60")]
+    invoke_timeout: u64,
+    #[clap(long)]
+    session_key: Option<String>,
+    #[clap(long)]
+    personal_access_token_secret: Option<String>,
+    #[clap(long, default_value_t = false)]
+    headless: bool,
 }
 
-#[tauri::command]
-fn actors_gallery(handle: tauri::AppHandle) -> Result<String, ()> {
-    let resource_path = handle
-        .path()
-        .resolve("resources/actors_gallery.json", BaseDirectory::Resource)
-        .unwrap();
-
-    let file = std::fs::read_to_string(resource_path).unwrap();
-    Ok(file)
-}
-
-#[tauri::command]
-fn kill_actor(sidecar_id: Uuid) {
-    if let Some(actors_mutex) = SPAWNED_ACTORS.get() {
-        let mut actors = actors_mutex.lock().map_anyhow_err().unwrap();
-        actors
-            .remove(&sidecar_id)
-            .expect("SPAWNED_ACTOR")
-            .child
-            .kill()
-            .unwrap();
-    }
-}
-
-#[tauri::command]
-async fn spawn_actor(
-    app: tauri::AppHandle,
-    name: String,
-    device: String,
-    spec_json_base64: String,
-) -> Result<Value, ()> {
-    let a = app.clone();
-    let state: State<TauriAppState> = a.state::<TauriAppState>();
-    let mut config = state.config.lock().unwrap();
-    config.actor_next_port += 1;
-    let sidecar_id = Uuid::new_v4();
-    let metadata = ActorMetadata {
-        name,
-        features: None,
-        actor_id: None,
-        actor_host: format!("{}:{}", config.actor_base_host, config.actor_next_port),
-        actor_seed: Some(config.actor_seed.clone()),
-        sidecar_id: Some(sidecar_id),
-    };
-    let metadata = serialize_and_encode(metadata, SerializationType::YAML).unwrap();
-
-    let sidecar_command = app
-        .shell()
-        .sidecar(format!("onceuponai-actors-candle-{}", device))
-        .unwrap()
-        .args(["spawn", "-j", &spec_json_base64, "-m", &metadata]);
-    let (mut rx, child) = sidecar_command.spawn().unwrap();
-
-    tauri::async_runtime::spawn(async move {
-        while let Some(message) = rx.recv().await {
-            match message {
-                CommandEvent::Stderr(buf) => {
-                    let text = std::str::from_utf8(&buf).unwrap();
-                    println!("STDERR {}", text);
-                    let text = Notification::read(text);
-                    if let Some(message) = text {
-                        app.emit("message", message).unwrap();
-                    }
-                }
-                CommandEvent::Stdout(buf) => {
-                    let text = std::str::from_utf8(&buf).unwrap();
-                    println!("STDOUT {}", text);
-                    let text = Notification::read(text);
-                    if let Some(message) = text {
-                        app.emit("message", message).unwrap();
-                    }
-                }
-                CommandEvent::Error(error) => {
-                    println!("ERROR {}", &error);
-                    app.emit("message", error).unwrap();
-                }
-                CommandEvent::Terminated(_) => {
-                    println!("TERMINATED");
-                    let message =
-                        Notification::build("ACTOR TERMINATED", NotificationLevel::Info).unwrap();
-                    app.emit("message", message).unwrap();
-                }
-                _ => println!("OTHER"),
-            }
-        }
-    });
-
-    SPAWNED_ACTORS
-        .get()
-        .expect("SPAWNED_ACTORS")
-        .lock()
-        .unwrap()
-        .insert(sidecar_id, SpawnedActor { child });
-
-    Ok(json!({"sidecar_id": sidecar_id}))
-}
-
-#[tauri::command]
-fn config(handle: AppHandle) -> TauriAppConfig {
-    let state: State<TauriAppState> = handle.state();
-    let config = state.config.lock().unwrap();
-    TauriAppConfig {
-        personal_token: config.personal_token.clone(),
-        base_url: config.base_url.clone(),
-        actor_seed: config.actor_seed.clone(),
-        actor_base_host: "".to_string(),
-        actor_next_port: 0,
-    }
-}
-
-fn main() {
+#[actix_rt::main]
+async fn main() -> std::io::Result<()> {
     SPAWNED_ACTORS
         .set(Arc::new(Mutex::new(HashMap::new())))
         .unwrap();
+    let args = MainArgs::parse();
 
-    let app = tauri::Builder::default()
-        .plugin(tauri_plugin_process::init())
-        .setup(|app| {
-            let config = Arc::new(Mutex::new(TauriAppConfig::default()));
-            let shared_config = Arc::clone(&config);
-            app.manage(TauriAppState { config });
-            thread::spawn(move || {
-                server::init(shared_config).unwrap();
-            });
+    if args.headless {
+        thread::spawn(move || {
+            server::init(None, args).unwrap();
+        });
+        tokio::signal::ctrl_c().await?;
+        println!("Ctrl-C received, shutting down");
+    } else {
+        let app = tauri::Builder::default()
+            .plugin(tauri_plugin_process::init())
+            .setup(|app| {
+                let config = Arc::new(Mutex::new(TauriAppConfig::default()));
+                let shared_config = Arc::clone(&config);
+                app.manage(TauriAppState { config });
+                thread::spawn(move || {
+                    server::init(Some(shared_config), args).unwrap();
+                });
 
-            Ok(())
-        })
-        .plugin(tauri_plugin_shell::init())
-        .plugin(tauri_plugin_http::init())
-        .invoke_handler(tauri::generate_handler![
-            greet,
-            config,
-            spawn_actor,
-            kill_actor,
-            actors_gallery
-        ])
-        .build(tauri::generate_context!())
-        .expect("error while running tauri application");
+                Ok(())
+            })
+            .plugin(tauri_plugin_shell::init())
+            .plugin(tauri_plugin_http::init())
+            .invoke_handler(tauri::generate_handler![
+                config,
+                spawn_actor,
+                kill_actor,
+                actors_gallery
+            ])
+            .build(tauri::generate_context!())
+            .expect("error while running tauri application");
 
-    app.run(|_app, event| {
-        if let RunEvent::ExitRequested { api: _, .. } = event {
-            // api.prevent_exit();
-            clean_up_resources().unwrap();
-        }
-    });
+        app.run(|_app, event| {
+            if let RunEvent::ExitRequested { api: _, .. } = event {
+                // api.prevent_exit();
+                clean_up_resources().unwrap();
+            }
+        });
+    }
+
+    Ok(())
 }
 
 fn clean_up_resources() -> Result<()> {

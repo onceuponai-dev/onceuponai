@@ -35,10 +35,10 @@ pub async fn start_worker_actor(
 }
 
 pub async fn start_main_cluster(
-    file: &String,
+    metadata: ActorMetadata,
+    spec: MainActorSpec,
 ) -> Result<Option<(MainActorSpec, Addr<MainActor>, ActorMetadata)>> {
-    let configuration_str = read_config_str(file, Some(true)).await.map_anyhow_err()?;
-    let actor: ActorObject<MainActorSpec> = serde_yaml::from_str(&configuration_str)?;
+    let actor = ActorObject::<MainActorSpec>::new(metadata, spec);
     let metadata = actor.metadata();
     let main_actor = ActorBuilder::build_main(actor)?;
     let res = start_main_actor(main_actor)?.expect("MAIN_ACTOR_SPEC");

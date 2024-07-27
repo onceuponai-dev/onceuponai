@@ -62,7 +62,7 @@ impl ReplaceTokens {
     }
 
     fn find_tokens(text: &str) -> Result<Vec<&str>> {
-        let re = Regex::new(r"\$\{(?P<token>[a-zA-Z0-9_\-]+)\}").unwrap();
+        let re = Regex::new(r"\$\{(?P<token>[a-zA-Z0-9_\-]+)\}")?;
         let tokens: Vec<&str> = re
             .captures_iter(text)
             .map(|x| x.name("token").unwrap().as_str())

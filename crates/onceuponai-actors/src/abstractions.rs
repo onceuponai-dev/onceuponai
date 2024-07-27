@@ -107,6 +107,10 @@ impl<T> ActorObject<T>
 where
     T: Clone + ActorActions,
 {
+    pub fn new(metadata: ActorMetadata, spec: T) -> Self {
+        ActorObject::<T> { metadata, spec }
+    }
+
     pub fn setup(mut self, actor_id: &str, features: Option<Vec<String>>) -> Self {
         self.metadata = self.metadata.setup(actor_id, features);
         self

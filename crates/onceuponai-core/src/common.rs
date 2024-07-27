@@ -43,6 +43,8 @@ pub trait ResultExt<T, E> {
     fn map_io_err(self) -> IoResult<T>;
 
     fn map_box_err(self) -> Result<T, Box<dyn std::error::Error>>;
+
+    fn map_str_err(self) -> Result<T, String>;
 }
 
 impl<T, E: std::fmt::Debug> ResultExt<T, E> for Result<T, E> {
@@ -56,6 +58,10 @@ impl<T, E: std::fmt::Debug> ResultExt<T, E> for Result<T, E> {
 
     fn map_box_err(self) -> Result<T, Box<dyn std::error::Error>> {
         Ok(self.map_err(|e| Box::new(CommonError::StringError(format!("{e:?}"))))?)
+    }
+
+    fn map_str_err(self) -> Result<T, String> {
+        self.map_err(|e| format!("{e:?}"))
     }
 }
 
