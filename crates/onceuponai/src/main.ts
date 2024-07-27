@@ -9,7 +9,7 @@ import { aliases, mdi } from 'vuetify/iconsets/mdi-svg'
 import { createVuetify } from 'vuetify'
 import * as components from 'vuetify/components'
 import * as directives from 'vuetify/directives'
-import { mdiHome, mdiBrain, mdiChat, mdiPuzzle, mdiDatabase, mdiVectorTriangle, mdiCodeBrackets, mdiViewDashboard, mdiAccountKey, mdiHelpCircle, mdiSend, mdiKeyPlus, mdiContentCopy, mdiDelete } from '@mdi/js'
+import { mdiHome, mdiBrain, mdiChat, mdiPuzzle, mdiDatabase, mdiVectorTriangle, mdiCodeBrackets, mdiViewDashboard, mdiAccountKey, mdiHelpCircle, mdiSend, mdiKeyPlus, mdiContentCopy, mdiDelete, mdiDotsHorizontal } from '@mdi/js'
 
 const vuetify = createVuetify({
     components,
@@ -42,7 +42,8 @@ const vuetify = createVuetify({
             send: mdiSend,
             keyPlus: mdiKeyPlus,
             contentCopy: mdiContentCopy,
-            delete: mdiDelete
+            delete: mdiDelete,
+            dotsHorizontal: mdiDotsHorizontal,
         },
         sets: {
             mdi,

@@ -2,11 +2,14 @@ use crate::{
     server::{TauriAppConfig, TauriAppState},
     SpawnedActor, SPAWNED_ACTORS,
 };
+use futures::StreamExt;
 use onceuponai_actors::abstractions::ActorMetadata;
 use onceuponai_core::{
     common::{serialize_and_encode, ResultExt, SerializationType},
     notifications::{Notification, NotificationLevel},
 };
+use onceuponai_server::handlers::oai::ChatCompletionsRequest;
+use reqwest::Client;
 use serde_json::{json, Value};
 use tauri::{path::BaseDirectory, AppHandle, Emitter, Manager, State};
 use tauri_plugin_shell::{process::CommandEvent, ShellExt};
@@ -121,4 +124,36 @@ pub fn config(handle: AppHandle) -> Result<TauriAppConfig, String> {
         actor_base_host: "".to_string(),
         actor_next_port: 0,
     })
+}
+
+#[tauri::command]
+pub async fn v1_chat_completions(
+    handle: AppHandle,
+    base_url: String,
+    personal_token: String,
+    chat_request: ChatCompletionsRequest,
+) -> Result<(), String> {
+    let client = Client::new();
+    let mut stream = client
+        .post(format!("{}/v1/chat/completions", base_url))
+        .header("Content-Type", "application/json")
+        .header("Authorization", format!("Bearer {}", personal_token))
+        .json(&chat_request)
+        .send()
+        .await
+        .map_err(|e| e.to_string())?
+        .bytes_stream();
+
+    while let Some(item) = stream.next().await {
+        match item {
+            Ok(bytes) => {
+                let message = String::from_utf8(bytes.to_vec()).map_err(|e| e.to_string())?;
+                handle
+                    .emit("v1-chat-completions", message)
+                    .map_err(|e| e.to_string())?;
+            }
+            Err(e) => return Err(e.to_string()),
+        }
+    }
+    Ok(())
 }

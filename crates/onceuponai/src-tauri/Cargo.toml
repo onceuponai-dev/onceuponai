@@ -15,12 +15,14 @@ actix = { workspace = true }
 actix-rt = { workspace = true }
 anyhow = { workspace = true }
 clap = { workspace = true }
+futures = { workspace = true }
 log = { workspace = true }
 onceuponai-abstractions= { path = "../../onceuponai-abstractions" }
 onceuponai-actors= { path = "../../onceuponai-actors" }
 onceuponai-core= { path = "../../onceuponai-core" }
 onceuponai-server= { path = "../../onceuponai-server" }
 once_cell = { workspace = true }
+reqwest = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
 tauri = { workspace = true }
