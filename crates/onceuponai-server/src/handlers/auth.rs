@@ -148,13 +148,6 @@ pub async fn token_login(
     Ok(HttpResponse::Unauthorized().json(json!({"error": "Unauthorized"})))
 }
 
-pub fn generate_token(length: usize) -> String {
-    let mut rng = rand::thread_rng();
-    (0..length)
-        .map(|_| rng.sample(Alphanumeric) as char)
-        .collect()
-}
-
 pub async fn personal_token(
     pat_request: web::Json<PATRequest>,
     session: actix_session::Session,

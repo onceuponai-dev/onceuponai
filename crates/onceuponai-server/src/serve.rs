@@ -1,6 +1,5 @@
 use crate::guards::AuthGuard;
 use crate::handlers::actors::{connected_actors, invoke};
-use crate::handlers::auth::generate_token;
 use crate::handlers::oai::v1_chat_completions;
 use crate::handlers::{
     self, assets_css, assets_js, health, index_html, ASSETS_CSS_HASH, ASSETS_JS_HASH,
@@ -14,6 +13,7 @@ use anyhow::Result;
 use base64::{engine::general_purpose, Engine as _};
 use num_traits::Zero;
 use onceuponai_actors::actors::main_actor::{MainActor, MainActorSpec};
+use onceuponai_core::common::generate_token;
 use onceuponai_core::common::ResultExt;
 
 fn get_secret_key(spec: &MainActorSpec) -> Result<Key> {

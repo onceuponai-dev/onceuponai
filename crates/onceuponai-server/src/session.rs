@@ -1,5 +1,7 @@
 use actix_session::Session;
+use actix_web::cookie::Key;
 use anyhow::Result;
+use base64::{engine::general_purpose, Engine};
 use onceuponai_core::common::{OptionToResult, ResultExt};
 use serde::{de::DeserializeOwned, Serialize};
 
@@ -70,12 +72,19 @@ impl SessionExt for Session {
     }
 }
 
+pub fn generate_cookie_key() -> String {
+    let key = Key::generate();
+    let master = key.master();
+    general_purpose::STANDARD.encode(master)
+}
+
 #[tokio::test]
 async fn test_key() -> Result<()> {
     use actix_web::cookie::Key;
     use base64::{engine::general_purpose, Engine as _};
     let key = Key::generate();
     let master = key.master();
+    println!("LEN {}", master.len());
     let enc = general_purpose::STANDARD.encode(master);
 
     // Convert &str to String

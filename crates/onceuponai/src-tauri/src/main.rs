@@ -30,7 +30,7 @@ pub struct SpawnActorRequest {
     pub spec_json_base64: String,
 }
 
-#[derive(Parser, Debug)]
+#[derive(Parser, Debug, Clone)]
 #[clap(author, version, about)]
 pub struct MainArgs {
     #[clap(long, default_value = "127.0.0.1:1992")]
@@ -41,7 +41,7 @@ pub struct MainArgs {
     port: u16,
     #[clap(long, default_value = "info")]
     log_level: String,
-    #[clap(long, default_value = "4")]
+    #[clap(long, default_value = "0")]
     workers: usize,
     #[clap(long, default_value = "60")]
     invoke_timeout: u64,
@@ -51,9 +51,19 @@ pub struct MainArgs {
     personal_access_token_secret: Option<String>,
     #[clap(long, default_value_t = false)]
     headless: bool,
+    #[clap(long, default_value_t = false)]
+    oidc: bool,
+    #[clap(long)]
+    oidc_issuer_url: Option<String>,
+    #[clap(long)]
+    oidc_client_id: Option<String>,
+    #[clap(long)]
+    oidc_client_secret: Option<String>,
+    #[clap(long)]
+    oidc_redirect_url: Option<String>,
 }
 
-#[actix_rt::main]
+#[tokio::main]
 async fn main() -> std::io::Result<()> {
     SPAWNED_ACTORS
         .set(Arc::new(Mutex::new(HashMap::new())))

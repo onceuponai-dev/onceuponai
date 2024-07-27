@@ -1,9 +1,11 @@
 use anyhow::{anyhow, Result};
 use base64::{engine::general_purpose, Engine as _};
 use once_cell::sync::OnceCell;
+use rand::distributions::Alphanumeric;
+use rand::{Rng, RngCore};
 use serde::de::DeserializeOwned;
 use std::io::{self, Result as IoResult};
-use std::{fs, path::PathBuf};
+use std::{env, fs, path::PathBuf};
 
 #[derive(thiserror::Error, Debug)]
 pub enum CommonError {
@@ -63,6 +65,19 @@ impl<T, E: std::fmt::Debug> ResultExt<T, E> for Result<T, E> {
     fn map_str_err(self) -> Result<T, String> {
         self.map_err(|e| format!("{e:?}"))
     }
+}
+
+pub fn random_base64(num_bytes: usize) -> String {
+    let mut buffer = vec![0u8; num_bytes];
+    rand::thread_rng().fill_bytes(&mut buffer);
+    general_purpose::STANDARD.encode(&buffer)
+}
+
+pub fn generate_token(length: usize) -> String {
+    let mut rng = rand::thread_rng();
+    (0..length)
+        .map(|_| rng.sample(Alphanumeric) as char)
+        .collect()
 }
 
 pub fn hf_hub_get_path(
@@ -202,6 +217,33 @@ where
     Ok(encoded_data)
 }
 
+pub fn env_or_some<T>(key: &str, some: Option<T>) -> T
+where
+    T: std::str::FromStr,
+{
+    if let Ok(value) = env::var(key) {
+        if let Ok(parsed) = value.parse::<T>() {
+            return parsed;
+        }
+    }
+
+    some.unwrap()
+}
+
+pub fn env_or_some_or_fn<T, F>(key: &str, some: Option<T>, func: F) -> T
+where
+    T: std::str::FromStr,
+    F: Fn() -> T,
+{
+    if let Ok(value) = env::var(key) {
+        if let Ok(parsed) = value.parse::<T>() {
+            return parsed;
+        }
+    }
+
+    some.unwrap_or_else(func)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -240,6 +282,20 @@ mod tests {
         let person: Person = decode_and_deserialize(&b64_data, SerializationType::YAML)?;
 
         assert_eq!(person.name, "___");
+
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_random_base64() -> Result<()> {
+        let _random_b64 = random_base64(32);
+
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_generate_token() -> Result<()> {
+        let _token = generate_token(50);
 
         Ok(())
     }
