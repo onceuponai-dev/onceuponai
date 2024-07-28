@@ -13,6 +13,8 @@ const pyodide = await loadPyodideAndPackages();
 const workerContext: Record<string, any> = {};
 
 self.onmessage = async (event) => {
+    await pyodide;
+    
     const { id, python, ...context } = event.data;
     for (const key of Object.keys(context)) {
         workerContext[key] = context[key];

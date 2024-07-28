@@ -1,9 +1,15 @@
 importScripts("https://cdn.jsdelivr.net/pyodide/v0.23.4/full/pyodide.js");
 
+
+function jsFunction(x, y) {
+    return x + y;
+}
+
 async function loadPyodideAndPackages() {
     self.pyodide = await loadPyodide();
 
     await self.pyodide.loadPackage(["numpy", "pytz", "matplotlib", "micropip", "pandas", "fastparquet"]);
+    self.pyodide.globals.set("jsFunction", jsFunction);
 }
 let pyodideReadyPromise = loadPyodideAndPackages();
 
