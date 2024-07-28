@@ -181,7 +181,7 @@ onMounted(() => {
 </script>
 
 <template>
-  <v-container class="d-flex flex-column fill-height fill-width">
+  <v-container fluid>
     <div class="flex-grow-1 mb-2 overflow-auto fill-width chat-area" ref="chatArea">
       <v-row v-for="(message, index) in messages" :key="index" class="mb-2">
         <v-col :cols="message.role === 'user' ? '8' : '10'" :offset="message.role === 'user' ? '0' : '1'">
