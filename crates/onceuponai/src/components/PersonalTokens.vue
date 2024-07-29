@@ -66,11 +66,11 @@ const generateToken = () => {
     <v-divider></v-divider>
     <br />
     <v-row>
-      <v-col cols="2">
+      <v-col cols="3">
         <v-text-field v-model="expirationDays" type="number" label="Expiration days" />
       </v-col>
       <v-col cols="1">
-        <v-btn size="large" @click="generateToken" icon="$keyPlus"></v-btn>
+        <v-btn size="large" variant="plain" @click="generateToken" icon="$keyPlus"></v-btn>
       </v-col>
 
       <v-col cols="5">

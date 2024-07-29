@@ -103,6 +103,14 @@ pub fn init(config: Option<Arc<Mutex<TauriAppConfig>>>, main_args: MainArgs) -> 
             onceuponai_server::serve::serve(res.0, res.1).await
         })
     } else {
+        let secret = spec
+            .personal_access_token_secret
+            .clone()
+            .expect("PERSONAL_ACCESS_TOKEN_SECRET");
+
+        let personal_token = generate_pat_token(&secret, "root", 30);
+        println!("PERSONAL TOKEN: {personal_token}");
+
         actix_rt::System::new().block_on(async {
             let res = start_main_cluster(metadata, spec)
                 .await

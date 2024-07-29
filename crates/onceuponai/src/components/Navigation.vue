@@ -10,13 +10,12 @@ const items = ref([
   // { title: 'HOME', icon: '$home', route: '/' },
   { title: 'ACTORS', icon: '$brain', route: '/actors' },
   { title: 'CHAT', icon: '$chat', route: '/chat' },
-  { title: 'PYTHON', icon: '$python', route: '/python' },
-  { title: 'DATASETS', icon: '$database', route: '/stores' },
-  { title: 'EMBEDDINGS', icon: '$embeddings', route: '/embeddings' },
-  { title: 'PROMPTS', icon: '$prompts', route: '/prompts' },
-  { title: 'DASHBOARD', icon: '$dashboard', route: '/dashboard' },
+  // { title: 'DATASETS', icon: '$database', route: '/stores' },
+  // { title: 'EMBEDDINGS', icon: '$embeddings', route: '/embeddings' },
+  // { title: 'PROMPTS', icon: '$prompts', route: '/prompts' },
+  // { title: 'DASHBOARD', icon: '$dashboard', route: '/dashboard' },
   { title: 'PERSONAL TOKENS', icon: '$tokens', route: '/personal-tokens' },
-  { title: 'SUPPORT', icon: '$support', route: '/support' },
+  // { title: 'SUPPORT', icon: '$support', route: '/support' },
 ]);
 
 

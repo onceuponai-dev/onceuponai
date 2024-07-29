@@ -211,9 +211,10 @@ watch(spawnSelectedSearch, (newValue) => {
 
 <template>
   <v-container>
-    <h1>Active Actors</h1>
-    <v-btn @click="refresh">REFRESH</v-btn>
-    <v-btn @click="spawnDialog = true">SPAWN</v-btn>
+    <!-- <h1>Active Actors</h1> -->
+    <v-btn @click="refresh" prepend-icon="$refresh" variant="text">REFRESH</v-btn>
+    &nbsp;
+    <v-btn @click="spawnDialog = true" prepend-icon="$power" variant="text">SPAWN</v-btn>
 
     <v-divider></v-divider>
 

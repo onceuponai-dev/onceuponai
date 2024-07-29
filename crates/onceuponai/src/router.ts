@@ -2,7 +2,6 @@ import { createRouter, createWebHashHistory } from 'vue-router';
 // import HomeComponent from './components/Home.vue';
 import ActorsComponent from './components/Actors.vue';
 import ChatComponent from './components/Chat.vue';
-import PythonComponent from './components/Code.vue';
 import PersonalTokensComponent from './components/PersonalTokens.vue';
 import FooterComponent from './components/Footer.vue';
 
@@ -28,14 +27,6 @@ const routes: Array<any> = [
     name: 'Chat',
     components: {
       default: ChatComponent,
-      footer: FooterComponent
-    }
-  },
-  {
-    path: '/python',
-    name: 'Python',
-    components: {
-      default: PythonComponent,
       footer: FooterComponent
     }
   },
