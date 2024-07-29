@@ -1,19 +1,23 @@
 
 GET http://rust:8080/api/health HTTP/1.1
 content-type: application/json
+Authorization: Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJyb290IiwiZXhwIjoxNzIyMzgyNjU2fQ.RuxMYqANIpRlBxO_klRPpUghhjSmaltioSWMjQmsXhM
 
 ###
 
 GET http://rust:8080/api/actors HTTP/1.1
 content-type: application/json
-Authorization: Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJxYmEuc29sQGdtYWlsLmNvbSIsImV4cCI6MTcxOTY4NDQxMn0.oE09Bl36hnekml96dD-CiP5mFI-L2baPl5RyaamzqIc
+Authorization: Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJyb290IiwiZXhwIjoxNzIyMzgyNjU2fQ.RuxMYqANIpRlBxO_klRPpUghhjSmaltioSWMjQmsXhM
 
 ###
 
 POST http://rust:8080/api/invoke/e5/multilingual HTTP/1.1
 content-type: application/json
+Authorization: Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJyb290IiwiZXhwIjoxNzIyMzgyNjU2fQ.RuxMYqANIpRlBxO_klRPpUghhjSmaltioSWMjQmsXhM
+
 {
     "stream": false,
+    "config": {},
     "data": {
         "input": ["What is rust"]
     }

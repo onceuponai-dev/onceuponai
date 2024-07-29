@@ -1,6 +1,6 @@
 use crate::guards::AuthGuard;
 use crate::handlers::actors::{connected_actors, invoke};
-use crate::handlers::oai::v1_chat_completions;
+use crate::handlers::oai::{v1_chat_completions, v1_embeddings};
 use crate::handlers::{
     self, assets_css, assets_js, health, index_html, ASSETS_CSS_HASH, ASSETS_JS_HASH,
 };
@@ -106,7 +106,8 @@ pub async fn serve(spec: MainActorSpec, addr: Addr<MainActor>) -> std::io::Resul
         app = app.service(
             web::scope("v1")
                 .guard(auth_guard)
-                .route("/chat/completions", web::post().to(v1_chat_completions)),
+                .route("/chat/completions", web::post().to(v1_chat_completions))
+                .route("/embeddings", web::post().to(v1_embeddings)),
         );
 
         //app.service(fs::Files::new("/", "../onceuponai-ui/dist/").show_files_listing())

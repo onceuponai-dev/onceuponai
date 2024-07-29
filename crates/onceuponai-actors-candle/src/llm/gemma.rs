@@ -2,8 +2,8 @@ use actix_telepathy::RemoteAddr;
 use anyhow::Result;
 use onceuponai_abstractions::EntityValue;
 use onceuponai_actors::abstractions::{
-    ActorActions, ActorError, ActorInvokeError, ActorInvokeRequest, ActorInvokeResponse,
-    ActorInvokeResult,
+    ActorActions, ActorError, ActorInvokeError, ActorInvokeFinish, ActorInvokeRequest,
+    ActorInvokeResponse, ActorInvokeResult,
 };
 use onceuponai_candle::llm::gemma::GemmaModel;
 use onceuponai_core::common::ResultExt;
@@ -53,23 +53,23 @@ impl ActorActions for GemmaSpec {
     }
 
     fn invoke(&self, uuid: Uuid, request: &ActorInvokeRequest) -> Result<ActorInvokeResponse> {
-        let input = request.data.get("prompt");
+        let input = request.data.get("message");
 
         if input.is_none() {
             return Ok(ActorInvokeResponse::Failure(ActorInvokeError {
                 uuid,
                 task_id: request.task_id,
                 error: ActorError::BadRequest(
-                    "REQUEST MUST CONTAINER PROMPT COLUMN WITH Vec<String>".to_string(),
+                    "REQUEST MUST CONTAINER MESSAGE COLUMN WITH Vec<MESSAGE { role: String, content: String }>".to_string(),
                 ),
             }));
         }
 
         let input: Vec<String> = input
-            .expect("PROMPT")
+            .expect("MESSAGE")
             .iter()
             .map(|x| match x {
-                EntityValue::STRING(i) => i.clone(),
+                EntityValue::MESSAGE { role: _, content } => content.clone(),
                 _ => todo!(),
             })
             .collect();
@@ -109,6 +109,89 @@ impl ActorActions for GemmaSpec {
         request: &ActorInvokeRequest,
         source: RemoteAddr,
     ) -> Result<()> {
-        todo!()
+        let input = request.data.get("message");
+
+        if input.is_none() {
+            source.do_send(ActorInvokeResponse::Failure(ActorInvokeError {
+            uuid,
+            task_id: request.task_id,
+            error: ActorError::BadRequest(
+                "REQUEST MUST CONTAINER MESSAGE COLUMN WITH Vec<MESSAGE { role: String, content: String }>".to_string(),
+            ),
+        }));
+
+            return Ok(());
+        }
+
+        let input: Vec<String> = input
+            .expect("MESSAGE")
+            .iter()
+            .map(|x| match x {
+                EntityValue::MESSAGE { role: _, content } => content.clone(),
+                _ => todo!(),
+            })
+            .collect();
+
+        let input = input[0].clone();
+
+        let mut model = GemmaModel::lazy(
+            None, None, None, None, None, None, None, None, None, None, None,
+        )?
+        .lock()
+        .map_anyhow_err()?;
+        let sample_len: usize = model.sample_len;
+        let eos_token = model.eos_token;
+        model.instance.model.clear_kv_cache();
+
+        let mut tokens = model
+            .instance
+            .tokenizer
+            .encode(input, true)
+            .map_err(anyhow::Error::msg)?
+            .get_ids()
+            .to_vec();
+
+        let tokens_len = tokens.len();
+
+        for index in 0..sample_len {
+            if let Some(_text) =
+                model
+                    .instance
+                    .loop_process(tokens.len(), index, &mut tokens, eos_token)?
+            {
+                let text = model
+                    .instance
+                    .tokenizer
+                    .decode(&tokens[tokens_len + index..], true)
+                    .map_err(anyhow::Error::msg)?;
+
+                let result = ActorInvokeResult {
+                    uuid,
+                    task_id: request.task_id,
+                    stream: request.stream,
+                    metadata: HashMap::new(),
+                    data: HashMap::from([(
+                        String::from("content"),
+                        vec![EntityValue::STRING(text)],
+                    )]),
+                };
+
+                let response = ActorInvokeResponse::Success(result);
+                source.do_send(response);
+            } else {
+                break;
+            }
+        }
+
+        let result = ActorInvokeFinish {
+            uuid,
+            task_id: request.task_id,
+            stream: request.stream,
+        };
+
+        let response = ActorInvokeResponse::Finish(result);
+        source.do_send(response);
+
+        Ok(())
     }
 }

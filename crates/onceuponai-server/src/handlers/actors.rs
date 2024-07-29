@@ -185,6 +185,7 @@ fn remove_invoke_task(task_id: &Uuid) {
 pub enum Mappers {
     Base,
     OaiChatCompletions,
+    OaiEmbeddings,
 }
 
 impl Mappers {
@@ -203,6 +204,12 @@ impl Mappers {
                             "content": result.data.get("content").expect("CONTENT").last()
                         }
                     }]
+            }),
+            Mappers::OaiEmbeddings => json!({
+                "object": "list",
+                "data": result.data.get("embeddings").expect("EMBEDDINGS").iter().enumerate().map(|(ix, v)| {
+                    json!({"object": "embedding", "embedding": v, "index": ix})
+                }).collect::<serde_json::Value>()
             }),
         }
     }

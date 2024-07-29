@@ -16,6 +16,13 @@ pub struct ChatCompletionsRequest {
     pub stream: Option<bool>,
 }
 
+#[derive(Deserialize, Serialize, Debug, Clone)]
+pub struct EmbeddingsRequest {
+    pub model: String,
+    pub input: Vec<EntityValue>,
+    pub encoding_format: Option<bool>,
+}
+
 pub async fn v1_chat_completions(
     chat_completions_request: web::Json<ChatCompletionsRequest>,
     app_state: web::Data<AppState>,
@@ -38,6 +45,29 @@ pub async fn v1_chat_completions(
         app_state,
         invoke_request,
         Mappers::OaiChatCompletions,
+    )
+    .await
+}
+
+pub async fn v1_embeddings(
+    embeddings_request: web::Json<EmbeddingsRequest>,
+    app_state: web::Data<AppState>,
+) -> Result<impl Responder, Box<dyn Error>> {
+    let model: Vec<&str> = embeddings_request.model.split('/').collect();
+    let kind: String = model[0].to_string();
+    let name: String = model[1].to_string();
+
+    let invoke_request = InvokeRequest {
+        config: HashMap::new(),
+        data: HashMap::from([("input".to_string(), embeddings_request.input.clone())]),
+        stream: Some(false),
+    };
+    base_invoke(
+        kind,
+        name,
+        app_state,
+        invoke_request,
+        Mappers::OaiEmbeddings,
     )
     .await
 }

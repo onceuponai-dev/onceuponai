@@ -4,6 +4,7 @@ import { fetch } from "../common";
 import { useRouter } from 'vue-router'
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from '@tauri-apps/api/event';
+import { load } from 'js-yaml';
 
 // interfaces
 interface Actor {
@@ -44,16 +45,10 @@ const actorsGallery: any = ref(null);
 const spawnDialog: any = ref(null);
 const spawnActorName: any = ref("");
 const spawnActorKind: any = ref("");
-const spawnActorSpec: any = ref([
-  { "key": "model_repo", "value": "speakleash/Bielik-7B-Instruct-v0.1-GGUF", "type": "string" },
-  { "key": "model_file", "value": "bielik-7b-instruct-v0.1.Q4_K_S.gguf", "type": "string" },
-  { "key": "tokenizer_repo", "value": "speakleash/Bielik-7B-Instruct-v0.1", "type": "string" },
-  { "key": "repeat_last_n", "value": 64, "type": "number" },
-  { "key": "repeat_last_nttt", "value": true, "type": "bool" }
-]);
+const spawnActorSpec: any = ref([]);
 const spawnActorDevice: any = ref("cpu");
 const spawnActorDevices = ['cpu', 'cuda'];
-const spawnActorsTypes = ['string', 'number', 'bool'];
+const spawnActorsTypes = ['string', 'number', 'bool', 'secret'];
 const spawnActorNewPairType = ref("string");
 
 const spawnSearchResults: any = ref([]);
@@ -126,7 +121,8 @@ const closeDialog = () => {
 onMounted(async () => {
   refresh();
   const ag: string = await invoke("actors_gallery");
-  actorsGallery.value = JSON.parse(ag);
+  actorsGallery.value = load(ag);
+  //actorsGallery.value = JSON.parse(ag);
   spawnSearchResults.value = actorsGallery.value.map((a: any) => a.id);
 });
 
@@ -174,6 +170,8 @@ const getInputComponent = (type: any) => {
   switch (type) {
     case 'number':
       return 'v-text-field';
+    case 'secret':
+      return 'v-text-field';
     case 'bool':
       return 'v-checkbox';
     default:
@@ -186,8 +184,21 @@ const getInputLabel = (type: any) => {
       return 'Number';
     case 'bool':
       return 'Boolean';
+    case 'secret':
+      return 'Secret';
     default:
       return 'Value';
+  }
+};
+
+const getInputType = (type: any) => {
+  switch (type) {
+    case 'number':
+      return 'number';
+    case 'secret':
+      return 'password';
+    default:
+      return 'text';
   }
 };
 
@@ -232,8 +243,8 @@ watch(spawnSelectedSearch, (newValue) => {
               <br />
               <br />
               ACTOR LOADING ...
-              <br/>
-              <br/>
+              <br />
+              <br />
               <v-icon icon="$brain" size="x-large" class="rotating"></v-icon>
               <!-- <v-img src="/images/brain.gif" width="100" class="centered-image"></v-img> -->
               <br />
@@ -260,7 +271,7 @@ watch(spawnSelectedSearch, (newValue) => {
 
               <div>{{ item.kind }}</div>
 
-              <p class="text-h4 font-weight-black">{{ item.metadata.name }}</p>
+              <p class="text-h6 font-weight-black">{{ item.metadata.name }}</p>
               <v-divider></v-divider>
             </v-card-text>
             <v-card-actions>
@@ -321,7 +332,7 @@ watch(spawnSelectedSearch, (newValue) => {
               <v-text-field v-model="pair.key" label="Key" class="mr-2 key-field" required></v-text-field>
               <!-- <v-text-field v-model="pair.value" label="Value" required></v-text-field> -->
               <component :is="getInputComponent(pair.type)" v-model="pair.value" :label="getInputLabel(pair.type)"
-                :type="pair.type === 'number' ? 'number' : 'text'" required class="flex-grow-1 mr-2"></component>
+                :type="getInputType(pair.type)" required class="flex-grow-1 mr-2"></component>
               <v-btn icon @click="removePair(index)" variant="text">
                 <v-icon color="red">$delete</v-icon>
               </v-btn>

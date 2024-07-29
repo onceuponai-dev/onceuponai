@@ -19,7 +19,7 @@ use uuid::Uuid;
 pub fn actors_gallery(handle: tauri::AppHandle) -> Result<String, String> {
     let resource_path = handle
         .path()
-        .resolve("resources/actors_gallery.json", BaseDirectory::Resource)
+        .resolve("resources/actors_gallery.yaml", BaseDirectory::Resource)
         .map_str_err()?;
 
     std::fs::read_to_string(resource_path).map_str_err()
