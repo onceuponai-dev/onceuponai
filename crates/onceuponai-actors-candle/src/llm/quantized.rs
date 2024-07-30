@@ -23,7 +23,10 @@ pub struct QuantizedSpec {
     pub repeat_penalty: Option<f32>,
     pub temp: Option<f64>,
     pub top_p: Option<f64>,
+    pub top_k: Option<usize>,
     pub sample_len: Option<usize>,
+    pub gqa: Option<usize>,
+    pub eos_token: Option<String>,
 }
 
 impl ActorActions for QuantizedSpec {
@@ -47,8 +50,13 @@ impl ActorActions for QuantizedSpec {
             self.repeat_penalty,
             self.temp,
             self.top_p,
+            self.top_k,
             self.sample_len,
+            self.gqa,
+            self.eos_token.clone(),
         )?;
+
+        println!("SPEC: {:?}", self);
 
         Ok(())
     }
@@ -76,7 +84,7 @@ impl ActorActions for QuantizedSpec {
             .collect();
 
         let mut model = QuantizedModel::lazy(
-            None, None, None, None, None, None, None, None, None, None, None,
+            None, None, None, None, None, None, None, None, None, None, None, None, None, None,
         )?
         .lock()
         .map_anyhow_err()?;
@@ -86,6 +94,7 @@ impl ActorActions for QuantizedSpec {
         let repeat_penalty = model.repeat_penalty;
         let temp = model.temp;
         let top_p = model.top_p;
+        let top_k = model.top_k;
         let sample_len = model.sample_len;
 
         let results = input
@@ -100,6 +109,7 @@ impl ActorActions for QuantizedSpec {
                     Some(repeat_penalty),
                     Some(temp),
                     top_p,
+                    top_k,
                 )
             })
             .collect::<Result<Vec<String>, _>>()?;
@@ -151,7 +161,7 @@ impl ActorActions for QuantizedSpec {
         let input = input[0].clone();
 
         let mut model = QuantizedModel::lazy(
-            None, None, None, None, None, None, None, None, None, None, None,
+            None, None, None, None, None, None, None, None, None, None, None, None, None, None,
         )?
         .lock()
         .map_anyhow_err()?;
@@ -160,10 +170,11 @@ impl ActorActions for QuantizedSpec {
         let repeat_penalty = model.repeat_penalty;
         let temp = model.temp;
         let top_p = model.top_p;
+        let top_k = model.top_k;
 
         let prep = model
             .instance
-            .prepare(&input, Some(seed), Some(temp), top_p)?;
+            .prepare(&input, Some(seed), Some(temp), top_p, top_k)?;
         let prompt_tokens_len = prep.0;
         let mut all_tokens = prep.1;
         let mut logits_processor = prep.2;

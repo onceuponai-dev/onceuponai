@@ -2,7 +2,7 @@ use super::parse_device;
 use anyhow::Result;
 use candle_core::quantized::{ggml_file, gguf_file};
 use candle_core::{Device, Tensor};
-use candle_transformers::generation::LogitsProcessor;
+use candle_transformers::generation::{LogitsProcessor, Sampling};
 use candle_transformers::models::quantized_llama as model;
 use model::ModelWeights;
 use once_cell::sync::OnceCell;
@@ -26,6 +26,7 @@ pub struct QuantizedInstance {
     pub repeat_penalty: f32,
     pub temp: f64,
     pub top_p: Option<f64>,
+    pub top_k: Option<usize>,
     pub sample_len: usize,
 }
 
@@ -41,11 +42,12 @@ impl QuantizedModel {
         repeat_penalty: Option<f32>,
         temp: Option<f64>,
         top_p: Option<f64>,
+        top_k: Option<usize>,
     ) -> Result<String> {
         let repeat_penalty: f32 = repeat_penalty.unwrap_or(1.1);
         let repeat_last_n: usize = repeat_last_n.unwrap_or(64);
 
-        let prep = self.prepare(prompt, seed, temp, top_p)?;
+        let prep = self.prepare(prompt, seed, temp, top_p, top_k)?;
         let prompt_tokens_len = prep.0;
         let mut all_tokens = prep.1;
         let mut logits_processor = prep.2;
@@ -76,6 +78,7 @@ impl QuantizedModel {
         seed: Option<u64>,
         temperature: Option<f64>,
         top_p: Option<f64>,
+        top_k: Option<usize>,
     ) -> Result<(usize, Vec<u32>, LogitsProcessor)> {
         let prompt_tokens = self
             .tokenizer
@@ -88,7 +91,20 @@ impl QuantizedModel {
         let temperature = temperature.unwrap_or(0.8);
 
         let mut all_tokens = vec![];
-        let mut logits_processor = LogitsProcessor::new(seed, Some(temperature), top_p);
+        // let mut logits_processor = LogitsProcessor::new(seed, Some(temperature), top_p);
+        let mut logits_processor = {
+            let sampling = if temperature <= 0. {
+                Sampling::ArgMax
+            } else {
+                match (top_k, top_p) {
+                    (None, None) => Sampling::All { temperature },
+                    (Some(k), None) => Sampling::TopK { k, temperature },
+                    (None, Some(p)) => Sampling::TopP { p, temperature },
+                    (Some(k), Some(p)) => Sampling::TopKThenTopP { k, p, temperature },
+                }
+            };
+            LogitsProcessor::from_sampling(seed, sampling)
+        };
 
         let input = Tensor::new(prompt_tokens.as_slice(), &self.device)?.unsqueeze(0)?;
         let logits = self.model.forward(&input, 0)?;
@@ -153,7 +169,10 @@ impl QuantizedModel {
         repeat_penalty: Option<f32>,
         temp: Option<f64>,
         top_p: Option<f64>,
+        top_k: Option<usize>,
         sample_len: Option<usize>,
+        gqa: Option<usize>,
+        eos_token: Option<String>,
     ) -> Result<&'a Arc<Mutex<QuantizedInstance>>> {
         if QUANTIZED_INSTANCE.get().is_none() {
             let model = QuantizedModel::load(
@@ -162,11 +181,16 @@ impl QuantizedModel {
                 model_revision,
                 tokenizer_repo,
                 device,
+                gqa,
             )?;
 
-            let eos_token = "</s>";
+            let eos_token = match eos_token {
+                Some(eos) => eos,
+                None => "</s>".to_string(),
+            };
+
             let vocab = model.tokenizer.get_vocab(true).clone();
-            let eos_token = *vocab.get(eos_token).ok_or_err("EOS_TOKEN")?;
+            let eos_token = *vocab.get(&eos_token).ok_or_err("EOS_TOKEN")?;
 
             let seed: u64 = seed.unwrap_or(299792458);
             let temp = temp.unwrap_or(0.8);
@@ -182,6 +206,7 @@ impl QuantizedModel {
                 repeat_penalty,
                 temp,
                 top_p,
+                top_k,
                 sample_len,
             };
 
@@ -199,13 +224,12 @@ impl QuantizedModel {
         model_revision: Option<String>,
         tokenizer_repo: Option<String>,
         device_type: Option<String>,
+        gqa: Option<usize>,
     ) -> Result<QuantizedModel> {
-        let base_repo_id = (model_repo, model_file);
-
         let model_path = if model_file.starts_with("file://") {
             std::path::PathBuf::from(model_file.replace("file://", ""))
         } else {
-            hf_hub_get_path(base_repo_id.0, base_repo_id.1, None, model_revision)?
+            hf_hub_get_path(model_repo, model_file, None, model_revision)?
         };
 
         let tokenizer_repo = tokenizer_repo.unwrap_or(model_repo.to_string());
@@ -219,9 +243,17 @@ impl QuantizedModel {
         let device = parse_device(device_type)?;
         let tokenizer = Tokenizer::from_bytes(&tokenizer).map_anyhow_err()?;
 
-        let mut file = std::fs::File::open(model_path)?;
-        let model_content = gguf_file::Content::read(&mut file)?;
-        let model = ModelWeights::from_gguf(model_content, &mut file, &device)?;
+        let mut file = std::fs::File::open(&model_path)?;
+        let model = match model_path.extension().and_then(|ex| ex.to_str()) {
+            Some("gguf") => {
+                let model_content = gguf_file::Content::read(&mut file)?;
+                ModelWeights::from_gguf(model_content, &mut file, &device)?
+            }
+            Some("ggml" | "bin") | Some(_) | None => {
+                let model_content = ggml_file::Content::read(&mut file, &device)?;
+                ModelWeights::from_ggml(model_content, gqa.expect("GQA"))?
+            }
+        };
 
         Ok(QuantizedModel {
             model,
@@ -239,6 +271,7 @@ async fn test_bielik() -> Result<()> {
         None,
         Some("speakleash/Bielik-7B-Instruct-v0.1".to_string()),
         Some("cuda".to_string()),
+        None,
     )?;
 
     let eos_token = "</s>";
@@ -249,6 +282,7 @@ async fn test_bielik() -> Result<()> {
         "Jak ugotować żurek ?",
         500,
         eos_token,
+        None,
         None,
         None,
         None,
@@ -268,12 +302,14 @@ async fn test_phi3() -> Result<()> {
         Some("5eef2ce24766d31909c0b269fe90c817a8f263fb".to_string()),
         Some("microsoft/Phi-3-mini-4k-instruct".to_string()),
         Some("cuda".to_string()),
+        None,
     )?;
 
     let resp = phi3.invoke(
         "Write loop in python",
         500,
         200,
+        None,
         None,
         None,
         None,

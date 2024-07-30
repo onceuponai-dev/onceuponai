@@ -103,6 +103,9 @@
     - key: model_file
       value: bielik-7b-instruct-v0.1.Q4_K_S.gguf
       type: string
+    - key: model_revision
+      value: null
+      type: string
     - key: tokenizer_repo
       value: speakleash/Bielik-7B-Instruct-v0.1
       type: string
@@ -118,10 +121,24 @@
     - key: temp
       value: 0.8
       type: number
+    - key: top_p
+      value: null
+      type: number
+    - key: top_k
+      value: null
+      type: number
     - key: sample_len
       value: 1000
       type: number
-      
+    - key: gqa
+      value: 8
+      type: number
+    - key: eos_token
+      value: </s>
+      type: string
+
+
+
 - id: quantized/llama3
   sidecar: onceuponai-actors-candle
   kind: quantized
@@ -136,6 +153,9 @@
       type: string
     - key: model_file
       value: bielik-7b-instruct-v0.1.Q4_K_S.gguf
+      type: string
+    - key: model_revision
+      value: null
       type: string
     - key: tokenizer_repo
       value: speakleash/Bielik-7B-Instruct-v0.1
