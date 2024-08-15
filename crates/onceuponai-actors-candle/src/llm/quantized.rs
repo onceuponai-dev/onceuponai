@@ -26,6 +26,7 @@ pub struct QuantizedSpec {
     pub top_k: Option<usize>,
     pub sample_len: Option<usize>,
     pub gqa: Option<usize>,
+    pub force_dmmv: Option<bool>,
     pub eos_token: Option<String>,
 }
 
@@ -53,6 +54,7 @@ impl ActorActions for QuantizedSpec {
             self.top_k,
             self.sample_len,
             self.gqa,
+            self.force_dmmv,
             self.eos_token.clone(),
         )?;
 
@@ -85,6 +87,7 @@ impl ActorActions for QuantizedSpec {
 
         let mut model = QuantizedModel::lazy(
             None, None, None, None, None, None, None, None, None, None, None, None, None, None,
+            None,
         )?
         .lock()
         .map_anyhow_err()?;
@@ -162,6 +165,7 @@ impl ActorActions for QuantizedSpec {
 
         let mut model = QuantizedModel::lazy(
             None, None, None, None, None, None, None, None, None, None, None, None, None, None,
+            None,
         )?
         .lock()
         .map_anyhow_err()?;

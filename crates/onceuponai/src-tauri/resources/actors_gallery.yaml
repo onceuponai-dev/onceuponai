@@ -88,6 +88,9 @@
     - key: sample_len
       value: 1000
       type: number
+
+
+# QUANTIZED MODELS
 - id: quantized/bielik
   sidecar: onceuponai-actors-candle
   kind: quantized
@@ -133,11 +136,12 @@
     - key: gqa
       value: 8
       type: number
+    - key: force_dmmv
+      value: false
+      type: bool
     - key: eos_token
       value: </s>
       type: string
-
-
 
 - id: quantized/llama3
   sidecar: onceuponai-actors-candle
@@ -172,6 +176,24 @@
     - key: temp
       value: 0.8
       type: number
+    - key: top_p
+      value: null
+      type: number
+    - key: top_k
+      value: null
+      type: number
     - key: sample_len
       value: 1000
       type: number
+    - key: gqa
+      value: 8
+      type: number
+    - key: force_dmmv
+      value: false
+      type: bool
+    - key: eos_token
+      value: </s>
+      type: string
+
+
+

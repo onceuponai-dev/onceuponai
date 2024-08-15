@@ -172,6 +172,7 @@ impl QuantizedModel {
         top_k: Option<usize>,
         sample_len: Option<usize>,
         gqa: Option<usize>,
+        force_dmmv: Option<bool>,
         eos_token: Option<String>,
     ) -> Result<&'a Arc<Mutex<QuantizedInstance>>> {
         if QUANTIZED_INSTANCE.get().is_none() {
@@ -182,6 +183,7 @@ impl QuantizedModel {
                 tokenizer_repo,
                 device,
                 gqa,
+                force_dmmv,
             )?;
 
             let eos_token = match eos_token {
@@ -218,6 +220,7 @@ impl QuantizedModel {
         Ok(QUANTIZED_INSTANCE.get().expect("QUANTIZED_INSTANCE"))
     }
 
+    #[allow(unused)]
     pub fn load(
         model_repo: &str,
         model_file: &str,
@@ -225,7 +228,17 @@ impl QuantizedModel {
         tokenizer_repo: Option<String>,
         device_type: Option<String>,
         gqa: Option<usize>,
+        force_dmmv: Option<bool>,
     ) -> Result<QuantizedModel> {
+        #[cfg(feature = "cuda")]
+        candle_core::quantized::cuda::set_force_dmmv(force_dmmv.unwrap_or(false));
+
+        #[cfg(feature = "cuda")]
+        candle_core::cuda::set_gemm_reduced_precision_f16(true);
+
+        #[cfg(feature = "cuda")]
+        candle_core::cuda::set_gemm_reduced_precision_bf16(true);
+
         let model_path = if model_file.starts_with("file://") {
             std::path::PathBuf::from(model_file.replace("file://", ""))
         } else {
@@ -272,6 +285,7 @@ async fn test_bielik() -> Result<()> {
         Some("speakleash/Bielik-7B-Instruct-v0.1".to_string()),
         Some("cuda".to_string()),
         None,
+        None,
     )?;
 
     let eos_token = "</s>";
@@ -302,6 +316,7 @@ async fn test_phi3() -> Result<()> {
         Some("5eef2ce24766d31909c0b269fe90c817a8f263fb".to_string()),
         Some("microsoft/Phi-3-mini-4k-instruct".to_string()),
         Some("cuda".to_string()),
+        None,
         None,
     )?;
 

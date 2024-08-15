@@ -7,13 +7,13 @@ Authorization: Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJyb290IiwiZ
 
 GET http://rust:8080/api/actors HTTP/1.1
 content-type: application/json
-Authorization: Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJyb290IiwiZXhwIjoxNzIyMzgyNjU2fQ.RuxMYqANIpRlBxO_klRPpUghhjSmaltioSWMjQmsXhM
+Authorization: Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJyb290IiwiZXhwIjoxNzIyMzgzMjA3fQ.2WY1--OluQlhUST3Yq0tDczxU6XaDVAg-X91lOstb4U
 
 ###
 
-POST http://rust:8080/api/invoke/e5/multilingual HTTP/1.1
+POST http://rust:8080/api/invoke/e5/multilingual-e5-small HTTP/1.1
 content-type: application/json
-Authorization: Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJyb290IiwiZXhwIjoxNzIyMzgyNjU2fQ.RuxMYqANIpRlBxO_klRPpUghhjSmaltioSWMjQmsXhM
+Authorization: Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJyb290IiwiZXhwIjoxNzIyMzgzODQ4fQ.xTDvEaPNloTeAc745qKuxVb24zZjy7ZzQIKWg7g0vnw
 
 {
     "stream": false,
@@ -22,6 +22,18 @@ Authorization: Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJyb290IiwiZ
         "input": ["What is rust"]
     }
 }
+
+###
+
+POST http://rust:8080/v1/embeddings HTTP/1.1
+content-type: application/json
+Authorization: Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJyb290IiwiZXhwIjoxNzIyMzgzODQ4fQ.xTDvEaPNloTeAc745qKuxVb24zZjy7ZzQIKWg7g0vnw
+
+{
+    "model": "e5/multilingual-e5-small",
+    "input": ["What is rust"]
+}
+
 
 ###
 
