@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, nextTick, onMounted } from "vue";
+import { ref, onMounted } from "vue";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from '@tauri-apps/api/event';
 import { fetch } from "../common";
@@ -8,15 +8,6 @@ interface Message {
   content: string;
   role: 'user' | 'assistant' | 'system';
 }
-
-interface Choice {
-  message: Message
-}
-
-interface ChatResponse {
-  choices: Choice[];
-}
-
 
 const inputMessage = ref('');
 const messages = ref<Message[]>([]);
