@@ -91,13 +91,23 @@ jobs:
     #  run: npm install
 
     - uses: Swatinem/rust-cache@v2
-    - name: build and lint with clippy
+    - name: build and lint with clippy - candle
       working-directory: ./crates/onceuponai-actors-candle
       run: cargo clippy --no-default-features --tests
 
-    - name: Check no default features
+    - name: Check no default features - candle
       working-directory: ./crates/onceuponai-actors-candle
       run: cargo check --no-default-features
+
+    - uses: Swatinem/rust-cache@v2
+    - name: build and lint with clippy - server
+      working-directory: ./crates/onceuponai-server
+      run: cargo clippy --no-default-features --tests
+
+    - name: Check no default features - server
+      working-directory: ./crates/onceuponai-server
+      run: cargo check --no-default-features
+
 
     #- uses: actions/checkout@v4
     #- name: Build Actors Candle
