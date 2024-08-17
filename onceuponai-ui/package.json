@@ -11,7 +11,7 @@
   },
   "dependencies": {
     "@types/vue-router": "^2.0.0",
-    "axios": "^1.6.0",
+    "axios": "^1.7.4",
     "rete": "2.0.1",
     "rete-area-plugin": "2.0.0",
     "rete-connection-plugin": "2.0.0",
