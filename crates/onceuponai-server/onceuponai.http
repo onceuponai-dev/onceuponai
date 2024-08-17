@@ -1,0 +1,64 @@
+
+GET http://rust:8080/api/health HTTP/1.1
+content-type: application/json
+Authorization: Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJyb290IiwiZXhwIjoxNzIyMzgyNjU2fQ.RuxMYqANIpRlBxO_klRPpUghhjSmaltioSWMjQmsXhM
+
+###
+
+GET http://rust:8080/api/actors HTTP/1.1
+content-type: application/json
+Authorization: Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJyb290IiwiZXhwIjoxNzIyMzgzMjA3fQ.2WY1--OluQlhUST3Yq0tDczxU6XaDVAg-X91lOstb4U
+
+###
+
+POST http://rust:8080/api/invoke/e5/multilingual-e5-small HTTP/1.1
+content-type: application/json
+Authorization: Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJyb290IiwiZXhwIjoxNzIyMzgzODQ4fQ.xTDvEaPNloTeAc745qKuxVb24zZjy7ZzQIKWg7g0vnw
+
+{
+    "stream": false,
+    "config": {},
+    "data": {
+        "input": ["What is rust"]
+    }
+}
+
+###
+
+POST http://rust:8080/v1/embeddings HTTP/1.1
+content-type: application/json
+Authorization: Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJyb290IiwiZXhwIjoxNzIyMzgzODQ4fQ.xTDvEaPNloTeAc745qKuxVb24zZjy7ZzQIKWg7g0vnw
+
+{
+    "model": "e5/multilingual-e5-small",
+    "input": ["What is rust"]
+}
+
+
+###
+
+POST http://rust:8080/api/invoke/quantized/bielik HTTP/1.1
+content-type: application/json
+Authorization: Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJxYmEuc29sQGdtYWlsLmNvbSIsImV4cCI6MTcxOTc3MTA5OX0.b2qIq9hyGmfAgGdo5IAJHRwEyVVLp0AqSapckf4uzBk
+
+{
+    "stream": false,
+    "config": {},
+    "data": {
+        "message": [{"content":"Skorzystaj z poniższych fragmentów kontekstu, aby odpowiedzieć na pytanie na końcu. Jeśli odpowiedzi nie ma w kontekście, po prostu powiedz, że nie wiesz, nie próbuj wymyślać odpowiedzi. Nie dodawaj nic od siebie, podaj tylko odpowiedź. \n Kontekst: \n Ryby umyj pod bieżącą wodą, osusz papierowym ręcznikiem. Sprawdź, czy wnętrzności zostały dokładnie usunięte, oczyść jamę brzuszną. Cytryny umyj i pokrój w cienkie plasterki. Czosnek obierz i pokrój na cienkie plasterki. W jamie brzusznej każdego pstrąga umieść kilka plasterków cytryny, czosnek oraz gałązki tymianku i koperku. To doda rybie aromatycznych smaków. Zewnętrzną stronę ryb natrzyj oliwą z oliwek, solą i pieprzem. Możesz również delikatnie naciąć skórę w kilku miejscach, co pozwoli lepiej wchłonąć przyprawy. Piekarnik rozgrzej do 200°C. Pstrągi ułóż na lekko natłuszczonej blasze lub w naczyniu żaroodpornym. Piecz ryby przez około 20-25 minut, aż skórka będzie chrupiąca i złocista, a mięso łatwo oddziela się od ości. Gotowe ryby delikatnie przełóż na talerze. Możesz podać je z dodatkowymi plasterkami świeżej cytryny i świeżym koprem. Doskonale komponują się z lekkimi sałatkami lub gotowanymi młodymi ziemniakami. \n Pytanie:\n W jakiej temperaturze piec rybę ?", "role":"user"}]
+    }
+}
+
+###
+
+POST http://rust:8080/api/invoke/quantized/bielik HTTP/1.1
+content-type: application/json
+Authorization: Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJxYmEuc29sQGdtYWlsLmNvbSIsImV4cCI6MTcxOTc3MTA5OX0.b2qIq9hyGmfAgGdo5IAJHRwEyVVLp0AqSapckf4uzBk
+
+{
+    "stream": true,
+    "config": {},
+    "data": {
+        "message": [{"content":"Jak ugotować żurek ?", "role":"user"}]
+    }
+}

@@ -1,0 +1,31 @@
+[package]
+name = "onceuponai-actors-candle"
+version.workspace = true
+edition.workspace = true
+description.workspace = true
+repository.workspace = true
+keywords.workspace = true
+categories.workspace = true
+license.workspace = true
+
+[dependencies]
+actix-telepathy = { workspace = true }
+actix-broker = { workspace = true }
+actix-rt = { workspace = true }
+anyhow = { workspace = true }
+clap = { workspace = true }
+log = { workspace = true }
+onceuponai-abstractions= { path = "../onceuponai-abstractions" }
+onceuponai-actors= { path = "../onceuponai-actors" }
+onceuponai-candle= { path = "../onceuponai-candle" }
+onceuponai-core= { path = "../onceuponai-core" }
+serde = { workspace = true }
+uuid = { workspace = true }
+
+[target.x86_64-pc-windows-gnu]
+linker = "/usr/bin/x86_64-w64-mingw32-gcc"
+
+[features]
+default = []
+cuda = ["onceuponai-candle/cuda"]
+

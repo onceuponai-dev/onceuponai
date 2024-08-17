@@ -8,12 +8,6 @@ spec:
   log_level: error
   workers: 0
   invoke_timeout: 15
-  auth:
-    oidc:
-      issuer_url: https://login.microsoftonline.com/${OIDC_TENANT_ID}/v2.0
-      client_id: ${OIDC_CLIENT_ID}
-      client_secret: ${OIDC_CLIENT_SECRET}
-      redirect_url: ${OIDC_REDIRECT_URL}
-  session_key: ${SESSION_KEY} # openssl rand -base64 32
-  personal_access_token_secret: ${PAT_SECRET} # openssl rand -base64 32
+  session_key: HyAZwY1zOgGa0JfQqvJuMz03o7bkp8t0jmQd9E/FckEqAWN79sR12F+2o5rYiJqe3TFk3+bvtZU6Ujn7bY926g== # openssl rand -base64 32
+  personal_access_token_secret: MY_SECURE_PAT_SECRET # openssl rand -base64 32
 
