@@ -30,11 +30,29 @@ jobs:
 
     - uses: actions/checkout@v4
 
-    #- name: install dependencies (ubuntu only)
-    #  if: matrix.platform == 'ubuntu-22.04' # This must match the platform value defined above.
-    #  run: |
-    #    sudo apt-get update
-    #    sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf
+    - name: Set up cache for apt packages
+      id: cache-apt
+      uses: actions/cache@v3
+      with:
+        path: /var/cache/apt
+        key: ${{ runner.os }}-apt-cache-${{ hashFiles('your-package-list-file') }}
+        restore-keys: |
+          ${{ runner.os }}-apt-cache-
+
+    - name: Set up cache for installed apt packages
+      id: cache-apt-lib
+      uses: actions/cache@v3
+      with:
+        path: /var/lib/apt
+        key: ${{ runner.os }}-apt-lib-${{ hashFiles('your-package-list-file') }}
+        restore-keys: |
+          ${{ runner.os }}-apt-lib-
+
+    - name: install dependencies (ubuntu only)
+      if: matrix.platform == 'ubuntu-22.04' # This must match the platform value defined above.
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf
 
     #- name: setup node
     #  uses: actions/setup-node@v4
