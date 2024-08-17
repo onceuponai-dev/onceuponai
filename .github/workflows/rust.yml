@@ -60,13 +60,8 @@ jobs:
       # If you don't have `beforeBuildCommand` configured you may want to build your frontend here too.
       run: yarn install # change this to npm or pnpm depending on which one you use.
 
+    - uses: actions/checkout@v4
     - name: Build Actors Candle
-      uses: actions/checkout@v4
-      working-directory: ./crates/onceuponai-actors-candle
-      run: cargo build --verbose
-
-    - name: Build Actors Candle
-      uses: actions/checkout@v4
       working-directory: ./crates/onceuponai-actors-candle
       run: cargo build --verbose
 
