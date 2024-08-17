@@ -66,10 +66,10 @@ jobs:
       run: cargo build --verbose
 
     - uses: tauri-apps/tauri-action@v0
-      working-directory: ./crates/onceuponai
       #env:
       #  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
+        projectPath: ./crates/onceuponai
         args: ${{ matrix.args }}
 
 #    - name: Run tests
