@@ -1,0 +1,129 @@
+name: Rust
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  format:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install minimal stable with clippy and rustfmt
+        uses: actions-rs/toolchain@v1
+        with:
+          profile: default
+          toolchain: stable
+          override: true
+      - name: Format
+        run: cargo fmt -- --check
+
+  build:
+    permissions:
+      contents: write
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          #- platform: 'macos-latest' # for Arm based macs (M1 and above).
+          #  args: '--target aarch64-apple-darwin'
+          #- platform: 'macos-latest' # for Intel based macs.
+          #  args: '--target x86_64-apple-darwin'
+          - platform: 'ubuntu-latest'
+            args: ''
+          #- platform: 'windows-latest'
+          #  args: ''
+
+    runs-on: ${{ matrix.platform }}
+
+    steps:
+
+    - uses: actions/checkout@v4
+
+    - name: Set up cache for apt packages
+      id: cache-apt
+      uses: actions/cache@v3
+      with:
+        path: |
+          /var/cache/apt/archives
+          !/var/cache/apt/archives/lock
+        key: ${{ runner.os }}-apt-cache-${{ hashFiles('your-package-list-file') }}
+        restore-keys: |
+          ${{ runner.os }}-apt-cache-
+
+    - name: Set up cache for installed apt packages
+      id: cache-apt-lib
+      uses: actions/cache@v3
+      with:
+        path: |
+          /var/lib/apt
+          !/var/lib/apt/lists/lock
+        key: ${{ runner.os }}-apt-lib-${{ hashFiles('your-package-list-file') }}
+        restore-keys: |
+          ${{ runner.os }}-apt-lib-
+
+    - name: install dependencies (ubuntu only)
+      if: matrix.platform == 'ubuntu-latest'
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf
+
+    #- name: setup node
+    #  uses: actions/setup-node@v4
+    #  with:
+    #    node-version: lts/*
+    #    cache: 'yarn' # Set this to npm, yarn or pnpm.
+
+    #- name: install Rust stable
+    #  uses: dtolnay/rust-toolchain@stable # Set this to dtolnay/rust-toolchain@nightly
+    #  with:
+    #    # Those targets are only used on macos runners so it's in an `if` to slightly speed up windows and linux builds.
+    #    targets: ${{ matrix.platform == 'macos-latest' && 'aarch64-apple-darwin,x86_64-apple-darwin' || '' }}
+
+    #- name: Rust cache
+    #  uses: swatinem/rust-cache@v2
+    #  with:
+    #    workspaces: './src-tauri -> target'
+
+    #- name: install frontend dependencies
+    #  working-directory: ./crates/
+    #  run: npm install
+
+    - uses: Swatinem/rust-cache@v2
+    - name: build and lint with clippy - candle
+      working-directory: ./crates/onceuponai-actors-candle
+      run: cargo clippy --no-default-features --tests
+
+    - name: Check no default features - candle
+      working-directory: ./crates/onceuponai-actors-candle
+      run: cargo check --no-default-features
+
+    - uses: Swatinem/rust-cache@v2
+    - name: build and lint with clippy - server
+      working-directory: ./crates/onceuponai-server
+      run: cargo clippy --no-default-features --tests
+
+    - name: Check no default features - server
+      working-directory: ./crates/onceuponai-server
+      run: cargo check --no-default-features
+
+
+    #- uses: actions/checkout@v4
+    #- name: Build Actors Candle
+    #  working-directory: ./crates/onceuponai-actors-candle
+    #  run: cargo build --verbose
+
+    #- uses: tauri-apps/tauri-action@v0
+    #  #env:
+    #  #  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    #  with:
+    #    projectPath: ./crates/onceuponai
+    #    args: ${{ matrix.args }}
+
+#    - name: Run tests
+#      run: cargo test --verbose
