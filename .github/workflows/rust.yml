@@ -49,7 +49,9 @@ jobs:
       id: cache-apt
       uses: actions/cache@v3
       with:
-        path: /var/cache/apt
+        path: |
+          /var/cache/apt/archives
+          !/var/cache/apt/archives/lock
         key: ${{ runner.os }}-apt-cache-${{ hashFiles('your-package-list-file') }}
         restore-keys: |
           ${{ runner.os }}-apt-cache-
@@ -58,7 +60,9 @@ jobs:
       id: cache-apt-lib
       uses: actions/cache@v3
       with:
-        path: /var/lib/apt
+        path: |
+          /var/lib/apt
+          !/var/lib/apt/lists/lock
         key: ${{ runner.os }}-apt-lib-${{ hashFiles('your-package-list-file') }}
         restore-keys: |
           ${{ runner.os }}-apt-lib-
