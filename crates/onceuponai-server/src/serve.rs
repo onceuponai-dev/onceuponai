@@ -2,7 +2,7 @@ use crate::guards::AuthGuard;
 use crate::handlers::actors::{connected_actors, invoke};
 use crate::handlers::oai::{v1_chat_completions, v1_embeddings};
 use crate::handlers::{
-    self, assets_css, assets_js, health, index_html, ASSETS_CSS_HASH, ASSETS_JS_HASH,
+    self, assets_css, assets_js, favicon, health, index_html, logo, ASSETS_CSS_HASH, ASSETS_JS_HASH,
 };
 use actix::Addr;
 use actix_session::{storage::CookieSessionStore, SessionMiddleware};
@@ -69,6 +69,8 @@ pub async fn serve(spec: MainActorSpec, addr: Addr<MainActor>) -> std::io::Resul
                 &format!("/assets/index-{}.css", ASSETS_CSS_HASH),
                 web::get().to(assets_css),
             )
+            .route("/ui/images/logo100.png", web::get().to(logo))
+            .route("/favicon.ico", web::get().to(favicon))
             .route("/health", web::get().to(health));
 
         if sp.is_oidc() {

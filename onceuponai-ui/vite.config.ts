@@ -12,7 +12,7 @@ export default defineConfig(({ command, mode }) => {
       vue(),
     ],
     build: {
-      outDir: '../onceuponai/ui/'
+      outDir: '../crates/onceuponai-server/ui/'
     },
     resolve: {
       alias: {
