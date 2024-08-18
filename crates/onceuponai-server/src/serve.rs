@@ -13,7 +13,6 @@ use anyhow::Result;
 use base64::{engine::general_purpose, Engine as _};
 use num_traits::Zero;
 use onceuponai_actors::actors::main_actor::{MainActor, MainActorSpec};
-use onceuponai_core::common::generate_token;
 use onceuponai_core::common::ResultExt;
 
 fn get_secret_key(spec: &MainActorSpec) -> Result<Key> {
@@ -27,7 +26,11 @@ pub struct AppState {
     pub spec: MainActorSpec,
 }
 
-pub async fn serve(spec: MainActorSpec, addr: Addr<MainActor>) -> std::io::Result<()> {
+pub async fn serve(
+    spec: MainActorSpec,
+    addr: Addr<MainActor>,
+    auth_token: String,
+) -> std::io::Result<()> {
     let secret_key = get_secret_key(&spec).map_io_err()?;
     let mut sp = spec.clone();
     if let Some(v) = spec.log_level {
@@ -35,12 +38,11 @@ pub async fn serve(spec: MainActorSpec, addr: Addr<MainActor>) -> std::io::Resul
     }
 
     if !sp.is_oidc() {
-        let _auth_token = generate_token(50);
-        sp._auth_token_set(_auth_token.clone());
+        sp._auth_token_set(auth_token.clone());
         // warn!("Auth token ");
         println!(
             "Server running on http://{}:{}/login?token={}",
-            spec.server_host, spec.server_port, _auth_token
+            spec.server_host, spec.server_port, auth_token
         );
     } else {
         println!(

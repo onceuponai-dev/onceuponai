@@ -1,5 +1,4 @@
 import { createRouter, createWebHashHistory } from 'vue-router';
-import HomeComponent from '@/components/Home.vue';
 import PromptsComponent from '@/components/Prompts.vue';
 import StoresComponent from '@/components/Stores.vue';
 import TermsComponent from '@/components/Terms.vue';
@@ -15,7 +14,7 @@ const routes: Array<any> = [
     path: '/',
     name: 'Home',
     components: {
-      default: HomeComponent,
+      default: ActorsComponent,
       footer: FooterComponent
     },
   },

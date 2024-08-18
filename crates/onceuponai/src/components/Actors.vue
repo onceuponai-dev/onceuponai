@@ -68,6 +68,8 @@ interface ModelsYaml {
 const router = useRouter();
 
 // refs
+
+const webUI = ref("");
 const dialog: any = ref(false);
 const selectedModel = ref<Actor | null>(null);
 const actors = ref<Actor[]>([]);
@@ -327,6 +329,16 @@ const getInputType = (type: any) => {
 const onSearch = () => {
 };
 
+const config: any = await invoke("config");
+const copyUrl = () => {
+  webUI.value = `${config.base_url}/login?token=${config.auth_token}`;
+  navigator.clipboard.writeText(webUI.value).then(() => {
+    console.log('Text copied to clipboard');
+  }).catch((err) => {
+    console.error('Failed to copy text: ', err);
+  });
+}
+
 
 watch(spawnSelectedSearch, (newValue) => {
   console.log("NEW ITEM" + newValue);
@@ -348,6 +360,9 @@ watch(spawnSelectedSearch, (newValue) => {
     <v-btn @click="refresh" prepend-icon="$refresh" variant="text">REFRESH</v-btn>
     &nbsp;
     <v-btn @click="spawnDialog = true" prepend-icon="$power" variant="text">SPAWN</v-btn>
+    &nbsp;
+    <v-btn @click="copyUrl" prepend-icon="$web" variant="text">COPY WEB URL</v-btn>
+
 
     <v-divider></v-divider>
 

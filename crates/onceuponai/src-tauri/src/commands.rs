@@ -6,6 +6,7 @@ use futures::StreamExt;
 use onceuponai_actors::abstractions::ActorMetadata;
 use onceuponai_core::{
     common::{serialize_and_encode, ResultExt, SerializationType},
+    config,
     notifications::{Notification, NotificationLevel},
 };
 use onceuponai_server::handlers::oai::ChatCompletionsRequest;
@@ -118,6 +119,7 @@ pub fn config(handle: AppHandle) -> Result<TauriAppConfig, String> {
     let state: State<TauriAppState> = handle.state();
     let config = state.config.lock().map_str_err()?;
     Ok(TauriAppConfig {
+        auth_token: config.auth_token.clone(),
         personal_token: config.personal_token.clone(),
         base_url: config.base_url.clone(),
         actor_seed: config.actor_seed.clone(),
