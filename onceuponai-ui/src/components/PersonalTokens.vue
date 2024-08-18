@@ -90,11 +90,11 @@ export default defineComponent({
         <v-text-field v-model="expirationDays" type="number" label="Expiration days" />
       </v-col>
       <v-col cols="1">
-        <v-btn size="large" @click="generateToken" icon="mdi-key-plus"></v-btn>
+        <v-btn size="large" @click="generateToken" icon="$keyPlus"></v-btn>
       </v-col>
 
       <v-col cols="5">
-        <v-text-field v-model="patTokenDisplay" append-icon="mdi-content-copy" @click:append="copyPat"></v-text-field>
+        <v-text-field v-model="patTokenDisplay" append-icon="$contentCopy" @click:append="copyPat"></v-text-field>
       </v-col>
       <v-col cols="1">
         <div v-if="tooltipVisible" class="tooltip">

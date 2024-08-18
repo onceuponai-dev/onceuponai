@@ -20,30 +20,15 @@ export default defineComponent({
 
     const drawer: any = ref(true);
     const items: any = ref([
-      { title: 'ACTORS', icon: 'mdi-brain', route: '/actors' },
-      { title: 'CHAT', icon: 'mdi-chat', route: '/chat' },
-      { title: 'DATASETS', icon: 'mdi-database', route: '/stores' },
-      { title: 'EMBEDDINGS', icon: 'mdi-vector-triangle', route: '/embeddings' },
-      { title: 'PROMPTS', icon: 'mdi-code-brackets', route: '/prompts' },
-      { title: 'DASHBOARD', icon: 'mdi-view-dashboard', route: '/dashboard' },
-      { title: 'PERSONAL TOKENS', icon: 'mdi-account-key', route: '/personal-tokens' },
-      { title: 'SUPPORT', icon: 'mdi-help-circle', route: '/support' },
+      { title: 'ACTORS', icon: '$brain', route: '/actors' },
+      { title: 'CHAT', icon: '$chat', route: '/chat' },
+      { title: 'PERSONAL TOKENS', icon: '$tokens', route: '/personal-tokens' },
     ]);
 
-    const projects: any = ref([
-      { name: 'Project 1' },
-      { name: 'Project 2' },
-      { name: 'Project 3' }
-    ]);
 
     const router = useRouter();
     const navigate = (route: string) => {
       router.push(route);
-    };
-
-    const addProject = () => {
-      // Logic to add a new project
-      alert("Add new project logic here!");
     };
 
 
@@ -82,8 +67,6 @@ export default defineComponent({
       drawer,
       items,
       navigate,
-      projects,
-      addProject,
       email,
       userName
     };
@@ -95,7 +78,7 @@ export default defineComponent({
   <v-app>
 
 
-    <v-navigation-drawer v-model="drawer" expand-on-hover rail>
+    <v-navigation-drawer v-model="drawer" expand-on-hover rail permanent location="right">
       <v-list>
         <v-list-item prepend-avatar="/ui/images/logo100.png" :subtitle="email" :title="userName"></v-list-item>
       </v-list>
@@ -106,41 +89,6 @@ export default defineComponent({
       </v-list>
 
     </v-navigation-drawer>
-
-    <v-app-bar app>
-      <v-toolbar-title>Once Upon ... AI</v-toolbar-title>
-
-      <v-spacer></v-spacer>
-
-      <v-menu offset-y>
-        <template v-slot:activator="{ props }">
-          <v-btn icon v-bind="props">
-            <v-icon>mdi-dots-vertical</v-icon>
-          </v-btn>
-        </template>
-        <v-list dense>
-          <v-list-item v-for="(project, index) in projects" :key="index" class="menu-item">
-            <v-list-item-content class="menu-item-content">
-              <v-list-item-icon>
-                <v-icon class="menu-icon">mdi-pencil</v-icon>
-              </v-list-item-icon>
-              <v-list-item-title>{{ project.name }}</v-list-item-title>
-            </v-list-item-content>
-
-          </v-list-item>
-          <v-list-item @click="addProject" class="menu-item">
-
-            <v-list-item-content class="menu-item-content">
-              <v-list-item-icon>
-                <v-icon class="menu-icon">mdi-plus</v-icon>
-              </v-list-item-icon>
-              <v-list-item-title>New Project</v-list-item-title>
-            </v-list-item-content>
-          </v-list-item>
-        </v-list>
-      </v-menu>
-    </v-app-bar>
-
 
     <v-main>
       <router-view />

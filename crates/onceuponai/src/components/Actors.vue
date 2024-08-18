@@ -4,7 +4,7 @@ import { fetch } from "../common";
 import { useRouter } from 'vue-router'
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from '@tauri-apps/api/event';
-import { load } from 'js-yaml';
+import { load, dump } from 'js-yaml';
 
 // interfaces
 interface Actor {
@@ -29,6 +29,42 @@ interface ActorMetadata {
   features: string[];
 }
 
+interface SpecItem {
+  key: string;
+  value: any;
+  type: string;
+}
+
+interface Template {
+  id: string;
+  sidecar: string;
+  kind: string;
+  device: string;
+  metadata: {
+    name: string;
+    description: string;
+    url: string;
+  };
+  spec: SpecItem[];
+}
+
+interface GalleryItem {
+  id: string;
+  template: string | null;
+  device?: string;
+  metadata: {
+    name: string;
+    description?: string;
+    url?: string;
+  };
+  spec: SpecItem[];
+}
+
+interface ModelsYaml {
+  templates: Template[];
+  galery: GalleryItem[];
+}
+
 const router = useRouter();
 
 // refs
@@ -42,6 +78,9 @@ const snackbarColor: any = ref(null);
 
 const actorsGallery: any = ref(null);
 
+const remoteSpawnConfig: any = ref(null);
+const remoteSpawnCommand: any = ref(null);
+const remoteSpawnDialog: any = ref(null);
 const spawnDialog: any = ref(null);
 const spawnActorName: any = ref("");
 const spawnActorKind: any = ref("");
@@ -56,7 +95,64 @@ const spawnSelectedSearch = ref('');
 const spawnInProgress = ref(false);
 
 
-// functions 
+// functions
+const mergeSpecs = (templateSpecs: SpecItem[], gallerySpecs: SpecItem[]): SpecItem[] => {
+  const mergedSpecs = [...templateSpecs];
+
+  gallerySpecs.forEach(gallerySpec => {
+    const index = mergedSpecs.findIndex(spec => spec.key === gallerySpec.key);
+    if (index !== -1) {
+      mergedSpecs[index] = gallerySpec;
+    } else {
+      mergedSpecs.push(gallerySpec);
+    }
+  });
+
+  return mergedSpecs;
+}
+
+const createModelsList = (yamlString: string): any[] => {
+  const modelsYaml = load(yamlString) as ModelsYaml;
+
+  const models = modelsYaml.galery.map(galleryItem => {
+    if (galleryItem.template === null) {
+      // If template is null, return the gallery item as is
+      return {
+        id: galleryItem.id,
+        device: galleryItem.device || 'cpu',
+        metadata: {
+          name: galleryItem.metadata.name,
+          description: galleryItem.metadata.description || '',
+          url: galleryItem.metadata.url || '',
+        },
+        spec: galleryItem.spec,
+      };
+    }
+
+    const template = modelsYaml.templates.find(t => t.id === galleryItem.template);
+
+    if (!template) {
+      throw new Error(`Template with id ${galleryItem.template} not found`);
+    }
+
+    const mergedSpecs = mergeSpecs(template.spec, galleryItem.spec);
+
+    return {
+      ...template,
+      id: galleryItem.id,
+      device: galleryItem.device || template.device, // Use device from gallery item or fallback to template
+      metadata: {
+        ...template.metadata,
+        name: galleryItem.metadata.name,
+        description: galleryItem.metadata.description ?? template.metadata.description, // Use description from gallery item or fallback to template
+        url: galleryItem.metadata.url ?? template.metadata.url, // Use URL from gallery item or fallback to template
+      },
+      spec: mergedSpecs,
+    };
+  });
+
+  return models;
+}
 
 const refresh = async () => {
   fetch(`/api/actors`)
@@ -114,6 +210,31 @@ const openDialog = (model: Actor) => {
   dialog.value = true;
 };
 
+const openRemoteSpawnDialog = () => {
+  remoteSpawnDialog.value = true;
+  const spec: any = {};
+  spawnActorSpec.value.forEach((pair: ActorSpecItem) => {
+    spec[pair.key] = pair.value;
+  });
+
+  spec["device"] = spawnActorDevice.value;
+
+  const config = {
+    "kind": spawnActorKind.value,
+    "metadata": {
+      "name": spawnActorName.value,
+      "actor_host": "127.0.0.1:1993",
+      "actor_seed": "127.0.0.1:1992"
+    },
+    "spec": spec
+  };
+
+  remoteSpawnConfig.value = dump(config);
+  remoteSpawnCommand.value = `onceuponai-actors-candle-${spec["device"]} spawn -f config.yaml`
+
+};
+
+
 const closeDialog = () => {
   dialog.value = false;
 };
@@ -121,7 +242,8 @@ const closeDialog = () => {
 onMounted(async () => {
   refresh();
   const ag: string = await invoke("actors_gallery");
-  actorsGallery.value = load(ag);
+  actorsGallery.value = createModelsList(ag);
+  console.log(actorsGallery.value)
   //actorsGallery.value = JSON.parse(ag);
   spawnSearchResults.value = actorsGallery.value.map((a: any) => a.id);
 });
@@ -311,6 +433,22 @@ watch(spawnSelectedSearch, (newValue) => {
       </v-card>
     </v-dialog>
 
+    <v-dialog v-model="remoteSpawnDialog" max-width="600px">
+      <v-card>
+        <v-card-title>Actor Config</v-card-title>
+        <v-card-text>
+          <v-divider></v-divider>
+          <v-textarea label="config.yaml" rows="12" v-model="remoteSpawnConfig"></v-textarea>
+          <span><i>{{remoteSpawnCommand}}</i></span>
+        </v-card-text>
+        <v-card-actions>
+          <v-spacer></v-spacer>
+          <v-btn color="primary" @click="remoteSpawnDialog = false">Close</v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
+
+
     <v-dialog v-model="spawnDialog" width="90%">
       <v-card>
         <v-card-title>
@@ -352,7 +490,8 @@ watch(spawnSelectedSearch, (newValue) => {
         </v-card-text>
         <v-card-actions>
           <v-spacer></v-spacer>
-          <v-btn color="blue darken-1" @click="spawn"><b>Spawn</b></v-btn>
+          <v-btn color="green darken-1" @click="spawn"><b>Spawn</b></v-btn>
+          <v-btn color="blue darken-1" @click="openRemoteSpawnDialog"><b>Config</b></v-btn>
           <v-btn color="grey darken-1" @click="spawnDialog = false"><b>Cancel</b></v-btn>
         </v-card-actions>
       </v-card>
