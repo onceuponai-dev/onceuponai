@@ -3,10 +3,34 @@ import './assets/main.css'
 import { createApp } from 'vue'
 import App from './App.vue'
 import router from './router';
+import {
+    mdiHome,
+    mdiBrain,
+    mdiChat,
+    mdiPuzzle,
+    mdiDatabase,
+    mdiVectorTriangle,
+    mdiCodeBrackets,
+    mdiViewDashboard,
+    mdiAccountKey,
+    mdiHelpCircle,
+    mdiSend,
+    mdiKeyPlus,
+    mdiContentCopy,
+    mdiDelete,
+    mdiDotsHorizontal,
+    mdiLanguagePython,
+    mdiCheck,
+    mdiArrowRightDropCircleOutline,
+    mdiRefresh,
+    mdiPower
+} from '@mdi/js'
+
 
 
 // Vuetify
 import 'vuetify/styles'
+import { aliases, mdi } from 'vuetify/iconsets/mdi-svg'
 import { createVuetify } from 'vuetify'
 import * as components from 'vuetify/components'
 import * as directives from 'vuetify/directives'
@@ -25,6 +49,36 @@ const vuetify = createVuetify({
             },
         },
     },
+    icons: {
+        defaultSet: 'mdi',
+        aliases: {
+            ...aliases,
+            home: mdiHome,
+            brain: mdiBrain,
+            puzzle: mdiPuzzle,
+            chat: mdiChat,
+            database: mdiDatabase,
+            embeddings: mdiVectorTriangle,
+            prompts: mdiCodeBrackets,
+            dashboard: mdiViewDashboard,
+            tokens: mdiAccountKey,
+            support: mdiHelpCircle,
+            send: mdiSend,
+            keyPlus: mdiKeyPlus,
+            contentCopy: mdiContentCopy,
+            delete: mdiDelete,
+            dotsHorizontal: mdiDotsHorizontal,
+            python: mdiLanguagePython,
+            check: mdiCheck,
+            arrowRightDropCircleOutline: mdiArrowRightDropCircleOutline,
+            refresh: mdiRefresh,
+            power: mdiPower
+        },
+        sets: {
+            mdi,
+        },
+    },
+
 })
 
 createApp(App).use(vuetify).use(router).mount('#app')

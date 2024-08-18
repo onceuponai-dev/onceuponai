@@ -20,25 +20,15 @@ export default defineComponent({
 
     const drawer: any = ref(true);
     const items: any = ref([
-      { title: 'ACTORS', icon: 'mdi-brain', route: '/actors' },
-      { title: 'CHAT', icon: 'mdi-chat', route: '/chat' },
-      { title: 'PERSONAL TOKENS', icon: 'mdi-account-key', route: '/personal-tokens' },
+      { title: 'ACTORS', icon: '$brain', route: '/actors' },
+      { title: 'CHAT', icon: '$chat', route: '/chat' },
+      { title: 'PERSONAL TOKENS', icon: '$tokens', route: '/personal-tokens' },
     ]);
 
-    const projects: any = ref([
-      { name: 'Project 1' },
-      { name: 'Project 2' },
-      { name: 'Project 3' }
-    ]);
 
     const router = useRouter();
     const navigate = (route: string) => {
       router.push(route);
-    };
-
-    const addProject = () => {
-      // Logic to add a new project
-      alert("Add new project logic here!");
     };
 
 
@@ -77,8 +67,6 @@ export default defineComponent({
       drawer,
       items,
       navigate,
-      projects,
-      addProject,
       email,
       userName
     };

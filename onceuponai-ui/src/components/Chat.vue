@@ -212,34 +212,39 @@ export default defineComponent({
 </script>
 
 <template>
-  <v-container class="d-flex flex-column fill-height">
-    <v-card class="flex-grow-1 mb-2 overflow-auto fill-width chat-area" ref="chatArea">
+  <v-container fluid>
+    <div class="flex-grow-1 mb-2 overflow-auto fill-width fill-height chat-area" ref="chatArea">
       <v-row v-for="(message, index) in messages" :key="index" class="mb-2">
-        <v-col :cols="message.role === 'user' ? '8' : '12'" :offset="message.role === 'user' ? '0' : '1'">
-          <v-card :class="message.role" class="pa-3 rounded-pill" width="90%">
-            <v-card-text class="card-text">{{ message.content }}</v-card-text>
-          </v-card>
+        <v-col :cols="message.role === 'user' ? '8' : '10'" :offset="message.role === 'user' ? '0' : '1'">
+          <div :class="message.role" class="pa-3 rounded-pill" width="90%">
+            <v-divider :color="message.role == 'user' ? 'success' : 'info'">
+              <v-chip class="mx-2 text-caption" :color="message.role == 'user' ? 'success' : 'info'">{{ message.role
+                }}</v-chip>
+            </v-divider>
+            <div class="card-text">{{ message.content }}</div>
+          </div>
         </v-col>
+        <v-divider v-if="message.role != 'user'" color="error"></v-divider>
       </v-row>
       <v-row>
-        <v-col cols="2" offset="6">
-          <v-progress-circular v-if="showProgress" color="green" indeterminate></v-progress-circular>
+        <v-col cols="4" offset="6" v-if="showProgress">
+          <v-icon v-if="showProgress" icon="$brain" size="small" class="rotating"></v-icon>
         </v-col>
       </v-row>
-    </v-card>
+    </div>
     <v-bottom-navigation color="primary" horizontal height="75">
       <v-row>
         <v-col cols="2" offset="1">
-          <v-select label="Actor" menu-icon="mdi-brain" bg-color="white" density="comfortable" v-model="selectedActor"
+          <v-select label="Actor" menu-icon="$brain" bg-color="white" density="comfortable" v-model="selectedActor"
             :items="actors"></v-select>
         </v-col>
         <v-col cols="7">
-          <v-text-field clearable v-model="inputMessage" @keyup.enter="sendMessage" label="🗯️ Message"
-            variant="underlined" :disabled="actors == 0" required></v-text-field>
+          <v-text-field clearable v-model="inputMessage" @keyup.enter="sendMessage" label="Message" variant="underlined"
+            :disabled="actors == 0" required></v-text-field>
         </v-col>
         <v-col cols="1">
           <v-btn @click="sendMessage" :disabled="actors == 0">
-            <v-icon>mdi-send</v-icon>
+            <v-icon>$send</v-icon>
 
           </v-btn>
         </v-col>
@@ -254,6 +259,7 @@ export default defineComponent({
     </v-bottom-navigation>
   </v-container>
 
+
 </template>
 
 <style scoped>
@@ -262,21 +268,16 @@ export default defineComponent({
 }
 
 .fill-width {
-  width: 80vw;
+  width: 95vw;
   overflow-x: hidden !important;
 }
 
-
 .user {
-  background: linear-gradient(135deg, rgba(255, 255, 255, 0.9), rgba(220, 220, 220, 0.9));
   align-self: flex-start;
-  box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.5);
 }
 
 .assistant {
-  background: linear-gradient(135deg, rgba(250, 250, 255, 0.9), rgba(220, 220, 225, 0.9));
   align-self: flex-end;
-  box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.5);
 }
 
 .pa-3 {
@@ -301,12 +302,25 @@ export default defineComponent({
 
 .chat-area {
   overflow-y: auto;
-  max-height: 75vh !important;
   font-family: ui-sans-serif, -apple-system, system-ui, Segoe UI, Roboto, Ubuntu, Cantarell, Noto Sans, sans-serif, Helvetica, Apple Color Emoji, Arial, Segoe UI Emoji, Segoe UI Symbol !important;
   font-size: 2rem !important;
 }
 
 .switch {
   margin-top: 7px;
+}
+
+@keyframes rotate {
+  0% {
+    transform: rotate(0deg);
+  }
+
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+.rotating {
+  animation: rotate 2s linear infinite;
 }
 </style>
