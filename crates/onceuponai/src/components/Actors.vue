@@ -490,8 +490,8 @@ watch(spawnSelectedSearch, (newValue) => {
         </v-card-text>
         <v-card-actions>
           <v-spacer></v-spacer>
-          <v-btn color="blue darken-1" @click="spawn"><b>Spawn</b></v-btn>
-          <v-btn color="green darken-1" @click="openRemoteSpawnDialog"><b>Config</b></v-btn>
+          <v-btn color="green darken-1" @click="spawn"><b>Spawn</b></v-btn>
+          <v-btn color="blue darken-1" @click="openRemoteSpawnDialog"><b>Config</b></v-btn>
           <v-btn color="grey darken-1" @click="spawnDialog = false"><b>Cancel</b></v-btn>
         </v-card-actions>
       </v-card>
