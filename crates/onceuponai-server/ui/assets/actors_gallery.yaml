@@ -1,0 +1,213 @@
+templates:
+  - id: e5
+    kind: e5
+    device: cpu
+    sidecar: onceuponai-actors-candle
+    metadata:
+      name: e5
+      description: ""
+      url: ""
+    spec:
+      - key: model_repo
+        value: intfloat/multilingual-e5-small
+        type: string
+
+  - id: gemma
+    kind: gemma
+    device: cpu
+    sidecar: onceuponai-actors-candle
+    metadata:
+      name: gemma
+      description: ""
+      url: ""
+    spec:
+      - key: base_repo_id
+        value: google/gemma-2b-it
+        type: string
+      - key: tokenizer_repo
+        value: google/gemma-2b-it
+        type: string
+      - key: seed
+        value: 299792458
+        type: number
+      - key: repeat_last_n
+        value: 64
+        type: number
+      - key: repeat_penalty
+        value: 1.1
+        type: number
+      - key: temp
+        value: 0.8
+        type: number
+      - key: top_p
+        value: null
+        type: number
+      - key: hf_token
+        value: null
+        type: secret
+      - key: use_flash_attn
+        value: false
+        type: bool
+      - key: sample_len
+        value: 1000
+        type: number
+
+  - id: quantized
+    sidecar: onceuponai-actors-candle
+    kind: quantized
+    device: cuda
+    metadata:
+      name: quantized
+      description: ""
+      url: ""
+    spec:
+      - key: model_repo
+        value: speakleash/Bielik-7B-Instruct-v0.1-GGUF
+        type: string
+      - key: model_file
+        value: bielik-7b-instruct-v0.1.Q4_K_S.gguf
+        type: string
+      - key: model_revision
+        value: null
+        type: string
+      - key: tokenizer_repo
+        value: speakleash/Bielik-7B-Instruct-v0.1
+        type: string
+      - key: seed
+        value: 299792458
+        type: number
+      - key: repeat_last_n
+        value: 64
+        type: number
+      - key: repeat_penalty
+        value: 1.1
+        type: number
+      - key: temp
+        value: 0.8
+        type: number
+      - key: top_p
+        value: null
+        type: number
+      - key: top_k
+        value: null
+        type: number
+      - key: sample_len
+        value: 1000
+        type: number
+      - key: gqa
+        value: 8
+        type: number
+      - key: force_dmmv
+        value: false
+        type: bool
+      - key: eos_token
+        value: </s>
+        type: string
+
+
+
+galery:
+  # E5 MODELS
+  - id: e5/multilingual-e5-small
+    template: e5
+    device: cpu
+    metadata:
+      name: multilingual-e5-small
+      description: ""
+      url: ""
+    spec:
+      - key: model_repo
+        value: intfloat/multilingual-e5-small
+        type: string
+
+  - id: e5/multilingual-e5-large
+    template: e5
+    device: cpu
+    metadata:
+      name: multilingual-e5-large
+      description: ""
+      url: ""
+    spec:
+      - key: model_repo
+        value: intfloat/multilingual-e5-large
+        type: string
+
+  - id: e5/e5-small-v2
+    template: e5
+    device: cpu
+    metadata:
+      name: e5-small-v2
+      description: ""
+      url: ""
+    spec:
+      - key: model_repo
+        value: intfloat/e5-small-v2
+        type: string
+
+  - id: e5/e5-large-v2
+    template: e5
+    device: cpu
+    metadata:
+      name: e5-large-v2
+      description: ""
+      url: ""
+    spec:
+      - key: model_repo
+        value: intfloat/e5-large-v2
+        type: string
+
+
+
+  # GEMMA MODELS
+  - id: gemma/gemma-2b-it
+    template: gemma
+    device: cpu
+    metadata:
+      name: gemma-2b-it
+      description: ""
+      url: ""
+    spec:
+      - key: base_repo_id
+        value: google/gemma-2b-it
+        type: string
+      - key: tokenizer_repo
+        value: google/gemma-2b-it
+        type: string
+
+
+  # QUANTIZED MODELS
+  - id: quantized/bielik
+    template: quantized
+    device: cuda
+    metadata:
+      name: bielik
+      description: ""
+      url: ""
+    spec:
+      - key: model_repo
+        value: speakleash/Bielik-7B-Instruct-v0.1-GGUF
+        type: string
+      - key: model_file
+        value: bielik-7b-instruct-v0.1.Q4_K_S.gguf
+        type: string
+      - key: tokenizer_repo
+        value: speakleash/Bielik-7B-Instruct-v0.1
+        type: string
+
+  - id: quantized/llama3
+    template: quantized
+    device: cuda
+    metadata:
+      name: llama3
+      description: ""
+      url: ""
+    spec:
+      - key: model_repo
+        value: speakleash/Bielik-7B-Instruct-v0.1-GGUF
+        type: string
+      - key: model_file
+        value: bielik-7b-instruct-v0.1.Q4_K_S.gguf
+        type: string
+      - key: tokenizer_repo
+        value: speakleash/Bielik-7B-Instruct-v0.1
+        type: string
