@@ -217,9 +217,14 @@ export default defineComponent({
 
     onMounted(() => {
       refresh();
-      const ag: string = "";
-      // actorsGallery.value = createModelsList(ag);
-      // spawnSearchResults.value = actorsGallery.value.map((a: any) => a.id);
+      axios.get(`/api/actors/gallery`)
+        .then(function (response) {
+          actorsGallery.value = createModelsList(response.data);
+          spawnSearchResults.value = actorsGallery.value.map((a: any) => a.id);
+        })
+        .catch(function (error) {
+          console.log(error);
+        });
     });
 
     const addPair = () => {

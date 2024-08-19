@@ -1,5 +1,5 @@
 use crate::guards::AuthGuard;
-use crate::handlers::actors::{connected_actors, invoke};
+use crate::handlers::actors::{actors_gallery, connected_actors, invoke};
 use crate::handlers::oai::{v1_chat_completions, v1_embeddings};
 use crate::handlers::{
     self, assets_css, assets_js, favicon, health, index_html, logo, ASSETS_CSS_HASH, ASSETS_JS_HASH,
@@ -99,6 +99,7 @@ pub async fn serve(
             web::scope("/api")
                 .guard(auth_guard.clone())
                 .route("/actors", web::get().to(connected_actors))
+                .route("/actors/gallery", web::get().to(actors_gallery))
                 .route("/invoke/{kind}/{name}", web::post().to(invoke))
                 .route("/user", web::get().to(handlers::users::user))
                 .route(

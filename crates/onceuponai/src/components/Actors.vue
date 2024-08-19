@@ -243,10 +243,10 @@ const closeDialog = () => {
 
 onMounted(async () => {
   refresh();
-  const ag: string = await invoke("actors_gallery");
-  actorsGallery.value = createModelsList(ag);
+  const ag = await fetch(`/api/actors/gallery`);
+  const gallery = await ag.text();
+  actorsGallery.value = createModelsList(gallery);
   console.log(actorsGallery.value)
-  //actorsGallery.value = JSON.parse(ag);
   spawnSearchResults.value = actorsGallery.value.map((a: any) => a.id);
 });
 

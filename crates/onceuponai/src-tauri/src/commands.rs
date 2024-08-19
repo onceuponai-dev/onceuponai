@@ -6,25 +6,14 @@ use futures::StreamExt;
 use onceuponai_actors::abstractions::ActorMetadata;
 use onceuponai_core::{
     common::{serialize_and_encode, ResultExt, SerializationType},
-    config,
     notifications::{Notification, NotificationLevel},
 };
 use onceuponai_server::handlers::oai::ChatCompletionsRequest;
 use reqwest::Client;
 use serde_json::{json, Value};
-use tauri::{path::BaseDirectory, AppHandle, Emitter, Manager, State};
+use tauri::{AppHandle, Emitter, Manager, State};
 use tauri_plugin_shell::{process::CommandEvent, ShellExt};
 use uuid::Uuid;
-
-#[tauri::command]
-pub fn actors_gallery(handle: tauri::AppHandle) -> Result<String, String> {
-    let resource_path = handle
-        .path()
-        .resolve("resources/actors_gallery.yaml", BaseDirectory::Resource)
-        .map_str_err()?;
-
-    std::fs::read_to_string(resource_path).map_str_err()
-}
 
 #[tauri::command]
 pub fn kill_actor(sidecar_id: Uuid) -> Result<(), String> {

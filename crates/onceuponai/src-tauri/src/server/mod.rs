@@ -9,7 +9,6 @@ use onceuponai_core::common::{
     env_or_some, env_or_some_or_fn, generate_token, random_base64, ResultExt,
 };
 use onceuponai_server::handlers::auth::generate_pat_token;
-use onceuponai_server::session::generate_cookie_key;
 use serde::{Deserialize, Serialize};
 use std::{
     io,

@@ -18,6 +18,14 @@ use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
 use uuid::Uuid;
 
+const ACTORS_GALLERY: &str = include_str!("../../ui/assets/actors_gallery.yaml");
+
+pub async fn actors_gallery() -> impl Responder {
+    HttpResponse::Ok()
+        .content_type("text/yaml")
+        .body(ACTORS_GALLERY)
+}
+
 pub async fn connected_actors(_req: HttpRequest) -> Result<impl Responder, Box<dyn Error>> {
     let connected_actors = onceuponai_actors::actors::main_actor::CONNECTED_ACTORS
         .get()
