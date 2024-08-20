@@ -39,6 +39,15 @@ impl ActorActions for QuantizedSpec {
         "quantized".to_string()
     }
 
+    fn init(&self) -> Result<()> {
+        QuantizedModel::init(
+            self.model_repo.clone(),
+            self.model_file.clone(),
+            self.model_revision.clone(),
+            self.tokenizer_repo.clone(),
+        )
+    }
+
     fn start(&self) -> Result<()> {
         QuantizedModel::lazy(
             self.model_repo.clone(),

@@ -26,6 +26,10 @@ impl ActorActions for E5Spec {
         "e5".to_string()
     }
 
+    fn init(&self) -> Result<()> {
+        E5Model::init(self.model_repo.clone())
+    }
+
     fn start(&self) -> Result<()> {
         E5Model::lazy(self.model_repo.clone(), self.device.clone())?;
         info!("MODEL STARTED");

@@ -220,6 +220,32 @@ impl QuantizedModel {
         Ok(QUANTIZED_INSTANCE.get().expect("QUANTIZED_INSTANCE"))
     }
 
+    pub fn init(
+        model_repo: Option<String>,
+        model_file: Option<String>,
+        model_revision: Option<String>,
+        tokenizer_repo: Option<String>,
+    ) -> Result<()> {
+        let model_repo = &model_repo.expect("model_repo");
+        let model_file = &model_file.expect("model_file");
+
+        let _model_path = if model_file.starts_with("file://") {
+            std::path::PathBuf::from(model_file.replace("file://", ""))
+        } else {
+            hf_hub_get_path(model_repo, model_file, None, model_revision)?
+        };
+
+        let tokenizer_repo = tokenizer_repo.unwrap_or(model_repo.to_string());
+
+        let _tokenizer = if tokenizer_repo.starts_with("file://") {
+            std::fs::read(tokenizer_repo.replace("file://", ""))?
+        } else {
+            hf_hub_get(&tokenizer_repo, "tokenizer.json", None, None)?
+        };
+
+        Ok(())
+    }
+
     #[allow(unused)]
     pub fn load(
         model_repo: &str,

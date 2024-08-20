@@ -2,7 +2,7 @@ pub mod llm;
 use crate::llm::ActorKind;
 use anyhow::Result;
 use clap::{arg, Command};
-use onceuponai_actors::cluster::start_worker_cluster;
+use onceuponai_actors::cluster::{init_actor, start_worker_cluster};
 
 fn cli() -> Command {
     Command::new("onceuponai")
@@ -30,6 +30,15 @@ fn cli() -> Command {
                     .help("config metadata yaml in base64")])
                 .arg_required_else_help(true),
         )
+        .subcommand(
+            Command::new("init")
+                .about("init")
+                .args(vec![arg!(--json <JSON> "json")
+                    .required(false)
+                    .short('j')
+                    .help("config json in base64")])
+                .arg_required_else_help(true),
+        )
 }
 
 pub(crate) async fn commands() -> Result<()> {
@@ -42,6 +51,10 @@ pub(crate) async fn commands() -> Result<()> {
             let yaml = sub_sub_matches.get_one::<String>("yaml");
             let metadata_yaml = sub_sub_matches.get_one::<String>("metadata");
             start_worker_cluster::<ActorKind>(file, yaml, json, metadata_yaml).await?
+        }
+        Some(("init", sub_sub_matches)) => {
+            let json = sub_sub_matches.get_one::<String>("json");
+            init_actor::<ActorKind>(json).await?
         }
         _ => unreachable!(),
     }

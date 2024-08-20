@@ -42,6 +42,14 @@ impl E5Model {
         Ok(embeddings_data)
     }
 
+    pub fn init(e5_model_repo: Option<String>) -> Result<()> {
+        let e5_model_repo = &e5_model_repo.expect("model_repo");
+        let _weights = hf_hub_get(e5_model_repo, "model.safetensors", None, None)?;
+        let _tokenizer = hf_hub_get(e5_model_repo, "tokenizer.json", None, None)?;
+        let _candle_config = hf_hub_get(e5_model_repo, "config.json", None, None)?;
+        Ok(())
+    }
+
     pub fn load(e5_model_repo: &str, device_type: Option<String>) -> Result<E5Model> {
         let weights = hf_hub_get(e5_model_repo, "model.safetensors", None, None)?;
         let tokenizer = hf_hub_get(e5_model_repo, "tokenizer.json", None, None)?;

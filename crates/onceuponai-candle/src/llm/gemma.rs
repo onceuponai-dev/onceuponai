@@ -141,6 +141,25 @@ impl GemmaModel {
         Ok(GEMMA_INSTANCE.get().expect("GEMMA_INSTANCE"))
     }
 
+    pub fn init(
+        base_repo_id: Option<String>,
+        tokenizer_repo: Option<String>,
+        hf_token: Option<String>,
+    ) -> Result<()> {
+        let base_repo_id = &base_repo_id.expect("base_repo_id");
+        let hf_token = Some(hf_token.unwrap_or(std::env::var("HF_TOKEN").expect("HF_TOKEN")));
+
+        let _paths = hf_hub_get_multiple(
+            base_repo_id,
+            "model.safetensors.index.json",
+            hf_token.clone(),
+        )?;
+
+        let tokenizer_repo = tokenizer_repo.unwrap_or(base_repo_id.clone());
+        let _tokenizer = hf_hub_get(&tokenizer_repo, "tokenizer.json", hf_token.clone(), None)?;
+        Ok(())
+    }
+
     #[allow(clippy::too_many_arguments)]
     pub fn load(
         base_repo_id: String,
