@@ -18,7 +18,7 @@ use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
 use uuid::Uuid;
 
-const ACTORS_GALLERY: &str = include_str!("../../ui/assets/actors_gallery.yaml");
+const ACTORS_GALLERY: &str = include_str!("../../actors_gallery.yaml");
 
 pub async fn actors_gallery() -> impl Responder {
     HttpResponse::Ok()

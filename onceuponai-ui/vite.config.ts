@@ -12,7 +12,14 @@ export default defineConfig(({ command, mode }) => {
       vue(),
     ],
     build: {
-      outDir: '../crates/onceuponai-server/ui/'
+      outDir: '../crates/onceuponai-server/ui/',
+      rollupOptions: {
+        output: {
+          entryFileNames: 'index.js',
+          chunkFileNames: 'index.js',
+          assetFileNames: 'index.css',
+        },
+      },
     },
     resolve: {
       alias: {

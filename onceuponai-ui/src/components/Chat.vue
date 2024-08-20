@@ -2,6 +2,7 @@
 import { defineComponent, ref, onMounted, nextTick } from 'vue';
 import { useRouter } from 'vue-router';
 import axios from 'axios';
+import { parseMarkdown } from '../mdcommon';
 
 interface Message {
   content: string;
@@ -203,7 +204,8 @@ export default defineComponent({
       showProgress,
       selectedActor,
       actors,
-      isStream
+      isStream,
+parseMarkdown
     };
 
 
@@ -221,7 +223,7 @@ export default defineComponent({
               <v-chip class="mx-2 text-caption" :color="message.role == 'user' ? 'success' : 'info'">{{ message.role
                 }}</v-chip>
             </v-divider>
-            <div class="card-text">{{ message.content }}</div>
+            <div class="card-text" v-html="parseMarkdown(message.content)"></div>
           </div>
         </v-col>
         <v-divider v-if="message.role != 'user'" color="error"></v-divider>

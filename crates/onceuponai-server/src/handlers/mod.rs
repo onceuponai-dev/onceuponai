@@ -5,12 +5,12 @@ pub mod chat;
 pub mod oai;
 pub mod users;
 
-pub const ASSETS_CSS_HASH: &str = "8a6604ca";
-pub const ASSETS_JS_HASH: &str = "4037f5d6";
+// pub const ASSETS_CSS_HASH: &str = "577b6681";
+// pub const ASSETS_JS_HASH: &str = "05752d2b";
 
 const INDEX_HTML: &str = include_str!("../../ui/index.html");
-const ASSETS_CSS: &str = include_str!("../../ui/assets/index-8a6604ca.css");
-const ASSETS_JS: &str = include_str!("../../ui/assets/index-4037f5d6.js");
+const ASSETS_CSS: &str = include_str!("../../ui/index.css");
+const ASSETS_JS: &str = include_str!("../../ui/index.js");
 
 const LOGO: &[u8] = include_bytes!("../../ui/images/logo100.png");
 const FAVICON: &[u8] = include_bytes!("../../ui/favicon.ico");

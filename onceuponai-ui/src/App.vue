@@ -137,4 +137,5 @@ export default defineComponent({
 .menu-icon {
   margin-right: 16px;
 }
+
 </style>

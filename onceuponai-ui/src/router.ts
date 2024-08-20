@@ -5,7 +5,6 @@ import TermsComponent from '@/components/Terms.vue';
 import FooterComponent from '@/components/Footer.vue';
 import ProfileComponent from '@/components/Profile.vue';
 import ActorsComponent from '@/components/Actors.vue';
-import DashboardComponent from '@/components/Dashboard.vue';
 import ChatComponent from '@/components/Chat.vue';
 import PersonalTokensComponent from '@/components/PersonalTokens.vue';
 
@@ -55,14 +54,6 @@ const routes: Array<any> = [
     name: 'Stores',
     components: {
       default: StoresComponent,
-      footer: FooterComponent
-    }
-  },
-  {
-    path: '/dashboard',
-    name: 'Dashboard',
-    components: {
-      default: DashboardComponent,
       footer: FooterComponent
     }
   },
