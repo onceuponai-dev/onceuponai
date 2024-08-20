@@ -3,6 +3,7 @@ import { ref, onMounted } from "vue";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from '@tauri-apps/api/event';
 import { fetch } from "../common";
+import { parseMarkdown } from '../mdcommon';
 
 interface Message {
   content: string;
@@ -181,7 +182,7 @@ onMounted(() => {
               <v-chip class="mx-2 text-caption" :color="message.role == 'user' ? 'success' : 'info'">{{ message.role
                 }}</v-chip>
             </v-divider>
-            <div class="card-text">{{ message.content }}</div>
+            <div class="card-text" v-html="parseMarkdown(message.content)"></div>
           </div>
         </v-col>
         <v-divider v-if="message.role !='user'" color="error"></v-divider>
