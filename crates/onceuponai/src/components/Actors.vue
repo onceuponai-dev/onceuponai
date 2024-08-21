@@ -80,7 +80,6 @@ const snackbarColor: any = ref(null);
 
 const actorsGallery: any = ref(null);
 
-const initCommand: any = ref(null);
 const remoteSpawnConfig: any = ref(null);
 const remoteSpawnCommand: any = ref(null);
 const remoteSpawnDialog: any = ref(null);
@@ -97,6 +96,7 @@ const spawnActorNewPairType = ref("string");
 const spawnSearchResults: any = ref([]);
 const spawnSelectedSearch = ref('');
 const spawnInProgress = ref(false);
+const initInProgress = ref(false);
 
 
 // functions
@@ -197,6 +197,15 @@ const buildActorJsonConfig = () => {
   const specJsonBase64 = btoa(jsonString);
   return specJsonBase64;
 }
+
+const init = async () => {
+  const specJsonBase64 = buildActorJsonConfig();
+  initInProgress.value = true;
+  const act: any = await invoke("init_actor", { "device": spawnActorDevice.value, "specJsonBase64": specJsonBase64 });
+  console.log(act);
+  initInProgress.value = false;
+};
+
 
 const spawn = async () => {
   const specJsonBase64 = buildActorJsonConfig();
@@ -357,10 +366,6 @@ watch(spawnSelectedSearch, (newValue) => {
     spawnActorSpec.value = selectedItem.spec;
     spawnActorDevice.value = selectedItem.device;
     console.log(selectedItem)
-
-    const config = buildActorJsonConfig();
-
-    initCommand.value = `${spawnActorSidecar.value}-${spawnActorDevice.value} init -j ${config}`
   }
 });
 
@@ -515,26 +520,11 @@ watch(spawnSelectedSearch, (newValue) => {
             <v-select v-model="spawnActorDevice" :items="spawnActorDevices" label="Device" required></v-select>
           </v-form>
           <br />
-
-          <v-stepper :items="['Initialize', 'Spawn']">
-            <template v-slot:item.1>
-              <v-card title="Initialize actor" flat>
-                <v-card-text>
-                  <span><i>{{ initCommand }}</i></span>
-                </v-card-text>
-              </v-card>
-            </template>
-
-            <template v-slot:item.2>
-              <v-card title="Spawn actor" flat>...</v-card>
-            </template>
-
-          </v-stepper>
-
-
         </v-card-text>
         <v-card-actions>
           <v-spacer></v-spacer>
+          <v-progress-circular color="orange" v-if="initInProgress" indeterminate></v-progress-circular>
+          <v-btn color="orange darken-1" @click="init"><b>Init</b></v-btn>
           <v-btn color="green darken-1" @click="spawn"><b>Spawn</b></v-btn>
           <v-btn color="blue darken-1" @click="openRemoteSpawnDialog"><b>Config</b></v-btn>
           <v-btn color="grey darken-1" @click="spawnDialog = false"><b>Cancel</b></v-btn>

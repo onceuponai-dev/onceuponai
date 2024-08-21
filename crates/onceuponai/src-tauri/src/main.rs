@@ -5,7 +5,7 @@ pub mod commands;
 pub mod server;
 use anyhow::Result;
 use clap::Parser;
-use commands::{config, kill_actor, spawn_actor, v1_chat_completions};
+use commands::{config, init_actor, kill_actor, spawn_actor, v1_chat_completions};
 use once_cell::sync::OnceCell;
 use onceuponai_core::common::ResultExt;
 use serde::{Deserialize, Serialize};
@@ -93,6 +93,7 @@ async fn main() -> std::io::Result<()> {
             .plugin(tauri_plugin_http::init())
             .invoke_handler(tauri::generate_handler![
                 config,
+                init_actor,
                 spawn_actor,
                 kill_actor,
                 v1_chat_completions
