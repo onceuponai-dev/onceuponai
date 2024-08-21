@@ -81,6 +81,8 @@ const snackbarColor: any = ref(null);
 const actorsGallery: any = ref(null);
 
 const remoteSpawnConfig: any = ref(null);
+
+const initCommand: any = ref(null);
 const remoteSpawnCommand: any = ref(null);
 const remoteSpawnDialog: any = ref(null);
 const spawnDialog: any = ref(null);
@@ -249,6 +251,10 @@ const openRemoteSpawnDialog = () => {
 
   remoteSpawnConfig.value = dump(config);
   remoteSpawnCommand.value = `${spawnActorSidecar.value}-${spec["device"]} spawn -f config.yaml`
+
+  const initConfig = buildActorJsonConfig();
+  initCommand.value = `${spawnActorSidecar.value}-${spawnActorDevice.value} init -j ${initConfig}`
+
 
 };
 
@@ -465,13 +471,28 @@ watch(spawnSelectedSearch, (newValue) => {
       </v-card>
     </v-dialog>
 
-    <v-dialog v-model="remoteSpawnDialog" max-width="600px">
+    <v-dialog v-model="remoteSpawnDialog" max-width="800px">
       <v-card>
         <v-card-title>Actor Config</v-card-title>
         <v-card-text>
           <v-divider></v-divider>
-          <v-textarea label="config.yaml" rows="12" v-model="remoteSpawnConfig"></v-textarea>
-          <span><i>{{ remoteSpawnCommand }}</i></span>
+          <v-stepper :items="['Initialize', 'Spawn']">
+            <template v-slot:item.1>
+              <v-card title="Initialize actor" flat>
+                <v-card-text>
+                  <span><i>{{ initCommand }}</i></span>
+                </v-card-text>
+              </v-card>
+            </template>
+            <template v-slot:item.2>
+              <v-card title="Spawn actor" flat>
+                <v-card-text>
+                  <v-textarea label="config.yaml" rows="12" v-model="remoteSpawnConfig"></v-textarea>
+                  <span><i>{{ remoteSpawnCommand }}</i></span>
+                </v-card-text>
+              </v-card>
+            </template>
+          </v-stepper>
         </v-card-text>
         <v-card-actions>
           <v-spacer></v-spacer>
