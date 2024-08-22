@@ -49,22 +49,12 @@ test-opendal: ## Test musl
 	cd ./crates/onceuponai-core && \
 	cargo test --features cuda --release -- llm::rag::test_opendal1 --show-output
 
-
-
 build-linux: ## Test musl
 	cd ./crates/onceuponai && \
-	. /usr/local/nvm/nvm.sh && \
-	nvm install 20 && \
-	npm install -g npm@latest && \
-	npm install && \
 	npm run tauri build
 
 build-win: ## Test musl
 	cd ./crates/onceuponai && \
-	. /usr/local/nvm/nvm.sh && \
-	nvm install 20 && \
-	npm install -g npm@latest && \
-	npm install && \
 	npm run tauri build -- --target x86_64-pc-windows-gnu
 
 build-sidecar-candle-cuda-linux: ## 

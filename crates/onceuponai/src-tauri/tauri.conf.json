@@ -33,6 +33,7 @@
       "icons/favicon.ico"
     ],
     "resources": [
+      "resources/*"
     ]
   }
 }

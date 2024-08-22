@@ -3,7 +3,7 @@ use crate::handlers::actors::{actors_gallery, connected_actors, invoke};
 use crate::handlers::oai::{v1_chat_completions, v1_embeddings};
 use crate::handlers::{self, assets_css, assets_js, favicon, health, index_html, logo};
 use actix::Addr;
-use actix_files as fs;
+// use actix_files as fs;
 use actix_session::{storage::CookieSessionStore, SessionMiddleware};
 use actix_web::middleware::Logger;
 use actix_web::HttpResponse;
@@ -66,7 +66,7 @@ pub async fn serve(
             .route("/index.css", web::get().to(assets_css))
             .route("/ui/images/logo100.png", web::get().to(logo))
             .route("/favicon.ico", web::get().to(favicon))
-            .service(fs::Files::new("/extensions", "./extensions").show_files_listing())
+            // .service(fs::Files::new("/extensions", "./extensions").show_files_listing())
             .route("/health", web::get().to(health));
 
         if sp.is_oidc() {
