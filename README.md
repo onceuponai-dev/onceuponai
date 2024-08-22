@@ -8,9 +8,9 @@ Once Upon ... AI is a rust-based desktop/server application designed to simplify
 Whether you want to quickly test different models like LLM-s with different parameters or build scalable solution this app streamlines the entire process.
 With support for both CPU and CUDA-accelerated GPU environments, you can deploy models locally or scale them across multiple nodes for production environments. 
 
-<center>
-<img src=".github/intro.gif" alt="intro" />
-</center>
+<p align="center">
+    <img src=".github/intro.gif" alt="intro" />
+</p>
 
 <!--
 ## Quick Start
