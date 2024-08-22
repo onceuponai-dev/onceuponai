@@ -19,7 +19,6 @@ interface ActorSpecItem {
   type: string;
 }
 
-
 interface ActorMetadata {
   name: string;
   actor_id: string;
@@ -27,12 +26,6 @@ interface ActorMetadata {
   actor_seed: string;
   sidecar_id: string;
   features: string[];
-}
-
-interface SpecItem {
-  key: string;
-  value: any;
-  type: string;
 }
 
 interface Template {
@@ -45,7 +38,7 @@ interface Template {
     description: string;
     url: string;
   };
-  spec: SpecItem[];
+  spec: ActorSpecItem[];
 }
 
 interface GalleryItem {
@@ -57,7 +50,7 @@ interface GalleryItem {
     description?: string;
     url?: string;
   };
-  spec: SpecItem[];
+  spec: ActorSpecItem[];
 }
 
 interface ModelsYaml {
@@ -102,7 +95,7 @@ const initInProgress = ref(false);
 
 
 // functions
-const mergeSpecs = (templateSpecs: SpecItem[], gallerySpecs: SpecItem[]): SpecItem[] => {
+const mergeSpecs = (templateSpecs: ActorSpecItem[], gallerySpecs: ActorSpecItem[]): ActorSpecItem[] => {
   const mergedSpecs = [...templateSpecs];
 
   gallerySpecs.forEach(gallerySpec => {
@@ -180,7 +173,9 @@ const refresh = async () => {
 const buildActorJsonConfig = () => {
   const spec: any = {};
   spawnActorSpec.value.forEach((pair: ActorSpecItem) => {
-    spec[pair.key] = pair.value;
+    console.log(pair.key, pair.type, pair.value);
+    const value = parseSpecItem(pair);
+    spec[pair.key] = value;
   });
 
   spec["device"] = spawnActorDevice.value;
@@ -234,7 +229,8 @@ const openRemoteSpawnDialog = () => {
   remoteSpawnDialog.value = true;
   const spec: any = {};
   spawnActorSpec.value.forEach((pair: ActorSpecItem) => {
-    spec[pair.key] = pair.value;
+    const value = parseSpecItem(pair);
+    spec[pair.key] = value;
   });
 
   spec["device"] = spawnActorDevice.value;
@@ -324,6 +320,7 @@ const getInputComponent = (type: any) => {
       return 'v-text-field';
   }
 };
+
 const getInputLabel = (type: any) => {
   switch (type) {
     case 'number':
@@ -336,6 +333,23 @@ const getInputLabel = (type: any) => {
       return 'Value';
   }
 };
+
+const parseSpecItem = (item: ActorSpecItem) => {
+
+  if(item.value == null) {
+    return item.value;
+  }
+
+  switch (item.type) {
+    case 'number':
+      return Number(String(item.value))
+    case 'bool':
+      return String(item.value).toLowerCase() == "true";
+    default:
+      return item.value;
+  }
+};
+
 
 const getInputType = (type: any) => {
   switch (type) {
@@ -545,7 +559,7 @@ watch(spawnSelectedSearch, (newValue) => {
         <v-card-actions>
           <v-spacer></v-spacer>
           <v-progress-circular color="orange" v-if="initInProgress" indeterminate></v-progress-circular>
-          <v-btn color="orange darken-1" @click="init"><b>Init</b></v-btn>
+          <v-btn color="orange darken-1" @click="init"><b>Download</b></v-btn>
           <v-btn color="green darken-1" @click="spawn"><b>Spawn</b></v-btn>
           <v-btn color="blue darken-1" @click="openRemoteSpawnDialog"><b>Config</b></v-btn>
           <v-btn color="grey darken-1" @click="spawnDialog = false"><b>Cancel</b></v-btn>
