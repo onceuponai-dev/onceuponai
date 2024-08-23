@@ -23,9 +23,10 @@ impl E5Model {
     pub fn lazy<'a>(
         model_repo: Option<String>,
         device: Option<String>,
+        hf_token: Option<String>,
     ) -> Result<&'a Arc<Mutex<E5Model>>> {
         if E5_INSTANCE.get().is_none() {
-            let e5_model = E5Model::load(&model_repo.expect("model_repo"), device)?;
+            let e5_model = E5Model::load(&model_repo.expect("model_repo"), device, hf_token)?;
             let _ = E5_INSTANCE.set(Arc::new(Mutex::new(e5_model))).is_ok();
         };
 
@@ -42,18 +43,22 @@ impl E5Model {
         Ok(embeddings_data)
     }
 
-    pub fn init(e5_model_repo: Option<String>) -> Result<()> {
+    pub fn init(e5_model_repo: Option<String>, hf_token: Option<String>) -> Result<()> {
         let e5_model_repo = &e5_model_repo.expect("model_repo");
-        let _weights = hf_hub_get(e5_model_repo, "model.safetensors", None, None)?;
-        let _tokenizer = hf_hub_get(e5_model_repo, "tokenizer.json", None, None)?;
-        let _candle_config = hf_hub_get(e5_model_repo, "config.json", None, None)?;
+        let _weights = hf_hub_get(e5_model_repo, "model.safetensors", hf_token.clone(), None)?;
+        let _tokenizer = hf_hub_get(e5_model_repo, "tokenizer.json", hf_token.clone(), None)?;
+        let _candle_config = hf_hub_get(e5_model_repo, "config.json", hf_token, None)?;
         Ok(())
     }
 
-    pub fn load(e5_model_repo: &str, device_type: Option<String>) -> Result<E5Model> {
-        let weights = hf_hub_get(e5_model_repo, "model.safetensors", None, None)?;
-        let tokenizer = hf_hub_get(e5_model_repo, "tokenizer.json", None, None)?;
-        let candle_config = hf_hub_get(e5_model_repo, "config.json", None, None)?;
+    pub fn load(
+        e5_model_repo: &str,
+        device_type: Option<String>,
+        hf_token: Option<String>,
+    ) -> Result<E5Model> {
+        let weights = hf_hub_get(e5_model_repo, "model.safetensors", hf_token.clone(), None)?;
+        let tokenizer = hf_hub_get(e5_model_repo, "tokenizer.json", hf_token.clone(), None)?;
+        let candle_config = hf_hub_get(e5_model_repo, "config.json", hf_token, None)?;
         let candle_config: BertConfig = serde_json::from_slice(&candle_config)?;
 
         let device = parse_device(device_type)?;

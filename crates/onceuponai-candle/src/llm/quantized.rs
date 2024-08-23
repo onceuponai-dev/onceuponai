@@ -174,6 +174,7 @@ impl QuantizedModel {
         gqa: Option<usize>,
         force_dmmv: Option<bool>,
         eos_token: Option<String>,
+        hf_token: Option<String>,
     ) -> Result<&'a Arc<Mutex<QuantizedInstance>>> {
         if QUANTIZED_INSTANCE.get().is_none() {
             let model = QuantizedModel::load(
@@ -184,6 +185,7 @@ impl QuantizedModel {
                 device,
                 gqa,
                 force_dmmv,
+                hf_token,
             )?;
 
             let eos_token = match eos_token {
@@ -225,6 +227,7 @@ impl QuantizedModel {
         model_file: Option<String>,
         model_revision: Option<String>,
         tokenizer_repo: Option<String>,
+        hf_token: Option<String>,
     ) -> Result<()> {
         let model_repo = &model_repo.expect("model_repo");
         let model_file = &model_file.expect("model_file");
@@ -232,7 +235,7 @@ impl QuantizedModel {
         let _model_path = if model_file.starts_with("file://") {
             std::path::PathBuf::from(model_file.replace("file://", ""))
         } else {
-            hf_hub_get_path(model_repo, model_file, None, model_revision)?
+            hf_hub_get_path(model_repo, model_file, hf_token.clone(), model_revision)?
         };
 
         let tokenizer_repo = tokenizer_repo.unwrap_or(model_repo.to_string());
@@ -240,13 +243,14 @@ impl QuantizedModel {
         let _tokenizer = if tokenizer_repo.starts_with("file://") {
             std::fs::read(tokenizer_repo.replace("file://", ""))?
         } else {
-            hf_hub_get(&tokenizer_repo, "tokenizer.json", None, None)?
+            hf_hub_get(&tokenizer_repo, "tokenizer.json", hf_token, None)?
         };
 
         Ok(())
     }
 
     #[allow(unused)]
+    #[allow(clippy::too_many_arguments)]
     pub fn load(
         model_repo: &str,
         model_file: &str,
@@ -255,6 +259,7 @@ impl QuantizedModel {
         device_type: Option<String>,
         gqa: Option<usize>,
         force_dmmv: Option<bool>,
+        hf_token: Option<String>,
     ) -> Result<QuantizedModel> {
         #[cfg(feature = "cuda")]
         candle_core::quantized::cuda::set_force_dmmv(force_dmmv.unwrap_or(false));
@@ -268,7 +273,7 @@ impl QuantizedModel {
         let model_path = if model_file.starts_with("file://") {
             std::path::PathBuf::from(model_file.replace("file://", ""))
         } else {
-            hf_hub_get_path(model_repo, model_file, None, model_revision)?
+            hf_hub_get_path(model_repo, model_file, hf_token.clone(), model_revision)?
         };
 
         let tokenizer_repo = tokenizer_repo.unwrap_or(model_repo.to_string());
@@ -276,7 +281,7 @@ impl QuantizedModel {
         let tokenizer = if tokenizer_repo.starts_with("file://") {
             std::fs::read(tokenizer_repo.replace("file://", ""))?
         } else {
-            hf_hub_get(&tokenizer_repo, "tokenizer.json", None, None)?
+            hf_hub_get(&tokenizer_repo, "tokenizer.json", hf_token, None)?
         };
 
         let device = parse_device(device_type)?;
@@ -312,6 +317,7 @@ async fn test_bielik() -> Result<()> {
         Some("cuda".to_string()),
         None,
         None,
+        None,
     )?;
 
     let eos_token = "</s>";
@@ -342,6 +348,7 @@ async fn test_phi3() -> Result<()> {
         Some("5eef2ce24766d31909c0b269fe90c817a8f263fb".to_string()),
         Some("microsoft/Phi-3-mini-4k-instruct".to_string()),
         Some("cuda".to_string()),
+        None,
         None,
         None,
     )?;

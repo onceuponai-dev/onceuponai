@@ -11,6 +11,10 @@ templates:
       - key: model_repo
         value: intfloat/multilingual-e5-small
         type: string
+      - key: hf_token
+        value: null
+        type: secret
+
 
   - id: gemma
     kind: gemma
@@ -103,6 +107,9 @@ templates:
       - key: eos_token
         value: </s>
         type: string
+      - key: hf_token
+        value: null
+        type: secret
 
 
 

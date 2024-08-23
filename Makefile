@@ -57,6 +57,13 @@ build-win: ## Test musl
 	cd ./crates/onceuponai && \
 	npm run tauri build -- --target x86_64-pc-windows-gnu
 
+rebuild-nsis: ## Test musl
+	awk '/; Copy external binaries/ {print; print "    File /a \"/oname=WebView2Loader.dll\" \"/home/jovyan/rust-src/onceuponai/target/x86_64-pc-windows-gnu/release/WebView2Loader.dll\""; next}1' ./target/x86_64-pc-windows-gnu/release/nsis/x64/installer.nsi > ./target/x86_64-pc-windows-gnu/release/nsis/x64/temp_file && \
+	mv ./target/x86_64-pc-windows-gnu/release/nsis/x64/temp_file ./target/x86_64-pc-windows-gnu/release/nsis/x64/installer.nsi && \
+	awk '/; Delete external binaries/ {print; print "    Delete \"$$INSTDIR\WebView2Loader.dll\""; next}1' ./target/x86_64-pc-windows-gnu/release/nsis/x64/installer.nsi > ./target/x86_64-pc-windows-gnu/release/nsis/x64/temp_file && \
+	mv ./target/x86_64-pc-windows-gnu/release/nsis/x64/temp_file ./target/x86_64-pc-windows-gnu/release/nsis/x64/installer.nsi && \
+	makensis ./target/x86_64-pc-windows-gnu/release/nsis/x64/installer.nsi
+
 build-sidecar-candle-cuda-linux: ## 
 	cd ./crates/onceuponai-actors-candle && \
 	cargo build --release --features cuda && \

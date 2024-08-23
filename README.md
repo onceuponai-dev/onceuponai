@@ -4,13 +4,17 @@
 
 ## Introduction
 
-Once Upon ... AI is a rust-based desktop/server application designed to simplify the setup and usage of machine learning models. 
+Once Upon ... AI is a rust-based desktop/server application designed to simplify the setup and usage of machine learning models (LLMs, Embedding models, Image generative models, Vision models and other). 
 Whether you want to quickly test different models like LLM-s with different parameters or build scalable solution this app streamlines the entire process.
 With support for both CPU and CUDA-accelerated GPU environments, you can deploy models locally or scale them across multiple nodes for production environments. 
 
 <p align="center">
     <img src=".github/intro.gif" alt="intro" />
 </p>
+
+## Supported Models
+
+
 
 <!--
 ## Quick Start
