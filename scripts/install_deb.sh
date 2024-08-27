@@ -102,7 +102,14 @@ accept_license() {
     echo "  https://developer.download.nvidia.com/compute/cuda/redist/libcurand/LICENSE.txt"
     echo "  https://developer.download.nvidia.com/compute/cuda/redist/libcublas/LICENSE.txt"
     echo
-    read -p "Do you accept the NVIDIA license agreement? (yes/no): " ACCEPT
+
+    if [ -n "$DEBIAN_FRONTEND" ] && [ "$DEBIAN_FRONTEND" = "noninteractive" ]; then
+        ACCEPT="$DEFAULT_ACCEPT"
+    else
+        # Interactive prompt with default value
+        read -p "Do you accept the NVIDIA license agreement? (yes/no) [yes]: " ACCEPT
+        ACCEPT=${ACCEPT:-$DEFAULT_ACCEPT}
+    fi
 
     case $ACCEPT in
         yes|y|Y|YES) echo "License accepted." ;;
@@ -125,7 +132,7 @@ cat  << EOF
 EOF
     echo
     echo "Installing dependencies"
-    DEBIAN_FRONTEND=noninteractive
+    #DEBIAN_FRONTEND=noninteractive
     apt update 
     apt install libwebkit2gtk-4.1-dev curl xz-utils -yq
 
