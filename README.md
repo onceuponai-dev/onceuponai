@@ -14,6 +14,59 @@ With support for both CPU and CUDA-accelerated GPU environments, you can deploy 
 
 ## Supported Models
 
+### Embeddings: 
+* [intfloat/e5-small-v2](https://huggingface.co/intfloat/e5-small-v2)
+* [intfloat/e5-large-v2](https://huggingface.co/intfloat/e5-large-v2)
+* [intfloat/multilingual-e5-small](https://huggingface.co/intfloat/multilingual-e5-small)
+* [intfloat/multilingual-e5-large](https://huggingface.co/intfloat/multilingual-e5-large)
+
+### LLMs:
+* [google/gemma-2b-it](https://huggingface.co/google/gemma-2b-it)
+* [google/gemma-7b-it](https://huggingface.co/google/gemma-7b-it)
+
+### Quantized LLMs:
+* [speakleash/Bielik-7B-Instruct-v0.1-GGUF](https://huggingface.co/speakleash/Bielik-7B-Instruct-v0.1-GGUF)
+* [TheBloke/Llama-2-7B-GGML](https://huggingface.co/TheBloke/Llama-2-7B-GGML)
+* [TheBloke/Llama-2-13B-GGML](https://huggingface.co/TheBloke/Llama-2-13B-GGML)
+* [TheBloke/Llama-2-7B-Chat-GGML](https://huggingface.co/TheBloke/Llama-2-7B-Chat-GGML)
+* [TheBloke/Llama-2-13B-Chat-GGML](https://huggingface.co/TheBloke/Llama-2-13B-Chat-GGML)
+* [TheBloke/CodeLlama-2-7B-GGML](https://huggingface.co/TheBloke/CodeLlama-2-7B-GGML)
+* [TheBloke/CodeLlama-2-13B-GGML](https://huggingface.co/TheBloke/CodeLlama-2-13B-GGML)
+* [TheBloke/leo-hessianai-7B-GGUF](https://huggingface.co/TheBloke/leo-hessianai-7B-GGUF)
+* [TheBloke/leo-hessianai-13B-GGUF](https://huggingface.co/TheBloke/leo-hessianai-13B-GGUF)
+* [TheBloke/Mixtral-8x7B-v0.1-GGUF](https://huggingface.co/TheBloke/Mixtral-8x7B-v0.1-GGUF)
+* [TheBloke/Mixtral-8x7B-Instruct-v0.1-GGUF](https://huggingface.co/TheBloke/Mixtral-8x7B-Instruct-v0.1-GGUF)
+* [TheBloke/Mistral-7B-v0.1-GGUF](https://huggingface.co/TheBloke/Mistral-7B-v0.1-GGUF)
+* [TheBloke/Mistral-7B-Instruct-v0.1-GGUF](https://huggingface.co/TheBloke/Mistral-7B-Instruct-v0.1-GGUF)
+* [TheBloke/Mistral-7B-Instruct-v0.2-GGUF](https://huggingface.co/TheBloke/Mistral-7B-Instruct-v0.2-GGUF)
+* [TheBloke/zephyr-7B-alpha-GGUF](https://huggingface.co/TheBloke/zephyr-7B-alpha-GGUF)
+* [TheBloke/zephyr-7B-beta-GGUF](https://huggingface.co/TheBloke/zephyr-7B-beta-GGUF)
+* [TheBloke/openchat_3.5-GGUF](https://huggingface.co/TheBloke/openchat_3.5-GGUF)
+* [TheBloke/Starling-LM-7B-alpha-GGUF](https://huggingface.co/TheBloke/Starling-LM-7B-alpha-GGUF)
+* [QuantFactory/Meta-Llama-3-8B-GGUF](https://huggingface.co/QuantFactory/Meta-Llama-3-8B-GGUF)
+* [microsoft/Phi-3-mini-4k-instruct-gguf](https://huggingface.co/microsoft/Phi-3-mini-4k-instruct-gguf)
+
+## Installation
+
+### Linux
+
+TODO
+
+### Windows
+
+TODO
+
+### Mac 
+
+TODO
+
+## Usage
+
+TODO
+
+## Architecture
+
+TODO
 
 
 <!--
@@ -104,6 +157,5 @@ Once Upon ... AI is a cutting-edge tool designed to make machine learning more a
 
 
 
-sudo /home/ubuntu/rust-src/onceuponai/scripts/postinstall.sh
 
 -->
