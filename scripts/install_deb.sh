@@ -129,7 +129,8 @@ EOF
     apt update 
     apt install libwebkit2gtk-4.1-dev curl xz-utils -yq
 
-    dpkg -i /home/ubuntu/rust-src/onceuponai/target/release/bundle/deb/onceuponai_0.0.0_amd64.deb
+    curl -LO https://github.com/onceuponai-dev/onceuponai/releases/download/v0.0.1-alpha.2/onceuponai_0.0.0_amd64.deb
+    dpkg -i onceuponai_0.0.0_amd64.deb
 }
 
 link_libraries() {

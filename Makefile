@@ -49,6 +49,10 @@ test-opendal: ## Test musl
 	cd ./crates/onceuponai-core && \
 	cargo test --features cuda --release -- llm::rag::test_opendal1 --show-output
 
+build-ui: ## Test musl
+	cd ./onceuponai-ui && \
+	npm run build
+
 build-linux: ## Test musl
 	cd ./crates/onceuponai && \
 	npm run tauri build
