@@ -105,7 +105,7 @@ accept_license() {
 
     DEFAULT_ACCEPT="yes"
 
-    if [ -n "$DEBIAN_FRONTEND" ] && [ "$DEBIAN_FRONTEND" = "noninteractive" ]; then
+    if [ "$DEBIAN_FRONTEND" = "noninteractive" ]; then
         ACCEPT="$DEFAULT_ACCEPT"
     else
         # Interactive prompt with default value
