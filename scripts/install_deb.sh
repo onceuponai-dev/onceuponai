@@ -103,6 +103,8 @@ accept_license() {
     echo "  https://developer.download.nvidia.com/compute/cuda/redist/libcublas/LICENSE.txt"
     echo
 
+    DEFAULT_ACCEPT="yes"
+
     if [ -n "$DEBIAN_FRONTEND" ] && [ "$DEBIAN_FRONTEND" = "noninteractive" ]; then
         ACCEPT="$DEFAULT_ACCEPT"
     else
