@@ -16,8 +16,6 @@ use openidconnect::{
     PkceCodeChallenge, RedirectUrl,
 };
 use openidconnect::{OAuth2TokenResponse, TokenResponse};
-use rand::distributions::Alphanumeric;
-use rand::Rng;
 use serde_json::json;
 use std::error::Error;
 

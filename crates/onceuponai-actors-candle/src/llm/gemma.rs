@@ -35,6 +35,14 @@ impl ActorActions for GemmaSpec {
         "gemma".to_string()
     }
 
+    fn init(&self) -> Result<()> {
+        GemmaModel::init(
+            self.base_repo_id.clone(),
+            self.tokenizer_repo.clone(),
+            self.hf_token.clone(),
+        )
+    }
+
     fn start(&self) -> Result<()> {
         GemmaModel::lazy(
             self.base_repo_id.clone(),

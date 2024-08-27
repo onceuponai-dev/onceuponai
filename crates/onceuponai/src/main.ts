@@ -29,7 +29,8 @@ import {
     mdiCheck, 
     mdiArrowRightDropCircleOutline,
     mdiRefresh,
-    mdiPower
+    mdiPower,
+    mdiWeb
 } from '@mdi/js'
 
 const vuetify = createVuetify({
@@ -69,7 +70,8 @@ const vuetify = createVuetify({
             check: mdiCheck,
             arrowRightDropCircleOutline: mdiArrowRightDropCircleOutline,
             refresh: mdiRefresh,
-            power: mdiPower
+            power: mdiPower,
+            web: mdiWeb
         },
         sets: {
             mdi,

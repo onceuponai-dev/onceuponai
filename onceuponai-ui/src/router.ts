@@ -1,12 +1,10 @@
 import { createRouter, createWebHashHistory } from 'vue-router';
-import HomeComponent from '@/components/Home.vue';
 import PromptsComponent from '@/components/Prompts.vue';
 import StoresComponent from '@/components/Stores.vue';
 import TermsComponent from '@/components/Terms.vue';
 import FooterComponent from '@/components/Footer.vue';
 import ProfileComponent from '@/components/Profile.vue';
 import ActorsComponent from '@/components/Actors.vue';
-import DashboardComponent from '@/components/Dashboard.vue';
 import ChatComponent from '@/components/Chat.vue';
 import PersonalTokensComponent from '@/components/PersonalTokens.vue';
 
@@ -15,7 +13,7 @@ const routes: Array<any> = [
     path: '/',
     name: 'Home',
     components: {
-      default: HomeComponent,
+      default: ActorsComponent,
       footer: FooterComponent
     },
   },
@@ -56,14 +54,6 @@ const routes: Array<any> = [
     name: 'Stores',
     components: {
       default: StoresComponent,
-      footer: FooterComponent
-    }
-  },
-  {
-    path: '/dashboard',
-    name: 'Dashboard',
-    components: {
-      default: DashboardComponent,
       footer: FooterComponent
     }
   },

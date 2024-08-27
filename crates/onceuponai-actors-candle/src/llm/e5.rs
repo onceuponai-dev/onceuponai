@@ -15,6 +15,7 @@ use uuid::Uuid;
 pub struct E5Spec {
     pub model_repo: Option<String>,
     pub device: Option<String>,
+    pub hf_token: Option<String>,
 }
 
 impl ActorActions for E5Spec {
@@ -26,8 +27,16 @@ impl ActorActions for E5Spec {
         "e5".to_string()
     }
 
+    fn init(&self) -> Result<()> {
+        E5Model::init(self.model_repo.clone(), self.hf_token.clone())
+    }
+
     fn start(&self) -> Result<()> {
-        E5Model::lazy(self.model_repo.clone(), self.device.clone())?;
+        E5Model::lazy(
+            self.model_repo.clone(),
+            self.device.clone(),
+            self.hf_token.clone(),
+        )?;
         info!("MODEL STARTED");
         Ok(())
     }
@@ -54,7 +63,7 @@ impl ActorActions for E5Spec {
             })
             .collect();
 
-        let embeddings_data: Vec<EntityValue> = E5Model::lazy(None, None)?
+        let embeddings_data: Vec<EntityValue> = E5Model::lazy(None, None, None)?
             .lock()
             .map_anyhow_err()?
             .embed(input)?

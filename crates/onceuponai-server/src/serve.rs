@@ -1,10 +1,9 @@
 use crate::guards::AuthGuard;
-use crate::handlers::actors::{connected_actors, invoke};
+use crate::handlers::actors::{actors_gallery, connected_actors, invoke};
 use crate::handlers::oai::{v1_chat_completions, v1_embeddings};
-use crate::handlers::{
-    self, assets_css, assets_js, health, index_html, ASSETS_CSS_HASH, ASSETS_JS_HASH,
-};
+use crate::handlers::{self, assets_css, assets_js, favicon, health, index_html, logo};
 use actix::Addr;
+// use actix_files as fs;
 use actix_session::{storage::CookieSessionStore, SessionMiddleware};
 use actix_web::middleware::Logger;
 use actix_web::HttpResponse;
@@ -13,7 +12,6 @@ use anyhow::Result;
 use base64::{engine::general_purpose, Engine as _};
 use num_traits::Zero;
 use onceuponai_actors::actors::main_actor::{MainActor, MainActorSpec};
-use onceuponai_core::common::generate_token;
 use onceuponai_core::common::ResultExt;
 
 fn get_secret_key(spec: &MainActorSpec) -> Result<Key> {
@@ -27,7 +25,11 @@ pub struct AppState {
     pub spec: MainActorSpec,
 }
 
-pub async fn serve(spec: MainActorSpec, addr: Addr<MainActor>) -> std::io::Result<()> {
+pub async fn serve(
+    spec: MainActorSpec,
+    addr: Addr<MainActor>,
+    auth_token: String,
+) -> std::io::Result<()> {
     let secret_key = get_secret_key(&spec).map_io_err()?;
     let mut sp = spec.clone();
     if let Some(v) = spec.log_level {
@@ -35,12 +37,11 @@ pub async fn serve(spec: MainActorSpec, addr: Addr<MainActor>) -> std::io::Resul
     }
 
     if !sp.is_oidc() {
-        let _auth_token = generate_token(50);
-        sp._auth_token_set(_auth_token.clone());
+        sp._auth_token_set(auth_token.clone());
         // warn!("Auth token ");
         println!(
             "Server running on http://{}:{}/login?token={}",
-            spec.server_host, spec.server_port, _auth_token
+            spec.server_host, spec.server_port, auth_token
         );
     } else {
         println!(
@@ -61,14 +62,11 @@ pub async fn serve(spec: MainActorSpec, addr: Addr<MainActor>) -> std::io::Resul
                 spec: sp.clone(),
             }))
             .route("/", web::get().to(index_html))
-            .route(
-                &format!("/assets/index-{}.js", ASSETS_JS_HASH),
-                web::get().to(assets_js),
-            )
-            .route(
-                &format!("/assets/index-{}.css", ASSETS_CSS_HASH),
-                web::get().to(assets_css),
-            )
+            .route("/index.js", web::get().to(assets_js))
+            .route("/index.css", web::get().to(assets_css))
+            .route("/ui/images/logo100.png", web::get().to(logo))
+            .route("/favicon.ico", web::get().to(favicon))
+            // .service(fs::Files::new("/extensions", "./extensions").show_files_listing())
             .route("/health", web::get().to(health));
 
         if sp.is_oidc() {
@@ -95,6 +93,7 @@ pub async fn serve(spec: MainActorSpec, addr: Addr<MainActor>) -> std::io::Resul
             web::scope("/api")
                 .guard(auth_guard.clone())
                 .route("/actors", web::get().to(connected_actors))
+                .route("/actors/gallery", web::get().to(actors_gallery))
                 .route("/invoke/{kind}/{name}", web::post().to(invoke))
                 .route("/user", web::get().to(handlers::users::user))
                 .route(

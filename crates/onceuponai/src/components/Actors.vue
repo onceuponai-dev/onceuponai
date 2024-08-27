@@ -19,7 +19,6 @@ interface ActorSpecItem {
   type: string;
 }
 
-
 interface ActorMetadata {
   name: string;
   actor_id: string;
@@ -27,12 +26,6 @@ interface ActorMetadata {
   actor_seed: string;
   sidecar_id: string;
   features: string[];
-}
-
-interface SpecItem {
-  key: string;
-  value: any;
-  type: string;
 }
 
 interface Template {
@@ -45,7 +38,7 @@ interface Template {
     description: string;
     url: string;
   };
-  spec: SpecItem[];
+  spec: ActorSpecItem[];
 }
 
 interface GalleryItem {
@@ -57,7 +50,7 @@ interface GalleryItem {
     description?: string;
     url?: string;
   };
-  spec: SpecItem[];
+  spec: ActorSpecItem[];
 }
 
 interface ModelsYaml {
@@ -68,6 +61,8 @@ interface ModelsYaml {
 const router = useRouter();
 
 // refs
+
+const webUI = ref("");
 const dialog: any = ref(false);
 const selectedModel = ref<Actor | null>(null);
 const actors = ref<Actor[]>([]);
@@ -79,10 +74,13 @@ const snackbarColor: any = ref(null);
 const actorsGallery: any = ref(null);
 
 const remoteSpawnConfig: any = ref(null);
+
+const initCommand: any = ref(null);
 const remoteSpawnCommand: any = ref(null);
 const remoteSpawnDialog: any = ref(null);
 const spawnDialog: any = ref(null);
 const spawnActorName: any = ref("");
+const spawnActorSidecar: any = ref("");
 const spawnActorKind: any = ref("");
 const spawnActorSpec: any = ref([]);
 const spawnActorDevice: any = ref("cpu");
@@ -93,10 +91,11 @@ const spawnActorNewPairType = ref("string");
 const spawnSearchResults: any = ref([]);
 const spawnSelectedSearch = ref('');
 const spawnInProgress = ref(false);
+const initInProgress = ref(false);
 
 
 // functions
-const mergeSpecs = (templateSpecs: SpecItem[], gallerySpecs: SpecItem[]): SpecItem[] => {
+const mergeSpecs = (templateSpecs: ActorSpecItem[], gallerySpecs: ActorSpecItem[]): ActorSpecItem[] => {
   const mergedSpecs = [...templateSpecs];
 
   gallerySpecs.forEach(gallerySpec => {
@@ -171,10 +170,12 @@ const refresh = async () => {
 
 };
 
-const spawn = async () => {
+const buildActorJsonConfig = () => {
   const spec: any = {};
   spawnActorSpec.value.forEach((pair: ActorSpecItem) => {
-    spec[pair.key] = pair.value;
+    console.log(pair.key, pair.type, pair.value);
+    const value = parseSpecItem(pair);
+    spec[pair.key] = value;
   });
 
   spec["device"] = spawnActorDevice.value;
@@ -191,6 +192,20 @@ const spawn = async () => {
   console.log('Configuration data:', actorConfig);
   const jsonString = JSON.stringify(actorConfig);
   const specJsonBase64 = btoa(jsonString);
+  return specJsonBase64;
+}
+
+const init = async () => {
+  const specJsonBase64 = buildActorJsonConfig();
+  initInProgress.value = true;
+  const act: any = await invoke("init_actor", { "device": spawnActorDevice.value, "specJsonBase64": specJsonBase64 });
+  console.log(act);
+  initInProgress.value = false;
+};
+
+
+const spawn = async () => {
+  const specJsonBase64 = buildActorJsonConfig();
   const act: any = await invoke("spawn_actor", { "name": spawnActorName.value, "device": spawnActorDevice.value, "specJsonBase64": specJsonBase64 });
   console.log(act);
 
@@ -214,7 +229,8 @@ const openRemoteSpawnDialog = () => {
   remoteSpawnDialog.value = true;
   const spec: any = {};
   spawnActorSpec.value.forEach((pair: ActorSpecItem) => {
-    spec[pair.key] = pair.value;
+    const value = parseSpecItem(pair);
+    spec[pair.key] = value;
   });
 
   spec["device"] = spawnActorDevice.value;
@@ -230,7 +246,11 @@ const openRemoteSpawnDialog = () => {
   };
 
   remoteSpawnConfig.value = dump(config);
-  remoteSpawnCommand.value = `onceuponai-actors-candle-${spec["device"]} spawn -f config.yaml`
+  remoteSpawnCommand.value = `${spawnActorSidecar.value}-${spec["device"]} spawn -f config.yaml`
+
+  const initConfig = buildActorJsonConfig();
+  initCommand.value = `${spawnActorSidecar.value}-${spawnActorDevice.value} init -j ${initConfig}`
+
 
 };
 
@@ -241,10 +261,10 @@ const closeDialog = () => {
 
 onMounted(async () => {
   refresh();
-  const ag: string = await invoke("actors_gallery");
-  actorsGallery.value = createModelsList(ag);
+  const ag = await fetch(`/api/actors/gallery`);
+  const gallery = await ag.text();
+  actorsGallery.value = createModelsList(gallery);
   console.log(actorsGallery.value)
-  //actorsGallery.value = JSON.parse(ag);
   spawnSearchResults.value = actorsGallery.value.map((a: any) => a.id);
 });
 
@@ -300,6 +320,7 @@ const getInputComponent = (type: any) => {
       return 'v-text-field';
   }
 };
+
 const getInputLabel = (type: any) => {
   switch (type) {
     case 'number':
@@ -312,6 +333,23 @@ const getInputLabel = (type: any) => {
       return 'Value';
   }
 };
+
+const parseSpecItem = (item: ActorSpecItem) => {
+
+  if(item.value == null) {
+    return item.value;
+  }
+
+  switch (item.type) {
+    case 'number':
+      return Number(String(item.value))
+    case 'bool':
+      return String(item.value).toLowerCase() == "true";
+    default:
+      return item.value;
+  }
+};
+
 
 const getInputType = (type: any) => {
   switch (type) {
@@ -327,6 +365,16 @@ const getInputType = (type: any) => {
 const onSearch = () => {
 };
 
+const config: any = await invoke("config");
+const copyUrl = () => {
+  webUI.value = `${config.base_url}/login?token=${config.auth_token}`;
+  navigator.clipboard.writeText(webUI.value).then(() => {
+    console.log('Text copied to clipboard');
+  }).catch((err) => {
+    console.error('Failed to copy text: ', err);
+  });
+}
+
 
 watch(spawnSelectedSearch, (newValue) => {
   console.log("NEW ITEM" + newValue);
@@ -334,6 +382,7 @@ watch(spawnSelectedSearch, (newValue) => {
   if (selectedItem) {
     spawnActorKind.value = selectedItem.kind;
     spawnActorName.value = selectedItem.metadata.name;
+    spawnActorSidecar.value = selectedItem.sidecar;
     spawnActorSpec.value = selectedItem.spec;
     spawnActorDevice.value = selectedItem.device;
     console.log(selectedItem)
@@ -348,6 +397,9 @@ watch(spawnSelectedSearch, (newValue) => {
     <v-btn @click="refresh" prepend-icon="$refresh" variant="text">REFRESH</v-btn>
     &nbsp;
     <v-btn @click="spawnDialog = true" prepend-icon="$power" variant="text">SPAWN</v-btn>
+    &nbsp;
+    <v-btn @click="copyUrl" prepend-icon="$web" variant="text">COPY WEB URL</v-btn>
+
 
     <v-divider></v-divider>
 
@@ -433,13 +485,28 @@ watch(spawnSelectedSearch, (newValue) => {
       </v-card>
     </v-dialog>
 
-    <v-dialog v-model="remoteSpawnDialog" max-width="600px">
+    <v-dialog v-model="remoteSpawnDialog" max-width="800px">
       <v-card>
         <v-card-title>Actor Config</v-card-title>
         <v-card-text>
           <v-divider></v-divider>
-          <v-textarea label="config.yaml" rows="12" v-model="remoteSpawnConfig"></v-textarea>
-          <span><i>{{remoteSpawnCommand}}</i></span>
+          <v-stepper :items="['Initialize', 'Spawn']">
+            <template v-slot:item.1>
+              <v-card title="Initialize actor" flat>
+                <v-card-text>
+                  <span><i>{{ initCommand }}</i></span>
+                </v-card-text>
+              </v-card>
+            </template>
+            <template v-slot:item.2>
+              <v-card title="Spawn actor" flat>
+                <v-card-text>
+                  <v-textarea label="config.yaml" rows="12" v-model="remoteSpawnConfig"></v-textarea>
+                  <span><i>{{ remoteSpawnCommand }}</i></span>
+                </v-card-text>
+              </v-card>
+            </template>
+          </v-stepper>
         </v-card-text>
         <v-card-actions>
           <v-spacer></v-spacer>
@@ -487,9 +554,12 @@ watch(spawnSelectedSearch, (newValue) => {
 
             <v-select v-model="spawnActorDevice" :items="spawnActorDevices" label="Device" required></v-select>
           </v-form>
+          <br />
         </v-card-text>
         <v-card-actions>
           <v-spacer></v-spacer>
+          <v-progress-circular color="orange" v-if="initInProgress" indeterminate></v-progress-circular>
+          <v-btn color="orange darken-1" @click="init"><b>Download</b></v-btn>
           <v-btn color="green darken-1" @click="spawn"><b>Spawn</b></v-btn>
           <v-btn color="blue darken-1" @click="openRemoteSpawnDialog"><b>Config</b></v-btn>
           <v-btn color="grey darken-1" @click="spawnDialog = false"><b>Cancel</b></v-btn>

@@ -3,6 +3,7 @@ import { ref, onMounted } from "vue";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from '@tauri-apps/api/event';
 import { fetch } from "../common";
+import { parseMarkdown } from '../mdcommon';
 
 interface Message {
   content: string;
@@ -69,105 +70,13 @@ const sendMessage = async () => {
   };
 
   await invoke("v1_chat_completions", { "chatRequest": message, "baseUrl": config.base_url, "personalToken": config.personal_token });
-
-
-  /*
-  const controller = new AbortController();
-  const signal = controller.signal;
-
-  fetch(`/v1/chat/completions`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json'
-    },
-    body: JSON.stringify({
-      stream: isStream.value,
-      model: selectedActor.value,
-      messages: [{ "content": text, "role": "user" }]
-    }),
-    signal: signal
-  })
-    .then(async (response: any) => {
-
-      if (!response.ok) {
-        throw new Error('Network response was not ok');
-      }
-
-
-      const reader = response.body?.getReader();
-      const decoder = new TextDecoder('utf-8');
-      let resultText = '';
-      let done, value;
-      let ix = 0;
-      if (reader) {
-        while ({ done, value } = await reader.read(), !done) {
-
-          showProgress.value = false;
-          let textChunk = decoder.decode(value, { stream: true });
-          resultText += textChunk;
-          console.log(textChunk);
-          const messagesToSend = resultText.split('\n').filter(message => message.trim().length > 0);
-          for (let message of messagesToSend) {
-            try {
-              if (isStream.value) {
-                const regex = /}{/g;
-                message = message.replace(regex, "},{");
-                message = `[${message}]`;
-                let m: ChatResponse[] = JSON.parse(message);
-                let role = m[0].choices[0].message.role;
-                let content = m.map((x) => x.choices[0].message.content).join("");
-                if (ix === 0) {
-                  messages.value.push({ "content": content, "role": role });
-                } else {
-                  let lastMessage = messages.value[messages.value.length - 1];
-                  lastMessage.content = content;
-                }
-              } else {
-                let m: ChatResponse = JSON.parse(message);
-                let choice = m.choices[0];
-                messages.value.push(choice.message);
-              }
-
-            } catch (e) {
-              console.warn('Failed to parse message', e);
-            }
-          }
-
-          nextTick(() => {
-            setTimeout(() => {
-              var chatDiv = document.getElementsByClassName("chat-area")[0];
-              chatDiv.scrollTop = chatDiv.scrollHeight;
-            }, 100);
-          });
-          ix++;
-        }
-
-        reader.releaseLock();
-      }
-
-
-    })
-    .catch(error => {
-      messages.value.push({ content: "😿 Error", role: 'assistant' });
-      showProgress.value = false;
-      console.log(error);
-    });
-    */
-
-  // Optional: Abort the request if needed
-  // controller.abort();
 };
-
-
-
 
 onMounted(() => {
   if (chatArea.value) {
     chatArea.value.scrollTop = chatArea.value.scrollHeight;
   }
 });
-
-
 
 </script>
 
@@ -181,7 +90,7 @@ onMounted(() => {
               <v-chip class="mx-2 text-caption" :color="message.role == 'user' ? 'success' : 'info'">{{ message.role
                 }}</v-chip>
             </v-divider>
-            <div class="card-text">{{ message.content }}</div>
+            <div class="card-text" v-html="parseMarkdown(message.content)"></div>
           </div>
         </v-col>
         <v-divider v-if="message.role !='user'" color="error"></v-divider>

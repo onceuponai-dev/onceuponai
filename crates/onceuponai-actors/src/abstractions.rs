@@ -79,6 +79,8 @@ pub trait ActorActions: Send + Sync {
     }
 
     fn kind(&self) -> String;
+
+    fn init(&self) -> Result<()>;
     fn start(&self) -> Result<()>;
     fn invoke(&self, uuid: Uuid, request: &ActorInvokeRequest) -> Result<ActorInvokeResponse>;
 

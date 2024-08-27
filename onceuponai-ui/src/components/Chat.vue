@@ -2,6 +2,7 @@
 import { defineComponent, ref, onMounted, nextTick } from 'vue';
 import { useRouter } from 'vue-router';
 import axios from 'axios';
+import { parseMarkdown } from '../mdcommon';
 
 interface Message {
   content: string;
@@ -137,58 +138,6 @@ export default defineComponent({
       // controller.abort();
     };
 
-
-
-
-
-
-
-
-
-
-
-
-    // const sendMessage = () => {
-    //   if (inputMessage.value.trim() === '') return;
-
-    //   var text = inputMessage.value;
-    //   messages.value.push({ content: text, role: 'user' });
-    //   inputMessage.value = '';
-    //   showProgress.value = true;
-    //   axios.post(`/api/invoke/${selectedActor.value}`, {
-    //     stream: isStream.value,
-    //     config: {},
-    //     data: {
-    //       message: [{ "content": text, "role": "user" }],
-    //     }
-    //   }, {
-    //     headers: {
-    //       'Content-Type': 'application/json'
-    //     }
-    //   })
-    //     .then(function (response) {
-
-    //       showProgress.value = false;
-    //       console.log(response);
-    //       var result = response.data.results[0];
-    //       messages.value.push({ content: result, role: 'assistant' });
-    //       nextTick(() => {
-    //         setTimeout(() => {
-    //           var chatDiv = document.getElementsByClassName("chat-area")[0]
-    //           chatDiv.scrollTop = chatDiv.scrollHeight;
-    //         }, 100);
-    //       });
-
-    //     })
-    //     .catch(function (error) {
-
-    //       messages.value.push({ content: "😿 Error", role: 'assistant' });
-    //       showProgress.value = false;
-    //       console.log(error);
-    //     });
-
-    // };
-
     onMounted(() => {
       if (chatArea.value) {
         chatArea.value.scrollTop = chatArea.value.scrollHeight;
@@ -203,7 +152,8 @@ export default defineComponent({
       showProgress,
       selectedActor,
       actors,
-      isStream
+      isStream,
+      parseMarkdown
     };
 
 
@@ -221,7 +171,7 @@ export default defineComponent({
               <v-chip class="mx-2 text-caption" :color="message.role == 'user' ? 'success' : 'info'">{{ message.role
                 }}</v-chip>
             </v-divider>
-            <div class="card-text">{{ message.content }}</div>
+            <div class="card-text" v-html="parseMarkdown(message.content)"></div>
           </div>
         </v-col>
         <v-divider v-if="message.role != 'user'" color="error"></v-divider>

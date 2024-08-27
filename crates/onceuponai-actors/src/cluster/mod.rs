@@ -74,6 +74,13 @@ pub async fn start_worker_cluster<T: ActorKindActions + DeserializeOwned>(
     Ok(())
 }
 
+pub async fn init_actor<T: ActorKindActions + DeserializeOwned>(
+    json: Option<&String>,
+) -> Result<()> {
+    let actor_kind: T = decode_and_deserialize(json.expect("json"), SerializationType::JSON)?;
+    actor_kind.actor().init()
+}
+
 const LOGO: &str = r#"
  ██████╗ ███╗   ██╗ ██████╗███████╗    ██╗   ██╗██████╗  ██████╗ ███╗   ██╗                  █████╗ ██╗
 ██╔═══██╗████╗  ██║██╔════╝██╔════╝    ██║   ██║██╔══██╗██╔═══██╗████╗  ██║                 ██╔══██╗██║

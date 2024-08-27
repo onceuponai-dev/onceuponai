@@ -27,12 +27,6 @@ interface ActorMetadata {
   features: string[];
 }
 
-interface SpecItem {
-  key: string;
-  value: any;
-  type: string;
-}
-
 interface Template {
   id: string;
   sidecar: string;
@@ -43,7 +37,7 @@ interface Template {
     description: string;
     url: string;
   };
-  spec: SpecItem[];
+  spec: ActorSpecItem[];
 }
 
 interface GalleryItem {
@@ -55,7 +49,7 @@ interface GalleryItem {
     description?: string;
     url?: string;
   };
-  spec: SpecItem[];
+  spec: ActorSpecItem[];
 }
 
 interface ModelsYaml {
@@ -100,7 +94,7 @@ export default defineComponent({
     const spawnInProgress = ref(false);
 
     // functions
-    const mergeSpecs = (templateSpecs: SpecItem[], gallerySpecs: SpecItem[]): SpecItem[] => {
+    const mergeSpecs = (templateSpecs: ActorSpecItem[], gallerySpecs: ActorSpecItem[]): ActorSpecItem[] => {
       const mergedSpecs = [...templateSpecs];
 
       gallerySpecs.forEach(gallerySpec => {
@@ -183,7 +177,8 @@ export default defineComponent({
       remoteSpawnDialog.value = true;
       const spec: any = {};
       spawnActorSpec.value.forEach((pair: ActorSpecItem) => {
-        spec[pair.key] = pair.value;
+        const value = parseSpecItem(pair);
+        spec[pair.key] = value;
       });
 
       spec["device"] = spawnActorDevice.value;
@@ -217,9 +212,14 @@ export default defineComponent({
 
     onMounted(() => {
       refresh();
-      const ag: string = "";
-      // actorsGallery.value = createModelsList(ag);
-      // spawnSearchResults.value = actorsGallery.value.map((a: any) => a.id);
+      axios.get(`/api/actors/gallery`)
+        .then(function (response) {
+          actorsGallery.value = createModelsList(response.data);
+          spawnSearchResults.value = actorsGallery.value.map((a: any) => a.id);
+        })
+        .catch(function (error) {
+          console.log(error);
+        });
     });
 
     const addPair = () => {
@@ -254,6 +254,23 @@ export default defineComponent({
           return 'Value';
       }
     };
+
+    const parseSpecItem = (item: ActorSpecItem) => {
+
+      if (item.value == null) {
+        return item.value;
+      }
+
+      switch (item.type) {
+        case 'number':
+          return Number(String(item.value))
+        case 'bool':
+          return String(item.value).toLowerCase() == "true";
+        default:
+          return item.value;
+      }
+    };
+
 
     const getInputType = (type: any) => {
       switch (type) {

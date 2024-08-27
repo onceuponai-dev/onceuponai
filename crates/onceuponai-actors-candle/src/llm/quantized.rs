@@ -28,6 +28,7 @@ pub struct QuantizedSpec {
     pub gqa: Option<usize>,
     pub force_dmmv: Option<bool>,
     pub eos_token: Option<String>,
+    pub hf_token: Option<String>,
 }
 
 impl ActorActions for QuantizedSpec {
@@ -37,6 +38,16 @@ impl ActorActions for QuantizedSpec {
 
     fn kind(&self) -> String {
         "quantized".to_string()
+    }
+
+    fn init(&self) -> Result<()> {
+        QuantizedModel::init(
+            self.model_repo.clone(),
+            self.model_file.clone(),
+            self.model_revision.clone(),
+            self.tokenizer_repo.clone(),
+            self.hf_token.clone(),
+        )
     }
 
     fn start(&self) -> Result<()> {
@@ -56,6 +67,7 @@ impl ActorActions for QuantizedSpec {
             self.gqa,
             self.force_dmmv,
             self.eos_token.clone(),
+            self.hf_token.clone(),
         )?;
 
         println!("SPEC: {:?}", self);
@@ -87,7 +99,7 @@ impl ActorActions for QuantizedSpec {
 
         let mut model = QuantizedModel::lazy(
             None, None, None, None, None, None, None, None, None, None, None, None, None, None,
-            None,
+            None, None,
         )?
         .lock()
         .map_anyhow_err()?;
@@ -165,7 +177,7 @@ impl ActorActions for QuantizedSpec {
 
         let mut model = QuantizedModel::lazy(
             None, None, None, None, None, None, None, None, None, None, None, None, None, None,
-            None,
+            None, None,
         )?
         .lock()
         .map_anyhow_err()?;

@@ -5,9 +5,10 @@ use onceuponai_actors::actors::main_actor::{
     MainActor, MainActorAuthConfig, MainActorOidcConfig, MainActorSpec,
 };
 use onceuponai_actors::cluster::start_main_cluster;
-use onceuponai_core::common::{env_or_some, env_or_some_or_fn, random_base64, ResultExt};
+use onceuponai_core::common::{
+    env_or_some, env_or_some_or_fn, generate_token, random_base64, ResultExt,
+};
 use onceuponai_server::handlers::auth::generate_pat_token;
-use onceuponai_server::session::generate_cookie_key;
 use serde::{Deserialize, Serialize};
 use std::{
     io,
@@ -21,6 +22,7 @@ pub struct TauriAppState {
 
 #[derive(Debug, Serialize, Deserialize, Default)]
 pub struct TauriAppConfig {
+    pub auth_token: String,
     pub personal_token: String,
     pub base_url: String,
     pub actor_seed: String,
@@ -91,8 +93,10 @@ pub fn init(config: Option<Arc<Mutex<TauriAppConfig>>>, main_args: MainArgs) -> 
                 .clone()
                 .expect("PERSONAL_ACCESS_TOKEN_SECRET");
 
+            let auth_token = generate_token(50);
             let personal_token = generate_pat_token(&secret, "root", 30);
             shared_config.base_url = format!("http://localhost:{}", res.0.server_port);
+            shared_config.auth_token = auth_token.clone();
             shared_config.personal_token = personal_token;
             shared_config.actor_seed = res.2.clone().actor_host;
             let host_split: Vec<&str> = res.2.actor_host.split(':').collect();
@@ -100,7 +104,7 @@ pub fn init(config: Option<Arc<Mutex<TauriAppConfig>>>, main_args: MainArgs) -> 
             shared_config.actor_next_port = host_split[1].parse().unwrap();
             drop(shared_config);
 
-            onceuponai_server::serve::serve(res.0, res.1).await
+            onceuponai_server::serve::serve(res.0, res.1, auth_token).await
         })
     } else {
         let secret = spec
@@ -108,6 +112,7 @@ pub fn init(config: Option<Arc<Mutex<TauriAppConfig>>>, main_args: MainArgs) -> 
             .clone()
             .expect("PERSONAL_ACCESS_TOKEN_SECRET");
 
+        let auth_token = generate_token(50);
         let personal_token = generate_pat_token(&secret, "root", 30);
         println!("PERSONAL TOKEN: {personal_token}");
 
@@ -117,7 +122,7 @@ pub fn init(config: Option<Arc<Mutex<TauriAppConfig>>>, main_args: MainArgs) -> 
                 .unwrap()
                 .expect("MAIN ACTOR SPEC");
 
-            onceuponai_server::serve::serve(res.0, res.1).await
+            onceuponai_server::serve::serve(res.0, res.1, auth_token).await
         })
     }
 }

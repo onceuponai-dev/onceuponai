@@ -1,3 +1,6 @@
 @import './base.css';
 
 
+.v-avatar {
+  border: none !important;
+}
