@@ -1,82 +1,71 @@
-FROM node:20 AS vue-build
-WORKDIR /app
-COPY onceuponai-ui/package*.json ./
-RUN npm install
-COPY onceuponai-ui/ .
-RUN npm run build
+ARG CUBLAS_VERSION="linux-x86_64-12.3.4.1-archive"
+ARG CURAND_VERSION="linux-x86_64-10.3.7.37-archive"
+ARG ONCEUPONAI_VERSION="v0.0.1-alpha.2"
+ARG ONCEUPONAI_DEB="onceuponai_0.0.0_amd64.deb"
 
-FROM nvidia/cuda:12.3.1-devel-ubuntu22.04 AS rust-build
+FROM ubuntu:24.04 AS downloader_cuda
 
-RUN apt-get update && apt-get install -y \
-    curl \
-    build-essential \
-    pkg-config \
-    libssl-dev \
-    protobuf-compiler \
-    && curl https://sh.rustup.rs -sSf | sh -s -- -y
+ARG CUBLAS_VERSION
+ARG CURAND_VERSION
+ARG ONCEUPONAI_VERSION
+ARG ONCEUPONAI_DEB
 
-ENV PATH=/root/.cargo/bin:$PATH
+RUN apt-get update && apt-get install -y wget xz-utils
 
-WORKDIR /app
-RUN mkdir onceuponai-core && \
-    mkdir onceuponai-py && \
-    mkdir onceuponai-operator && \
-    mkdir onceuponai && \
-    mkdir onceuponai/src && \
-    echo "fn main() {println!(\"Hello, world!\");}" > onceuponai/src/main.rs && \
-    mkdir onceuponai-core/src && \
-    echo "fn main() {println!(\"Hello, world!\");}" > onceuponai-core/src/lib.rs && \
-    mkdir onceuponai-operator/src && \
-    echo "fn main() {println!(\"Hello, world!\");}" > onceuponai-operator/src/main.rs && \
-    mkdir onceuponai-py/src && \
-    echo "fn main() {println!(\"Hello, world!\");}" > onceuponai-py/src/lib.rs
+WORKDIR /opt/cuda
+RUN wget https://developer.download.nvidia.com/compute/cuda/redist/libcublas/linux-x86_64/libcublas-${CUBLAS_VERSION}.tar.xz
+RUN wget https://developer.download.nvidia.com/compute/cuda/redist/libcurand/linux-x86_64/libcurand-${CURAND_VERSION}.tar.xz
 
+RUN xz -d libcublas-${CUBLAS_VERSION}.tar.xz && \
+    tar xvf libcublas-${CUBLAS_VERSION}.tar && \
+    rm libcublas-${CUBLAS_VERSION}.tar
 
-COPY onceuponai-backend/Cargo.toml onceuponai-backend/Cargo.lock ./
-COPY onceuponai-backend/onceuponai/Cargo.toml ./onceuponai/
-COPY onceuponai-backend/onceuponai-core/Cargo.toml ./onceuponai-core/
-COPY onceuponai-backend/onceuponai-operator/Cargo.toml ./onceuponai-operator/
-COPY onceuponai-backend/onceuponai-py/Cargo.toml ./onceuponai-py/
+RUN xz -d libcurand-${CURAND_VERSION}.tar.xz && \
+    tar xvf libcurand-${CURAND_VERSION}.tar && \
+    rm libcurand-${CURAND_VERSION}.tar
 
-WORKDIR /app/onceuponai
-RUN cargo build --release
+RUN wget https://developer.download.nvidia.com/compute/cuda/redist/libcurand/LICENSE.txt && \
+    mv LICENSE.txt /opt/cuda/LICENSE.LIBCURAND.txt
 
-WORKDIR /app
-RUN rm -rf onceuponai/src/* && \
-    rm -rf onceuponai-core/src/* && \
-    rm -rf onceuponai-operator/src/* && \
-    rm -rf onceuponai-py/src/*
+RUN wget https://developer.download.nvidia.com/compute/cuda/redist/libcublas/LICENSE.txt && \
+    mv LICENSE.txt /opt/cuda/LICENSE.LIBCUBLAS.txt
 
-FROM rust-build AS rust-build-release
+FROM ubuntu:24.04 AS downloader
 
-WORKDIR /app
-COPY onceuponai-backend/onceuponai/src ./onceuponai/src
-COPY onceuponai-backend/onceuponai-core/src ./onceuponai-core/src
-COPY onceuponai-backend/onceuponai-operator/src ./onceuponai-operator/src
-COPY onceuponai-backend/onceuponai-py/src ./onceuponai-py/src
+ARG CUBLAS_VERSION
+ARG CURAND_VERSION
+ARG ONCEUPONAI_VERSION
+ARG ONCEUPONAI_DEB
 
-WORKDIR /app/onceuponai
-COPY --from=vue-build /onceuponai/ui ./ui
-RUN cd ui/assets && \
-    CSS_HASH=$(ls -1 *.css | grep -oP '([a-f0-9]{8})') && \
-    JS_HASH=$(ls -1 *.js | grep -oP '([a-f0-9]{8})') && \
-    sed -i "s/4a47f803/$CSS_HASH/g" /app/onceuponai/src/handlers/mod.rs && \
-    sed -i "s/e1b29641/$JS_HASH/g" /app/onceuponai/src/handlers/mod.rs
+RUN apt-get update && apt-get install -y wget xz-utils
+WORKDIR /opt/onceuponai
+RUN wget https://github.com/onceuponai-dev/onceuponai/releases/download/${ONCEUPONAI_VERSION}/${ONCEUPONAI_DEB}
 
+FROM ubuntu:24.04
 
-RUN cargo build --release
+ARG CUBLAS_VERSION
+ARG CURAND_VERSION
+ARG ONCEUPONAI_VERSION
+ARG ONCEUPONAI_DEB
 
-FROM ubuntu:22.04
+COPY --from=downloader /opt/onceuponai /opt/onceuponai
+RUN apt update && apt install libwebkit2gtk-4.1-0 libgtk-3-0 -y
+RUN dpkg -i /opt/onceuponai/${ONCEUPONAI_DEB}
+RUN rm -r /opt/onceuponai
+RUN rm -rf /var/lib/apt/list/*
 
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    libssl3 \
-    ca-certificates \
-    && apt-get clean \
-    && rm -rf /var/lib/apt/lists/*
+COPY --from=downloader_cuda /opt/cuda/libcublas-${CUBLAS_VERSION}/lib/libcublas.so   /usr/lib/onceuponai/
+COPY --from=downloader_cuda /opt/cuda/libcublas-${CUBLAS_VERSION}/lib/libcublasLt.so /usr/lib/onceuponai/
+COPY --from=downloader_cuda /opt/cuda/libcurand-${CURAND_VERSION}/lib/libcurand.so  /usr/lib/onceuponai/
+COPY --from=downloader_cuda /opt/cuda/LICENSE.LIBCUBLAS.txt  /usr/lib/onceuponai/
+COPY --from=downloader_cuda /opt/cuda/LICENSE.LIBCURAND.txt  /usr/lib/onceuponai/
 
-WORKDIR /app
-COPY --from=rust-build-release /app/target/release/onceuponai .
+RUN ln -s /usr/lib/onceuponai/libcublas.so   /usr/lib/onceuponai/libcublas.so.12 && \
+    ln -s /usr/lib/onceuponai/libcublasLt.so /usr/lib/onceuponai/libcublasLt.so.12
 
+USER 1000
+WORKDIR /home/ubuntu
+
+ENV LD_LIBRARY_PATH=/usr/lib/onceuponai
 EXPOSE 8080
-
-CMD ["./onceuponai"]
+ENTRYPOINT ["onceuponai"]

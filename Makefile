@@ -49,6 +49,10 @@ test-opendal: ## Test musl
 	cd ./crates/onceuponai-core && \
 	cargo test --features cuda --release -- llm::rag::test_opendal1 --show-output
 
+build-ui: ## Test musl
+	cd ./onceuponai-ui && \
+	npm run build
+
 build-linux: ## Test musl
 	cd ./crates/onceuponai && \
 	npm run tauri build
@@ -84,6 +88,8 @@ build-sidecar-candle-cpu-win: ##
 	cargo build --release --target x86_64-pc-windows-gnu && \
 	cp ../../target/x86_64-pc-windows-gnu/release/onceuponai-actors-candle.exe ../onceuponai/src-tauri/binaries/sidecar/onceuponai-actors-candle-cpu-x86_64-pc-windows-gnu.exe
 
+build-full: build-ui build-sidecar-candle-cuda-linux build-sidecar-candle-cpu-linux build-sidecar-candle-cuda-win build-sidecar-candle-cpu-win build-linux build-win  
+	@echo "Full build completed."
 
 
 build-musl: ## Test musl

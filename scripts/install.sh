@@ -102,15 +102,24 @@ accept_license() {
     echo "  https://developer.download.nvidia.com/compute/cuda/redist/libcurand/LICENSE.txt"
     echo "  https://developer.download.nvidia.com/compute/cuda/redist/libcublas/LICENSE.txt"
     echo
-    read -p "Do you accept the NVIDIA license agreement? (yes/no): " ACCEPT
 
-    case $ACCEPT in
-        yes|y|Y|YES) echo "License accepted." ;;
-        no|n|N|NO) echo "You must accept the license to proceed."
-                   exit 1 ;;
-        *) echo "Invalid response. Please enter yes or no."
-           accept_license ;;
-    esac
+    #DEFAULT_ACCEPT="yes"
+
+    #if [ "$DEBIAN_FRONTEND" = "noninteractive" ]; then
+    #    ACCEPT="$DEFAULT_ACCEPT"
+    #else
+    #    # Interactive prompt with default value
+    #    read -p "Do you accept the NVIDIA license agreement? (yes/no) [yes]: " ACCEPT
+    #    ACCEPT=${ACCEPT:-$DEFAULT_ACCEPT}
+    #fi
+
+    #case $ACCEPT in
+    #    yes|y|Y|YES) echo "License accepted." ;;
+    #    no|n|N|NO) echo "You must accept the license to proceed."
+    #               exit 1 ;;
+    #    *) echo "Invalid response. Please enter yes or no."
+    #       accept_license ;;
+    #esac
 }
 
 install_app() {
@@ -125,11 +134,12 @@ cat  << EOF
 EOF
     echo
     echo "Installing dependencies"
-    DEBIAN_FRONTEND=noninteractive
+    #DEBIAN_FRONTEND=noninteractive
     apt update 
     apt install libwebkit2gtk-4.1-dev curl xz-utils -yq
 
-    dpkg -i /home/ubuntu/rust-src/onceuponai/target/release/bundle/deb/onceuponai_0.0.0_amd64.deb
+    curl -LO https://github.com/onceuponai-dev/onceuponai/releases/download/v0.0.1-alpha.2/onceuponai_0.0.0_amd64.deb
+    dpkg -i onceuponai_0.0.0_amd64.deb
 }
 
 link_libraries() {

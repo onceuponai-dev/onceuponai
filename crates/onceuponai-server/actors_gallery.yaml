@@ -183,11 +183,11 @@ galery:
 
 
   # QUANTIZED MODELS
-  - id: quantized/bielik
+  - id: quantized/bielik-7b
     template: quantized
     device: cuda
     metadata:
-      name: bielik
+      name: bielik-7b
       description: ""
       url: ""
     spec:
@@ -200,6 +200,25 @@ galery:
       - key: tokenizer_repo
         value: speakleash/Bielik-7B-Instruct-v0.1
         type: string
+
+  - id: quantized/bielik-11b
+    template: quantized
+    device: cuda
+    metadata:
+      name: bielik-11b
+      description: ""
+      url: ""
+    spec:
+      - key: model_repo
+        value: speakleash/Bielik-11B-v2.2-Instruct-GGUF
+        type: string
+      - key: model_file
+        value: Bielik-11B-v2.2-Instruct.Q4_K_M.gguf
+        type: string
+      - key: tokenizer_repo
+        value: speakleash/Bielik-11B-v2.2-Instruct
+        type: string
+
 
   - id: quantized/l7b
     template: quantized
