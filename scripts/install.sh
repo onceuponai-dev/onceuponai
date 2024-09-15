@@ -103,23 +103,23 @@ accept_license() {
     echo "  https://developer.download.nvidia.com/compute/cuda/redist/libcublas/LICENSE.txt"
     echo
 
-    DEFAULT_ACCEPT="yes"
+    #DEFAULT_ACCEPT="yes"
 
-    if [ "$DEBIAN_FRONTEND" = "noninteractive" ]; then
-        ACCEPT="$DEFAULT_ACCEPT"
-    else
-        # Interactive prompt with default value
-        read -p "Do you accept the NVIDIA license agreement? (yes/no) [yes]: " ACCEPT
-        ACCEPT=${ACCEPT:-$DEFAULT_ACCEPT}
-    fi
+    #if [ "$DEBIAN_FRONTEND" = "noninteractive" ]; then
+    #    ACCEPT="$DEFAULT_ACCEPT"
+    #else
+    #    # Interactive prompt with default value
+    #    read -p "Do you accept the NVIDIA license agreement? (yes/no) [yes]: " ACCEPT
+    #    ACCEPT=${ACCEPT:-$DEFAULT_ACCEPT}
+    #fi
 
-    case $ACCEPT in
-        yes|y|Y|YES) echo "License accepted." ;;
-        no|n|N|NO) echo "You must accept the license to proceed."
-                   exit 1 ;;
-        *) echo "Invalid response. Please enter yes or no."
-           accept_license ;;
-    esac
+    #case $ACCEPT in
+    #    yes|y|Y|YES) echo "License accepted." ;;
+    #    no|n|N|NO) echo "You must accept the license to proceed."
+    #               exit 1 ;;
+    #    *) echo "Invalid response. Please enter yes or no."
+    #       accept_license ;;
+    #esac
 }
 
 install_app() {
