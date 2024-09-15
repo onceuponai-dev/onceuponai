@@ -14,6 +14,9 @@ With support for both CPU and CUDA-accelerated GPU environments, you can deploy 
 
 ## Supported Models
 
+
+<img src=".github/spawn_model.png" alt="spawn model" />
+
 ### Embeddings: 
 * [intfloat/e5-small-v2](https://huggingface.co/intfloat/e5-small-v2)
 * [intfloat/e5-large-v2](https://huggingface.co/intfloat/e5-large-v2)
@@ -55,65 +58,106 @@ sudo apt update
 sudo apt install wget xz-utils -y
 
 wget https://raw.githubusercontent.com/onceuponai-dev/onceuponai/tauri/scripts/install.sh
-
 sudo bash ./install.sh
 ```
 
 ### Windows
 
-TODO
+For windows you can use WSL2 and run `install.sh` script as for `Linux`. 
+If you have GPU card use [https://docs.nvidia.com/cuda/wsl-user-guide/index.html](https://docs.nvidia.com/cuda/wsl-user-guide/index.html)
+to have CUDA support.
+To see GUI will need to run X-server eg. Xming, VcXsrv, Cygwin/X, MobaXterm, WezTerm
 
 ### Mac 
 
 TODO
 
+### Docker
+
+To run `Once Upon ... AI` with docker run:
+```
+docker run -it --name onceuponai --rm -p 8080:8080 \
+        -e DISPLAY=host.docker.internal:0.0 \
+        --gpus all \
+        -v $(pwd)/huggingface:/home/ubuntu/.cache/huggingface \
+        onceuponai/onceuponai:v0.0.1-alpha.2
+```
+
 ## Usage
 
-TODO
+After spawning a model you can call it using REST API which is compatible with OpenAI API.
+
+```python
+import os
+from openai import OpenAI
+
+client = OpenAI(
+    base_url="http://localhost:8080/v1",
+    api_key=os.environ["PERSONAL_TOKEN"],
+)
+
+completion = client.chat.completions.create(
+  model="quantized/mistral7b-instruct-v02",
+  messages=[
+    {"role": "user", "content": "At what temperature does water boil ?"}
+  ]
+)
+
+print(completion.choices[0].message)
+```
 
 ## Architecture
 
-TODO
+
+<img src=".github/architecture_multinode.jpeg" alt="spawn model" />
+
+Once Upon ... AI is built using an actors architecture, leveraging Rust's high-performance capabilities. 
+The application uses the [Actix Telepathy](https://github.com/wenig/actix-telepathy) framework to implement a distributed system of actors, 
+allowing each model to run as an isolated actor (process). 
+
+This design offers several advantages:
+* Scalability: Deploy models across multiple nodes or machines, ensuring high availability and performance in production environments.
+* Modularity: Easily spawn or terminate model deployments via the desktop app, giving you full control over your resources.
+* Gateway/Seed Node: The central gateway node exposes a REST API, allowing for seamless integration with external services and client applications.
+
+## Authentication
+
+REST API is secured using Personal User Tokens. 
+Additionally, the web server supports integration with OIDC providers for streamlined authentication in enterprise environments.
+
+Personal User Tokens: Each user must generate a unique token to access the API. This token ensures that only authorized users can interact with the deployed models.
+
+<img src=".github/personal_token.png" alt="spawn model" />
+
+OIDC Integration: For environments requiring enterprise-level security, the Actix server UI can integrate with popular OpenID Connect providers, offering a seamless and secure authentication experience.
+
+```bash
+Once Upon ... AI -
+
+Usage: onceuponai [OPTIONS]
+
+Options:
+      --actor-host <ACTOR_HOST>                                      [default: 127.0.0.1:1992]
+      --host <HOST>                                                  [default: 0.0.0.0]
+      --port <PORT>                                                  [default: 8080]
+      --log-level <LOG_LEVEL>                                        [default: info]
+      --workers <WORKERS>                                            [default: 0]
+      --invoke-timeout <INVOKE_TIMEOUT>                              [default: 60]
+      --session-key <SESSION_KEY>
+      --personal-access-token-secret <PERSONAL_ACCESS_TOKEN_SECRET>
+      --headless
+      --oidc
+      --oidc-issuer-url <OIDC_ISSUER_URL>
+      --oidc-client-id <OIDC_CLIENT_ID>
+      --oidc-client-secret <OIDC_CLIENT_SECRET>
+      --oidc-redirect-url <OIDC_REDIRECT_URL>
+  -h, --help                                                         Print help
+  -V, --version                                                      Print version
+```
+
 
 
 <!--
-## Quick Start
-
-Installation
-Platform Support:
-
-Linux
-Windows
-macOS (Coming Soon)
-
-General Installation Steps:
-
-Download the App:
-Grab the latest release from the GitHub Releases page. Download the appropriate binary for your platform.
-
-Run the Application:
-
-Linux:
-Download the binary and give it execute permissions:
-bash
-Copy code
-chmod +x once_upon_ai
-./once_upon_ai
-For CUDA support, ensure CUDA libraries are installed. Refer to the CUDA installation guide.
-Windows:
-Simply double-click the downloaded executable.
-Important: The application is not yet signed with a trusted certificate, so Windows Defender might show a warning. Click "More info" and then "Run anyway" to start the application.
-macOS:
-Coming soon!
-Install CUDA (Linux Only):
-To utilize GPU acceleration on Linux, install the required CUDA libraries. Follow the official CUDA installation guide or use your package manager:
-
-bash
-Copy code
-sudo apt-get install nvidia-cuda-toolkit
-Launching the App:
-Run the application as a desktop app or in headless mode for production deployments.
-
 API Usage Example:
 
 python
@@ -146,18 +190,7 @@ Vision Models:
 Each model comes pre-configured with appropriate parameters, making it easy to get started without diving into the complexities of setup.
 
 Architecture
-Once Upon ... AI is built using an advanced actors architecture, leveraging Rust's high-performance capabilities. The application uses the Actix Telepathy framework to implement a distributed system of actors, allowing each model to run as an isolated actor (process). This design offers several advantages:
 
-Scalability: Deploy models across multiple nodes or machines, ensuring high availability and performance in production environments.
-Modularity: Easily spawn or terminate model deployments via the desktop app, giving you full control over your resources.
-Gateway/Seed Node: The central gateway node exposes a REST API, allowing for seamless integration with external services and client applications.
-This architecture is not only ideal for local testing but is also robust enough to handle large-scale production workloads.
-
-Authentication
-Security is a top priority in "Once Upon ... AI". Both the REST API and the Actix server UI are secured using Personal User Tokens. Additionally, the web server supports integration with OIDC providers for streamlined authentication in enterprise environments.
-
-Personal User Tokens: Each user must generate a unique token to access the API. This token ensures that only authorized users can interact with the deployed models.
-OIDC Integration: For environments requiring enterprise-level security, the Actix server UI can integrate with popular OpenID Connect providers, offering a seamless and secure authentication experience.
 Conclusion
 Once Upon ... AI is a cutting-edge tool designed to make machine learning more accessible and scalable. Whether you're a developer experimenting on your local machine or deploying complex models in a production environment, this app provides the performance, security, and flexibility you need. Dive into your AI adventures today, and let "Once Upon ... AI" simplify the story of your next project.
 
