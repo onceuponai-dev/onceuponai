@@ -51,7 +51,12 @@ With support for both CPU and CUDA-accelerated GPU environments, you can deploy 
 ### Linux
 
 ```bash
-curl --proto '=https' --tlsv1.2 -sSf https://raw.githubusercontent.com/onceuponai-dev/onceuponai/tauri/scripts/install.sh | sudo sh
+sudo apt update
+sudo apt install wget xz-utils -y
+
+wget https://raw.githubusercontent.com/onceuponai-dev/onceuponai/tauri/scripts/install.sh
+
+sudo bash ./install.sh
 ```
 
 ### Windows
