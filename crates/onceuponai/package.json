@@ -32,7 +32,7 @@
     "@types/js-yaml": "^4.0.9",
     "@vitejs/plugin-vue": "^5.0.5",
     "typescript": "^5.2.2",
-    "vite": "^5.3.1",
+    "vite": "^5.4.6",
     "vue-tsc": "^2.0.22"
   }
 }
