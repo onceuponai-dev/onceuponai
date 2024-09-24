@@ -1,5 +1,6 @@
 pub mod e5;
 pub mod gemma;
+pub mod mistral;
 pub mod quantized;
 // pub mod rag;
 use anyhow::Result;

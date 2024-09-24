@@ -39,7 +39,7 @@ resource "azurerm_storage_container" "lancedb" {
 }
 
 # BOT SERVICE
-
+/*
 resource "azurerm_bot_channels_registration" "bot" {
   name                = var.bot.name
   location            = "global"
@@ -53,6 +53,7 @@ resource "azurerm_bot_channel_ms_teams" "bot" {
   location            = azurerm_bot_channels_registration.bot.location
   resource_group_name = azurerm_resource_group.rg.name
 }
+*/
 
 # VM
 
@@ -60,7 +61,6 @@ resource "azurerm_resource_group" "rg_vm" {
   name     = "${var.resource_group_name}_VM"
   location = var.location
 }
-
 
 resource "azurerm_virtual_network" "vnet" {
   name                = "myVNet"
@@ -74,26 +74,6 @@ resource "azurerm_subnet" "subnet" {
   resource_group_name  = azurerm_resource_group.rg_vm.name
   virtual_network_name = azurerm_virtual_network.vnet.name
   address_prefixes     = ["10.0.1.0/24"]
-}
-
-resource "azurerm_network_interface" "nic" {
-  name                = "myNIC"
-  location            = azurerm_resource_group.rg_vm.location
-  resource_group_name = azurerm_resource_group.rg_vm.name
-
-  ip_configuration {
-    name                          = "myNICConfig"
-    subnet_id                     = azurerm_subnet.subnet.id
-    private_ip_address_allocation = "Dynamic"
-    public_ip_address_id          = azurerm_public_ip.public_ip.id
-  }
-}
-
-resource "azurerm_public_ip" "public_ip" {
-  name                = "myPublicIP"
-  location            = azurerm_resource_group.rg_vm.location
-  resource_group_name = azurerm_resource_group.rg_vm.name
-  allocation_method   = "Dynamic"
 }
 
 resource "azurerm_network_security_group" "nsg" {
@@ -116,14 +96,35 @@ resource "azurerm_network_security_rule" "nsr" {
   network_security_group_name = azurerm_network_security_group.nsg.name
 }
 
-resource "azurerm_linux_virtual_machine" "vm" {
-  name                = "myVM"
+# Network Interface and Public IP for VM1
+resource "azurerm_public_ip" "public_ip1" {
+  name                = "myPublicIP1"
+  location            = azurerm_resource_group.rg_vm.location
+  resource_group_name = azurerm_resource_group.rg_vm.name
+  allocation_method   = "Dynamic"
+}
+
+resource "azurerm_network_interface" "nic1" {
+  name                = "myNIC1"
+  location            = azurerm_resource_group.rg_vm.location
+  resource_group_name = azurerm_resource_group.rg_vm.name
+
+  ip_configuration {
+    name                          = "myNICConfig1"
+    subnet_id                     = azurerm_subnet.subnet.id
+    private_ip_address_allocation = "Dynamic"
+    public_ip_address_id          = azurerm_public_ip.public_ip1.id
+  }
+}
+
+resource "azurerm_linux_virtual_machine" "vm1" {
+  name                = "myVM1"
   resource_group_name = azurerm_resource_group.rg_vm.name
   location            = azurerm_resource_group.rg_vm.location
   size                = "Standard_NC4as_T4_v3"
   admin_username      = "qba"
   network_interface_ids = [
-    azurerm_network_interface.nic.id,
+    azurerm_network_interface.nic1.id,
   ]
 
   os_disk {
@@ -132,18 +133,13 @@ resource "azurerm_linux_virtual_machine" "vm" {
   }
 
   source_image_reference {
-    #publisher = "microsoft-dsvm"
-    #offer     = "ubuntu-1804"
-    #sku       = "1804-gen2"
-    #version   = "latest"
-
     publisher = "Canonical"
     offer     = "0001-com-ubuntu-server-jammy"
     sku       = "22_04-lts"
     version   = "latest"
   }
 
-  computer_name                   = "qooba-gpu-spot"
+  computer_name                   = "qooba-gpu-spot-1"
   admin_ssh_key {
     username   = "qba"
     public_key = file("./ssh/id_rsa.pub")
@@ -151,12 +147,57 @@ resource "azurerm_linux_virtual_machine" "vm" {
 
   priority = "Spot"
   eviction_policy = "Deallocate"
-
 }
 
-output "vm_public_ip_address" {
-  value = azurerm_public_ip.public_ip.ip_address
-  description = "The public IP address of the VM."
+# Network Interface and Public IP for VM2
+resource "azurerm_public_ip" "public_ip2" {
+  name                = "myPublicIP2"
+  location            = azurerm_resource_group.rg_vm.location
+  resource_group_name = azurerm_resource_group.rg_vm.name
+  allocation_method   = "Dynamic"
 }
 
+resource "azurerm_network_interface" "nic2" {
+  name                = "myNIC2"
+  location            = azurerm_resource_group.rg_vm.location
+  resource_group_name = azurerm_resource_group.rg_vm.name
 
+  ip_configuration {
+    name                          = "myNICConfig2"
+    subnet_id                     = azurerm_subnet.subnet.id
+    private_ip_address_allocation = "Dynamic"
+    public_ip_address_id          = azurerm_public_ip.public_ip2.id
+  }
+}
+
+resource "azurerm_linux_virtual_machine" "vm2" {
+  name                = "myVM2"
+  resource_group_name = azurerm_resource_group.rg_vm.name
+  location            = azurerm_resource_group.rg_vm.location
+  size                = "Standard_NC4as_T4_v3"
+  admin_username      = "qba"
+  network_interface_ids = [
+    azurerm_network_interface.nic2.id,
+  ]
+
+  os_disk {
+    caching              = "ReadWrite"
+    storage_account_type = "StandardSSD_LRS"
+  }
+
+  source_image_reference {
+    publisher = "Canonical"
+    offer     = "0001-com-ubuntu-server-jammy"
+    sku       = "22_04-lts"
+    version   = "latest"
+  }
+
+  computer_name                   = "qooba-gpu-spot-2"
+  admin_ssh_key {
+    username   = "qba"
+    public_key = file("./ssh/id_rsa.pub")
+  }
+
+  priority = "Spot"
+  eviction_policy = "Deallocate"
+}
