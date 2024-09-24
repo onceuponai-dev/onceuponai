@@ -111,7 +111,45 @@ templates:
         value: null
         type: secret
 
-
+  - id: mistral
+    kind: mistral
+    device: cpu
+    sidecar: onceuponai-actors-candle
+    metadata:
+      name: mistral
+      description: ""
+      url: ""
+    spec:
+      - key: base_repo_id
+        value: mistralai/Mistral-7B-v0.1
+        type: string
+      - key: tokenizer_repo
+        value: mistralai/Mistral-7B-v0.1
+        type: string
+      - key: seed
+        value: 299792458
+        type: number
+      - key: repeat_last_n
+        value: 64
+        type: number
+      - key: repeat_penalty
+        value: 1.1
+        type: number
+      - key: temp
+        value: 0.8
+        type: number
+      - key: top_p
+        value: null
+        type: number
+      - key: top_k
+        value: null
+        type: number
+      - key: hf_token
+        value: null
+        type: secret
+      - key: sample_len
+        value: 1000
+        type: number
 
 galery:
   # E5 MODELS
@@ -676,3 +714,108 @@ galery:
         type: number
 
 
+  # MISTRAL MODELS
+  - id: mistral/mistral-7B-v0.1
+    template: mistral
+    device: cpu
+    metadata:
+      name: mistral-7B-v0.1
+      description: ""
+      url: ""
+    spec:
+      - key: base_repo_id
+        value: mistralai/Mistral-7B-v0.1
+        type: string
+      - key: tokenizer_repo
+        value: mistralai/Mistral-7B-v0.1
+        type: string
+
+  - id: mistral/mistral-7B-v0.2
+    template: mistral
+    device: cpu
+    metadata:
+      name: mistral-7B-v0.2
+      description: ""
+      url: ""
+    spec:
+      - key: base_repo_id
+        value: mistralai/Mistral-7B-v0.2
+        type: string
+      - key: tokenizer_repo
+        value: mistralai/Mistral-7B-v0.2
+        type: string
+
+  - id: mistral/mistral-7B-Instruct-v0.1
+    template: mistral
+    device: cpu
+    metadata:
+      name: mistral-7B-Instruct-v0.1
+      description: ""
+      url: ""
+    spec:
+      - key: base_repo_id
+        value: mistralai/Mistral-7B-Instruct-v0.1
+        type: string
+      - key: tokenizer_repo
+        value: mistralai/Mistral-7B-Instruct-v0.1
+        type: string
+
+  - id: mistral/mistral-7B-Instruct-v0.2
+    template: mistral
+    device: cpu
+    metadata:
+      name: mistral-7B-Instruct-v0.2
+      description: ""
+      url: ""
+    spec:
+      - key: base_repo_id
+        value: mistralai/Mistral-7B-Instruct-v0.2
+        type: string
+      - key: tokenizer_repo
+        value: mistralai/Mistral-7B-Instruct-v0.2
+        type: string
+
+  - id: mistral/mathstral-7B-v0.1
+    template: mistral
+    device: cpu
+    metadata:
+      name: mathstral-7B-v0.1
+      description: ""
+      url: ""
+    spec:
+      - key: base_repo_id
+        value: mistralai/mathstral-7B-v0.1
+        type: string
+      - key: tokenizer_repo
+        value: mistralai/mathstral-7B-v0.1
+        type: string
+
+  - id: mistral/mistral-nemo-base-2407
+    template: mistral
+    device: cpu
+    metadata:
+      name: mistral-nemo-base-2407
+      description: ""
+      url: ""
+    spec:
+      - key: base_repo_id
+        value: mistralai/Mistral-Nemo-Base-2407
+        type: string
+      - key: tokenizer_repo
+        value: mistralai/Mistral-Nemo-Base-2407
+        type: string
+
+  - id: mistral/mistral-nemo-instruct-2407
+    template: mistral
+    device: cpu
+    metadata:
+      name: mistral-nemo-instruct-2407
+      description: ""
+      url: ""
+    spec:
+      - key: base_repo_id
+        value: mistralai/Mistral-Nemo-Instruct-2407
+        type: string
+      - key: tokenizer_repo
+        value: mistralai/Mistral-Nemo-Instruct-2407
+        type: string

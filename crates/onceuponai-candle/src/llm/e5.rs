@@ -99,10 +99,21 @@ impl E5Model {
             })
             .collect::<std::result::Result<Vec<_>, _>>()?;
 
+        let attention_mask: Vec<Tensor> = tokens
+            .iter()
+            .map(|tokens| {
+                let tokens = tokens.get_attention_mask().to_vec();
+                Tensor::new(tokens.as_slice(), device)
+            })
+            .collect::<Result<Vec<_>, _>>()?;
+
         let token_ids = Tensor::stack(&token_ids, 0)?;
+        let attention_mask = Tensor::stack(&attention_mask, 0)?;
         let token_type_ids = token_ids.zeros_like()?;
 
-        let embeddings = self.model.forward(&token_ids, &token_type_ids)?;
+        let embeddings = self
+            .model
+            .forward(&token_ids, &token_type_ids, Some(&attention_mask))?;
         let (_n_sentence, n_tokens, _hidden_size) = embeddings.dims3()?;
         let embeddings = (embeddings.sum(1)? / (n_tokens as f64))?;
         let embeddings = if let Some(true) = self.normalize_embeddings {
