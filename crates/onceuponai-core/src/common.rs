@@ -121,7 +121,7 @@ pub fn hf_hub_get_multiple(
     hf_repo_id: &str,
     json_file: &str,
     hf_token: Option<String>,
-    // revision: Option<String>,
+    revision: Option<String>,
 ) -> Result<Vec<PathBuf>> {
     use hf_hub::{api::sync::ApiBuilder, Repo, RepoType};
 
@@ -131,14 +131,11 @@ pub fn hf_hub_get_multiple(
         api_builder = api_builder.with_token(Some(token));
     }
 
-    /*
     let repo = if let Some(rev) = revision {
         Repo::with_revision(hf_repo_id.to_string(), RepoType::Model, rev)
     } else {
         Repo::new(hf_repo_id.to_string(), RepoType::Model)
     };
-    */
-    let repo = Repo::new(hf_repo_id.to_string(), RepoType::Model);
 
     let api = api_builder.build()?.repo(repo);
     let json_path = api.get(json_file)?;

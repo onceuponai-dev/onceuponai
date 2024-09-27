@@ -273,6 +273,7 @@ impl MistralModel {
             base_repo_id,
             "model.safetensors.index.json",
             hf_token.clone(),
+            None,
         )?;
 
         let tokenizer_repo = spec.tokenizer_repo.unwrap_or(base_repo_id.clone());
@@ -294,6 +295,7 @@ impl MistralModel {
             &base_repo_id,
             "model.safetensors.index.json",
             hf_token.clone(),
+            None,
         )?;
 
         let device = parse_device(spec.device)?;
