@@ -20,7 +20,7 @@ use uuid::Uuid;
 
 pub const GEMMA_2B_REPO_ID: &str = "google/gemma-2b-it";
 
-static GEMMA_INSTANCE: OnceCell<Arc<Mutex<GemmaInstance>>> = OnceCell::new();
+static GEMMA_INSTANCE: OnceCell<Arc<Mutex<GemmaModel>>> = OnceCell::new();
 
 #[derive(Deserialize, Debug, Clone)]
 pub struct GemmaSpec {
@@ -55,19 +55,7 @@ impl ActorActions for GemmaSpec {
     }
 
     fn start(&self) -> Result<()> {
-        GemmaModel::lazy(
-            self.base_repo_id.clone(),
-            self.tokenizer_repo.clone(),
-            self.device.clone(),
-            self.seed,
-            self.repeat_last_n,
-            self.repeat_penalty,
-            self.temp,
-            self.top_p,
-            self.hf_token.clone(),
-            self.use_flash_attn,
-            self.sample_len,
-        )?;
+        GemmaModel::lazy(self.clone())?;
         Ok(())
     }
 
@@ -93,17 +81,11 @@ impl ActorActions for GemmaSpec {
             })
             .collect();
 
-        let mut model = GemmaModel::lazy(
-            None, None, None, None, None, None, None, None, None, None, None,
-        )?
-        .lock()
-        .map_anyhow_err()?;
-        let sample_len = model.sample_len;
-        let eos_token = model.eos_token;
+        let mut model = GemmaModel::lazy(self.clone())?.lock().map_anyhow_err()?;
 
         let results = input
             .iter()
-            .map(|prompt| model.instance.invoke(prompt, sample_len, eos_token))
+            .map(|prompt| model.invoke(prompt))
             .collect::<Result<Vec<String>, _>>()?;
 
         let results = results
@@ -153,17 +135,12 @@ impl ActorActions for GemmaSpec {
 
         let input = input[0].clone();
 
-        let mut model = GemmaModel::lazy(
-            None, None, None, None, None, None, None, None, None, None, None,
-        )?
-        .lock()
-        .map_anyhow_err()?;
+        let mut model = GemmaModel::lazy(self.clone())?.lock().map_anyhow_err()?;
         let sample_len: usize = model.sample_len;
         let eos_token = model.eos_token;
-        model.instance.model.clear_kv_cache();
+        model.model.clear_kv_cache();
 
         let mut tokens = model
-            .instance
             .tokenizer
             .encode(input, true)
             .map_err(anyhow::Error::msg)?
@@ -173,13 +150,8 @@ impl ActorActions for GemmaSpec {
         let tokens_len = tokens.len();
 
         for index in 0..sample_len {
-            if let Some(_text) =
-                model
-                    .instance
-                    .loop_process(tokens.len(), index, &mut tokens, eos_token)?
-            {
+            if let Some(_text) = model.loop_process(tokens.len(), index, &mut tokens, eos_token)? {
                 let text = model
-                    .instance
                     .tokenizer
                     .decode(&tokens[tokens_len + index..], true)
                     .map_err(anyhow::Error::msg)?;
@@ -215,12 +187,6 @@ impl ActorActions for GemmaSpec {
     }
 }
 
-pub struct GemmaInstance {
-    pub instance: GemmaModel,
-    pub eos_token: u32,
-    pub sample_len: usize,
-}
-
 pub struct GemmaModel {
     pub model: Model,
     pub device: Device,
@@ -228,10 +194,12 @@ pub struct GemmaModel {
     pub logits_processor: LogitsProcessor,
     pub repeat_penalty: f32,
     pub repeat_last_n: usize,
+    pub eos_token: u32,
+    pub sample_len: usize,
 }
 
 impl GemmaModel {
-    pub fn invoke(&mut self, prompt: &str, sample_len: usize, eos_token: u32) -> Result<String> {
+    pub fn invoke(&mut self, prompt: &str) -> Result<String> {
         self.model.clear_kv_cache();
 
         let mut tokens = self
@@ -242,8 +210,10 @@ impl GemmaModel {
             .to_vec();
         let tokens_len = tokens.len();
 
-        for index in 0..sample_len {
-            if let Some(_text) = self.loop_process(tokens.len(), index, &mut tokens, eos_token)? {
+        for index in 0..self.sample_len {
+            if let Some(_text) =
+                self.loop_process(tokens.len(), index, &mut tokens, self.eos_token)?
+            {
             } else {
                 break;
             }
@@ -292,52 +262,11 @@ impl GemmaModel {
     }
 
     #[allow(clippy::too_many_arguments)]
-    pub fn lazy<'a>(
-        base_repo_id: Option<String>,
-        tokenizer_repo: Option<String>,
-        device: Option<String>,
-        seed: Option<u64>,
-        repeat_last_n: Option<usize>,
-        repeat_penalty: Option<f32>,
-        temp: Option<f64>,
-        top_p: Option<f64>,
-        hf_token: Option<String>,
-        use_flash_attn: Option<bool>,
-        sample_len: Option<usize>,
-    ) -> Result<&'a Arc<Mutex<GemmaInstance>>> {
+    pub fn lazy<'a>(spec: GemmaSpec) -> Result<&'a Arc<Mutex<GemmaModel>>> {
         if GEMMA_INSTANCE.get().is_none() {
-            let model = GemmaModel::load(
-                base_repo_id.unwrap_or(GEMMA_2B_REPO_ID.to_string()),
-                tokenizer_repo,
-                device,
-                seed,
-                repeat_last_n,
-                repeat_penalty,
-                temp,
-                top_p,
-                hf_token,
-                use_flash_attn,
-            )?;
+            let model = GemmaModel::load(spec)?;
 
-            let eos_token = match model.tokenizer.get_vocab(true).get("<eos>").copied() {
-                Some(token) => token,
-                None => {
-                    return Err(anyhow::anyhow!("EOS token not found in vocabulary"))
-                        .map_io_err()?
-                }
-            };
-
-            let sample_len = sample_len.unwrap_or(1000);
-
-            let gemma_instance = GemmaInstance {
-                instance: model,
-                eos_token,
-                sample_len,
-            };
-
-            let _ = GEMMA_INSTANCE
-                .set(Arc::new(Mutex::new(gemma_instance)))
-                .is_ok();
+            let _ = GEMMA_INSTANCE.set(Arc::new(Mutex::new(model))).is_ok();
         };
 
         Ok(GEMMA_INSTANCE.get().expect("GEMMA_INSTANCE"))
@@ -363,38 +292,30 @@ impl GemmaModel {
     }
 
     #[allow(clippy::too_many_arguments)]
-    pub fn load(
-        base_repo_id: String,
-        tokenizer_repo: Option<String>,
-        device: Option<String>,
-        seed: Option<u64>,
-        repeat_last_n: Option<usize>,
-        repeat_penalty: Option<f32>,
-        temp: Option<f64>,
-        top_p: Option<f64>,
-        hf_token: Option<String>,
-        use_flash_attn: Option<bool>,
-    ) -> Result<GemmaModel> {
-        let seed = seed.unwrap_or(299792458);
-        let repeat_last_n = repeat_last_n.unwrap_or(64);
-        let repeat_penalty = repeat_penalty.unwrap_or(1.1);
-        let use_flash_attn = use_flash_attn.unwrap_or(false);
-        let hf_token = Some(hf_token.unwrap_or(std::env::var("HF_TOKEN").expect("HF_TOKEN")));
-
+    pub fn load(spec: GemmaSpec) -> Result<GemmaModel> {
+        let seed = spec.seed.unwrap_or(299792458);
+        let repeat_last_n = spec.repeat_last_n.unwrap_or(64);
+        let repeat_penalty = spec.repeat_penalty.unwrap_or(1.1);
+        let use_flash_attn = spec.use_flash_attn.unwrap_or(false);
+        let hf_token = Some(
+            spec.hf_token
+                .unwrap_or(std::env::var("HF_TOKEN").expect("HF_TOKEN")),
+        );
+        let base_repo_id = spec.base_repo_id.expect("base_repo_id");
         let paths = hf_hub_get_multiple(
             &base_repo_id,
             "model.safetensors.index.json",
             hf_token.clone(),
         )?;
 
-        let device = parse_device(device)?;
+        let device = parse_device(spec.device)?;
         let dtype = if device.is_cuda() {
             DType::BF16
         } else {
             DType::F32
         };
 
-        let tokenizer_repo = tokenizer_repo.unwrap_or(base_repo_id.clone());
+        let tokenizer_repo = spec.tokenizer_repo.unwrap_or(base_repo_id.clone());
 
         let vb = unsafe { VarBuilder::from_mmaped_safetensors(&paths, dtype, &device)? };
         let tokenizer = hf_hub_get(&tokenizer_repo, "tokenizer.json", hf_token.clone(), None)?;
@@ -403,7 +324,17 @@ impl GemmaModel {
         let candle_config: Config = serde_json::from_slice(&candle_config)?;
         let model = Model::new(use_flash_attn, &candle_config, vb)?;
 
-        let logits_processor = LogitsProcessor::new(seed, temp, top_p);
+        let logits_processor = LogitsProcessor::new(seed, spec.temp, spec.top_p);
+
+        let eos_token = match tokenizer.get_vocab(true).get("<eos>").copied() {
+            Some(token) => token,
+            None => {
+                return Err(anyhow::anyhow!("EOS token not found in vocabulary")).map_io_err()?
+            }
+        };
+
+        let sample_len = spec.sample_len.unwrap_or(1000);
+
         Ok(GemmaModel {
             model,
             tokenizer,
@@ -411,10 +342,13 @@ impl GemmaModel {
             repeat_penalty,
             repeat_last_n,
             device,
+            eos_token,
+            sample_len,
         })
     }
 }
 
+/*
 #[tokio::test]
 async fn test_codegemma() -> Result<()> {
     let mut phi3 = GemmaModel::load(
@@ -435,3 +369,4 @@ async fn test_codegemma() -> Result<()> {
     //println!("RESPONSE: {resp}");
     Ok(())
 }
+*/
