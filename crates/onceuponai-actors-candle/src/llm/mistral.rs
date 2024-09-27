@@ -20,7 +20,7 @@ use uuid::Uuid;
 
 pub const MISTRAL_REPO_ID: &str = "mistralai/Mistral-7B-Instruct-v0.2";
 
-static MISTRAL_INSTANCE: OnceCell<Arc<Mutex<MistralInstance>>> = OnceCell::new();
+static MISTRAL_INSTANCE: OnceCell<Arc<Mutex<MistralModel>>> = OnceCell::new();
 
 #[derive(Deserialize, Debug, Clone)]
 pub struct MistralSpec {
@@ -47,27 +47,11 @@ impl ActorActions for MistralSpec {
     }
 
     fn init(&self) -> Result<()> {
-        MistralModel::init(
-            self.base_repo_id.clone(),
-            self.tokenizer_repo.clone(),
-            self.hf_token.clone(),
-        )
+        MistralModel::init(self.clone())
     }
 
     fn start(&self) -> Result<()> {
-        MistralModel::lazy(
-            self.base_repo_id.clone(),
-            self.tokenizer_repo.clone(),
-            self.device.clone(),
-            self.seed,
-            self.repeat_last_n,
-            self.repeat_penalty,
-            self.temp,
-            self.top_p,
-            self.top_k,
-            self.hf_token.clone(),
-            self.sample_len,
-        )?;
+        MistralModel::lazy(self.clone())?;
         Ok(())
     }
 
@@ -93,17 +77,11 @@ impl ActorActions for MistralSpec {
             })
             .collect();
 
-        let mut model = MistralModel::lazy(
-            None, None, None, None, None, None, None, None, None, None, None,
-        )?
-        .lock()
-        .map_anyhow_err()?;
-        let sample_len = model.sample_len;
-        let eos_token = model.eos_token;
+        let mut model = MistralModel::lazy(self.clone())?.lock().map_anyhow_err()?;
 
         let results = input
             .iter()
-            .map(|prompt| model.instance.invoke(prompt, sample_len, eos_token))
+            .map(|prompt| model.invoke(prompt))
             .collect::<Result<Vec<String>, _>>()?;
 
         let results = results
@@ -153,17 +131,11 @@ impl ActorActions for MistralSpec {
 
         let input = input[0].clone();
 
-        let mut model = MistralModel::lazy(
-            None, None, None, None, None, None, None, None, None, None, None,
-        )?
-        .lock()
-        .map_anyhow_err()?;
+        let mut model = MistralModel::lazy(self.clone())?.lock().map_anyhow_err()?;
         let sample_len: usize = model.sample_len;
-        let eos_token = model.eos_token;
-        model.instance.model.clear_kv_cache();
+        model.model.clear_kv_cache();
 
         let mut tokens = model
-            .instance
             .tokenizer
             .encode(input, true)
             .map_err(anyhow::Error::msg)?
@@ -173,13 +145,8 @@ impl ActorActions for MistralSpec {
         let tokens_len = tokens.len();
 
         for index in 0..sample_len {
-            if let Some(_text) =
-                model
-                    .instance
-                    .loop_process(tokens.len(), index, &mut tokens, eos_token)?
-            {
+            if let Some(_text) = model.loop_process(tokens.len(), index, &mut tokens)? {
                 let text = model
-                    .instance
                     .tokenizer
                     .decode(&tokens[tokens_len + index..], true)
                     .map_err(anyhow::Error::msg)?;
@@ -215,12 +182,6 @@ impl ActorActions for MistralSpec {
     }
 }
 
-pub struct MistralInstance {
-    pub instance: MistralModel,
-    pub eos_token: u32,
-    pub sample_len: usize,
-}
-
 pub struct MistralModel {
     pub model: Model,
     pub device: Device,
@@ -228,10 +189,12 @@ pub struct MistralModel {
     pub logits_processor: LogitsProcessor,
     pub repeat_penalty: f32,
     pub repeat_last_n: usize,
+    pub eos_token: u32,
+    pub sample_len: usize,
 }
 
 impl MistralModel {
-    pub fn invoke(&mut self, prompt: &str, sample_len: usize, eos_token: u32) -> Result<String> {
+    pub fn invoke(&mut self, prompt: &str) -> Result<String> {
         self.model.clear_kv_cache();
 
         let mut tokens = self
@@ -242,8 +205,8 @@ impl MistralModel {
             .to_vec();
         let tokens_len = tokens.len();
 
-        for index in 0..sample_len {
-            if let Some(_text) = self.loop_process(tokens.len(), index, &mut tokens, eos_token)? {
+        for index in 0..self.sample_len {
+            if let Some(_text) = self.loop_process(tokens.len(), index, &mut tokens)? {
             } else {
                 break;
             }
@@ -257,13 +220,11 @@ impl MistralModel {
         Ok(text)
     }
 
-    #[allow(clippy::too_many_arguments)]
     pub fn loop_process(
         &mut self,
         tokens_len: usize,
         index: usize,
         tokens: &mut Vec<u32>,
-        eos_token: u32,
     ) -> Result<Option<String>> {
         let context_size = if index > 0 { 1 } else { tokens_len };
         let start_pos = tokens_len.saturating_sub(context_size);
@@ -284,72 +245,29 @@ impl MistralModel {
 
         let next_token = self.logits_processor.sample(&logits)?;
         tokens.push(next_token);
-        if next_token == eos_token {
+        if next_token == self.eos_token {
             return Ok(None);
         }
 
         Ok(Some("".to_string()))
     }
 
-    #[allow(clippy::too_many_arguments)]
-    pub fn lazy<'a>(
-        base_repo_id: Option<String>,
-        tokenizer_repo: Option<String>,
-        device: Option<String>,
-        seed: Option<u64>,
-        repeat_last_n: Option<usize>,
-        repeat_penalty: Option<f32>,
-        temp: Option<f64>,
-        top_p: Option<f64>,
-        top_k: Option<usize>,
-        hf_token: Option<String>,
-        sample_len: Option<usize>,
-    ) -> Result<&'a Arc<Mutex<MistralInstance>>> {
+    pub fn lazy<'a>(spec: MistralSpec) -> Result<&'a Arc<Mutex<MistralModel>>> {
         if MISTRAL_INSTANCE.get().is_none() {
-            let model = MistralModel::load(
-                base_repo_id.unwrap_or(MISTRAL_REPO_ID.to_string()),
-                tokenizer_repo,
-                device,
-                seed,
-                repeat_last_n,
-                repeat_penalty,
-                temp,
-                top_p,
-                top_k,
-                hf_token,
-            )?;
+            let model = MistralModel::load(spec)?;
 
-            let eos_token = match model.tokenizer.get_vocab(true).get("</s>").copied() {
-                Some(token) => token,
-                None => {
-                    return Err(anyhow::anyhow!("EOS token not found in vocabulary"))
-                        .map_io_err()?
-                }
-            };
-
-            let sample_len = sample_len.unwrap_or(1000);
-
-            let mistral_instance = MistralInstance {
-                instance: model,
-                eos_token,
-                sample_len,
-            };
-
-            let _ = MISTRAL_INSTANCE
-                .set(Arc::new(Mutex::new(mistral_instance)))
-                .is_ok();
+            let _ = MISTRAL_INSTANCE.set(Arc::new(Mutex::new(model))).is_ok();
         };
 
         Ok(MISTRAL_INSTANCE.get().expect("MISTRAL_INSTANCE"))
     }
 
-    pub fn init(
-        base_repo_id: Option<String>,
-        tokenizer_repo: Option<String>,
-        hf_token: Option<String>,
-    ) -> Result<()> {
-        let base_repo_id = &base_repo_id.expect("base_repo_id");
-        let hf_token = Some(hf_token.unwrap_or(std::env::var("HF_TOKEN").expect("HF_TOKEN")));
+    pub fn init(spec: MistralSpec) -> Result<()> {
+        let base_repo_id = &spec.base_repo_id.expect("base_repo_id");
+        let hf_token = Some(
+            spec.hf_token
+                .unwrap_or(std::env::var("HF_TOKEN").expect("HF_TOKEN")),
+        );
 
         let _paths = hf_hub_get_multiple(
             base_repo_id,
@@ -357,43 +275,35 @@ impl MistralModel {
             hf_token.clone(),
         )?;
 
-        let tokenizer_repo = tokenizer_repo.unwrap_or(base_repo_id.clone());
+        let tokenizer_repo = spec.tokenizer_repo.unwrap_or(base_repo_id.clone());
         let _tokenizer = hf_hub_get(&tokenizer_repo, "tokenizer.json", hf_token.clone(), None)?;
         Ok(())
     }
 
-    #[allow(clippy::too_many_arguments)]
-    pub fn load(
-        base_repo_id: String,
-        tokenizer_repo: Option<String>,
-        device: Option<String>,
-        seed: Option<u64>,
-        repeat_last_n: Option<usize>,
-        repeat_penalty: Option<f32>,
-        temp: Option<f64>,
-        top_p: Option<f64>,
-        top_k: Option<usize>,
-        hf_token: Option<String>,
-    ) -> Result<MistralModel> {
-        let seed = seed.unwrap_or(299792458);
-        let repeat_last_n = repeat_last_n.unwrap_or(64);
-        let repeat_penalty = repeat_penalty.unwrap_or(1.1);
-        let hf_token = Some(hf_token.unwrap_or(std::env::var("HF_TOKEN").expect("HF_TOKEN")));
+    pub fn load(spec: MistralSpec) -> Result<MistralModel> {
+        let seed = spec.seed.unwrap_or(299792458);
+        let repeat_last_n = spec.repeat_last_n.unwrap_or(64);
+        let repeat_penalty = spec.repeat_penalty.unwrap_or(1.1);
+        let hf_token = Some(
+            spec.hf_token
+                .unwrap_or(std::env::var("HF_TOKEN").expect("HF_TOKEN")),
+        );
 
+        let base_repo_id = spec.base_repo_id.expect("base_repo_id");
         let paths = hf_hub_get_multiple(
             &base_repo_id,
             "model.safetensors.index.json",
             hf_token.clone(),
         )?;
 
-        let device = parse_device(device)?;
+        let device = parse_device(spec.device)?;
         let dtype = if device.is_cuda() {
             DType::BF16
         } else {
             DType::F32
         };
 
-        let tokenizer_repo = tokenizer_repo.unwrap_or(base_repo_id.clone());
+        let tokenizer_repo = spec.tokenizer_repo.unwrap_or(base_repo_id.clone());
 
         let vb = unsafe { VarBuilder::from_mmaped_safetensors(&paths, dtype, &device)? };
         let tokenizer = hf_hub_get(&tokenizer_repo, "tokenizer.json", hf_token.clone(), None)?;
@@ -403,11 +313,11 @@ impl MistralModel {
         let model = Model::new(&candle_config, vb)?;
 
         let logits_processor = {
-            let temperature = temp.unwrap_or(0.);
+            let temperature = spec.temp.unwrap_or(0.);
             let sampling = if temperature <= 0. {
                 Sampling::ArgMax
             } else {
-                match (top_k, top_p) {
+                match (spec.top_k, spec.top_p) {
                     (None, None) => Sampling::All { temperature },
                     (Some(k), None) => Sampling::TopK { k, temperature },
                     (None, Some(p)) => Sampling::TopP { p, temperature },
@@ -417,6 +327,15 @@ impl MistralModel {
             LogitsProcessor::from_sampling(seed, sampling)
         };
 
+        let eos_token = match tokenizer.get_vocab(true).get("</s>").copied() {
+            Some(token) => token,
+            None => {
+                return Err(anyhow::anyhow!("EOS token not found in vocabulary")).map_io_err()?
+            }
+        };
+
+        let sample_len = spec.sample_len.unwrap_or(1000);
+
         Ok(MistralModel {
             model,
             tokenizer,
@@ -424,6 +343,8 @@ impl MistralModel {
             repeat_penalty,
             repeat_last_n,
             device,
+            eos_token,
+            sample_len,
         })
     }
 }

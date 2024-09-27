@@ -47,11 +47,7 @@ impl ActorActions for GemmaSpec {
     }
 
     fn init(&self) -> Result<()> {
-        GemmaModel::init(
-            self.base_repo_id.clone(),
-            self.tokenizer_repo.clone(),
-            self.hf_token.clone(),
-        )
+        GemmaModel::init(self.clone())
     }
 
     fn start(&self) -> Result<()> {
@@ -268,13 +264,12 @@ impl GemmaModel {
         Ok(GEMMA_INSTANCE.get().expect("GEMMA_INSTANCE"))
     }
 
-    pub fn init(
-        base_repo_id: Option<String>,
-        tokenizer_repo: Option<String>,
-        hf_token: Option<String>,
-    ) -> Result<()> {
-        let base_repo_id = &base_repo_id.expect("base_repo_id");
-        let hf_token = Some(hf_token.unwrap_or(std::env::var("HF_TOKEN").expect("HF_TOKEN")));
+    pub fn init(spec: GemmaSpec) -> Result<()> {
+        let base_repo_id = &spec.base_repo_id.expect("base_repo_id");
+        let hf_token = Some(
+            spec.hf_token
+                .unwrap_or(std::env::var("HF_TOKEN").expect("HF_TOKEN")),
+        );
 
         let _paths = hf_hub_get_multiple(
             base_repo_id,
@@ -282,12 +277,11 @@ impl GemmaModel {
             hf_token.clone(),
         )?;
 
-        let tokenizer_repo = tokenizer_repo.unwrap_or(base_repo_id.clone());
+        let tokenizer_repo = spec.tokenizer_repo.unwrap_or(base_repo_id.clone());
         let _tokenizer = hf_hub_get(&tokenizer_repo, "tokenizer.json", hf_token.clone(), None)?;
         Ok(())
     }
 
-    #[allow(clippy::too_many_arguments)]
     pub fn load(spec: GemmaSpec) -> Result<GemmaModel> {
         let seed = spec.seed.unwrap_or(299792458);
         let repeat_last_n = spec.repeat_last_n.unwrap_or(64);
