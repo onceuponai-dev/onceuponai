@@ -24,7 +24,8 @@ static MISTRAL_INSTANCE: OnceCell<Arc<Mutex<MistralModel>>> = OnceCell::new();
 
 #[derive(Deserialize, Debug, Clone)]
 pub struct MistralSpec {
-    pub base_repo_id: Option<String>,
+    pub model_repo: Option<String>,
+    pub model_revision: Option<String>,
     pub tokenizer_repo: Option<String>,
     pub device: Option<String>,
     pub seed: Option<u64>,
@@ -263,7 +264,7 @@ impl MistralModel {
     }
 
     pub fn init(spec: MistralSpec) -> Result<()> {
-        let base_repo_id = &spec.base_repo_id.expect("base_repo_id");
+        let base_repo_id = &spec.model_repo.expect("base_repo_id");
         let hf_token = Some(
             spec.hf_token
                 .unwrap_or(std::env::var("HF_TOKEN").expect("HF_TOKEN")),
@@ -273,7 +274,7 @@ impl MistralModel {
             base_repo_id,
             "model.safetensors.index.json",
             hf_token.clone(),
-            None,
+            spec.model_revision,
         )?;
 
         let tokenizer_repo = spec.tokenizer_repo.unwrap_or(base_repo_id.clone());
@@ -290,12 +291,12 @@ impl MistralModel {
                 .unwrap_or(std::env::var("HF_TOKEN").expect("HF_TOKEN")),
         );
 
-        let base_repo_id = spec.base_repo_id.expect("base_repo_id");
+        let base_repo_id = spec.model_repo.expect("base_repo_id");
         let paths = hf_hub_get_multiple(
             &base_repo_id,
             "model.safetensors.index.json",
             hf_token.clone(),
-            None,
+            spec.model_revision,
         )?;
 
         let device = parse_device(spec.device)?;

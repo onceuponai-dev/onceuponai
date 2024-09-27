@@ -25,8 +25,11 @@ templates:
       description: ""
       url: ""
     spec:
-      - key: base_repo_id
+      - key: model_repo
         value: google/gemma-2b-it
+        type: string
+      - key: model_revision
+        value: null
         type: string
       - key: tokenizer_repo
         value: google/gemma-2b-it
@@ -120,8 +123,11 @@ templates:
       description: ""
       url: ""
     spec:
-      - key: base_repo_id
+      - key: model_repo
         value: mistralai/Mistral-7B-v0.1
+        type: string
+      - key: model_revision
+        value: null
         type: string
       - key: tokenizer_repo
         value: mistralai/Mistral-7B-v0.1
@@ -212,7 +218,7 @@ galery:
       description: ""
       url: ""
     spec:
-      - key: base_repo_id
+      - key: model_repo
         value: google/gemma-2b-it
         type: string
       - key: tokenizer_repo
@@ -723,7 +729,7 @@ galery:
       description: ""
       url: ""
     spec:
-      - key: base_repo_id
+      - key: model_repo
         value: mistralai/Mistral-7B-v0.1
         type: string
       - key: tokenizer_repo
@@ -738,7 +744,7 @@ galery:
       description: ""
       url: ""
     spec:
-      - key: base_repo_id
+      - key: model_repo
         value: mistralai/Mistral-7B-v0.2
         type: string
       - key: tokenizer_repo
@@ -753,7 +759,7 @@ galery:
       description: ""
       url: ""
     spec:
-      - key: base_repo_id
+      - key: model_repo
         value: mistralai/Mistral-7B-Instruct-v0.1
         type: string
       - key: tokenizer_repo
@@ -768,7 +774,7 @@ galery:
       description: ""
       url: ""
     spec:
-      - key: base_repo_id
+      - key: model_repo
         value: mistralai/Mistral-7B-Instruct-v0.2
         type: string
       - key: tokenizer_repo
@@ -783,7 +789,7 @@ galery:
       description: ""
       url: ""
     spec:
-      - key: base_repo_id
+      - key: model_repo
         value: mistralai/mathstral-7B-v0.1
         type: string
       - key: tokenizer_repo
@@ -798,7 +804,7 @@ galery:
       description: ""
       url: ""
     spec:
-      - key: base_repo_id
+      - key: model_repo
         value: mistralai/Mistral-Nemo-Base-2407
         type: string
       - key: tokenizer_repo
@@ -813,7 +819,7 @@ galery:
       description: ""
       url: ""
     spec:
-      - key: base_repo_id
+      - key: model_repo
         value: mistralai/Mistral-Nemo-Instruct-2407
         type: string
       - key: tokenizer_repo
