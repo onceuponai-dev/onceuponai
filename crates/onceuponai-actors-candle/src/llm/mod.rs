@@ -1,3 +1,5 @@
+use anyhow::Result;
+use candle_core::Device;
 use e5::E5Spec;
 use gemma::GemmaSpec;
 use mistral::MistralSpec;
@@ -37,4 +39,24 @@ impl ActorKindActions for ActorKind {
             ActorKind::E5(object) => object.metadata(),
         }
     }
+}
+
+fn parse_device(device_type: Option<String>) -> Result<Device> {
+    let device_type = device_type.unwrap_or("cpu".to_string());
+
+    let device = if device_type == "cpu" {
+        Device::Cpu
+    } else {
+        Device::new_cuda(0).unwrap()
+    };
+    Ok(device)
+}
+
+pub struct LLMState {
+    pub use_quantized: bool,
+}
+
+pub enum LLMModel {
+    Gemma,
+    QuantizedModel,
 }

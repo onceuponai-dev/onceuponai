@@ -4,7 +4,7 @@ members = [
     "crates/onceuponai-abstractions", 
     "crates/onceuponai-actors", 
     "crates/onceuponai-actors-candle", 
-    "crates/onceuponai-candle",
+    #"crates/onceuponai-candle",
     "crates/onceuponai-core", 
     #"crates/onceuponai-operator",
     #"crates/onceuponai-py",
@@ -66,7 +66,7 @@ openidconnect = { version="3.5", features=["reqwest"] }
 rand = "0.8.5"
 regex = "1"
 reqwest = { version = "0.12.7", features = ["json", "rustls-tls", "blocking", "stream"], default-features = false}
-rustls = { version = "0.23.5" }
+rustls = { version = "0.23.13" }
 safetensors = "0.4.5"
 schemars = "0.8.21"
 serde = { version = "1.0.210", features = ["derive"] }
