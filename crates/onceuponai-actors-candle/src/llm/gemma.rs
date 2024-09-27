@@ -137,7 +137,6 @@ impl ActorActions for GemmaSpec {
 
         let mut model = GemmaModel::lazy(self.clone())?.lock().map_anyhow_err()?;
         let sample_len: usize = model.sample_len;
-        let eos_token = model.eos_token;
         model.model.clear_kv_cache();
 
         let mut tokens = model
@@ -150,7 +149,7 @@ impl ActorActions for GemmaSpec {
         let tokens_len = tokens.len();
 
         for index in 0..sample_len {
-            if let Some(_text) = model.loop_process(tokens.len(), index, &mut tokens, eos_token)? {
+            if let Some(_text) = model.loop_process(tokens.len(), index, &mut tokens)? {
                 let text = model
                     .tokenizer
                     .decode(&tokens[tokens_len + index..], true)
@@ -211,9 +210,7 @@ impl GemmaModel {
         let tokens_len = tokens.len();
 
         for index in 0..self.sample_len {
-            if let Some(_text) =
-                self.loop_process(tokens.len(), index, &mut tokens, self.eos_token)?
-            {
+            if let Some(_text) = self.loop_process(tokens.len(), index, &mut tokens)? {
             } else {
                 break;
             }
@@ -233,7 +230,6 @@ impl GemmaModel {
         tokens_len: usize,
         index: usize,
         tokens: &mut Vec<u32>,
-        eos_token: u32,
     ) -> Result<Option<String>> {
         let context_size = if index > 0 { 1 } else { tokens_len };
         let start_pos = tokens_len.saturating_sub(context_size);
@@ -254,7 +250,7 @@ impl GemmaModel {
 
         let next_token = self.logits_processor.sample(&logits)?;
         tokens.push(next_token);
-        if next_token == eos_token {
+        if next_token == self.eos_token {
             return Ok(None);
         }
 
