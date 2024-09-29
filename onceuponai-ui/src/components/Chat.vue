@@ -30,6 +30,7 @@ export default defineComponent({
     const actors: any = ref([]);
     const selectedActor: any = ref(null);
     const isStream: any = ref(true);
+    const dialog: any = ref(null);
 
     axios.get(`/api/actors`)
       .then(function (response) {
@@ -153,7 +154,8 @@ export default defineComponent({
       selectedActor,
       actors,
       isStream,
-      parseMarkdown
+      parseMarkdown,
+      dialog
     };
 
 
@@ -190,7 +192,8 @@ export default defineComponent({
         </v-col>
         <v-col cols="7">
           <v-text-field clearable v-model="inputMessage" @keyup.enter="sendMessage" label="Message" variant="underlined"
-            :disabled="actors == 0" required></v-text-field>
+            :disabled="actors == 0" append-inner-icon="$openInNew" @click:append-inner="dialog = true"
+            required></v-text-field>
         </v-col>
         <v-col cols="1">
           <v-btn @click="sendMessage" :disabled="actors == 0">
@@ -207,6 +210,19 @@ export default defineComponent({
       </v-row>
 
     </v-bottom-navigation>
+    <v-dialog v-model="dialog" width="90%">
+      <v-card>
+        <v-card-text>
+          <v-textarea v-model="inputMessage" label="Message" rows="20"></v-textarea>
+        </v-card-text>
+
+        <v-card-actions>
+          <v-spacer></v-spacer>
+          <v-btn color="green darken-1" variant="text" @click="sendMessage">Send</v-btn>
+          <v-btn color="gray darken-1" variant="text" @click="dialog = false">Close</v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
   </v-container>
 
 

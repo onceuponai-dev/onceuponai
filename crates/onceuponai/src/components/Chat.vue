@@ -17,6 +17,7 @@ const showProgress = ref(false);
 const actors: any = ref([]);
 const selectedActor: any = ref(null);
 const isStream: any = ref(true);
+const dialog: any = ref(null);
 
 fetch(`/api/actors`)
   .then(async (response: any) => {
@@ -93,7 +94,7 @@ onMounted(() => {
             <div class="card-text" v-html="parseMarkdown(message.content)"></div>
           </div>
         </v-col>
-        <v-divider v-if="message.role !='user'" color="error"></v-divider>
+        <v-divider v-if="message.role != 'user'" color="error"></v-divider>
       </v-row>
       <v-row>
         <v-col cols="4" offset="6" v-if="showProgress">
@@ -103,13 +104,14 @@ onMounted(() => {
     </div>
     <v-bottom-navigation color="primary" horizontal height="75">
       <v-row>
-        <v-col cols="2" offset="1">
+        <v-col cols="2" class="actors-select">
           <v-select label="Actor" menu-icon="$brain" bg-color="white" density="comfortable" v-model="selectedActor"
             :items="actors"></v-select>
         </v-col>
         <v-col cols="7">
           <v-text-field clearable v-model="inputMessage" @keyup.enter="sendMessage" label="Message" variant="underlined"
-            :disabled="actors == 0" required></v-text-field>
+            :disabled="actors == 0" append-inner-icon="$openInNew" @click:append-inner="dialog = true"
+            required></v-text-field>
         </v-col>
         <v-col cols="1">
           <v-btn @click="sendMessage" :disabled="actors == 0">
@@ -126,6 +128,20 @@ onMounted(() => {
       </v-row>
 
     </v-bottom-navigation>
+
+    <v-dialog v-model="dialog" width="90%">
+      <v-card>
+        <v-card-text>
+          <v-textarea v-model="inputMessage" label="Message" rows="15"></v-textarea>
+        </v-card-text>
+
+        <v-card-actions>
+          <v-spacer></v-spacer>
+          <v-btn color="green darken-1" variant="elevated" @click="sendMessage">Send</v-btn>
+          <v-btn color="gray darken-1" variant="text" @click="dialog = false">Close</v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
   </v-container>
 
 
@@ -193,4 +209,7 @@ onMounted(() => {
   animation: rotate 2s linear infinite;
 }
 
+.actors-select {
+  margin-left: 2%;
+}
 </style>

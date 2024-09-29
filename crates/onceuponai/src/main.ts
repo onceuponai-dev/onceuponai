@@ -1,6 +1,6 @@
 import { createApp } from "vue";
 import App from "./App.vue";
-
+import './assets/global.css';
 import router from './router';
 
 // Vuetify
@@ -30,7 +30,15 @@ import {
     mdiArrowRightDropCircleOutline,
     mdiRefresh,
     mdiPower,
-    mdiWeb
+    mdiWeb,
+    mdiOpenInNew,
+    mdiTools,
+    mdiTextBoxOutline,
+    mdiTextBoxEditOutline,
+    mdiPencil,
+    mdiRun,
+    mdiChevronRight,
+    mdiChevronLeft
 } from '@mdi/js'
 
 const vuetify = createVuetify({
@@ -71,7 +79,15 @@ const vuetify = createVuetify({
             arrowRightDropCircleOutline: mdiArrowRightDropCircleOutline,
             refresh: mdiRefresh,
             power: mdiPower,
-            web: mdiWeb
+            web: mdiWeb,
+            openInNew: mdiOpenInNew,
+            tools: mdiTools,
+            textBoxOutline: mdiTextBoxOutline,
+            textBoxEditOutline: mdiTextBoxEditOutline,
+            pencil: mdiPencil,
+            run: mdiRun,
+            chevronLeft: mdiChevronLeft,
+            chevronRight: mdiChevronRight
         },
         sets: {
             mdi,
