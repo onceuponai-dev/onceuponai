@@ -3,7 +3,7 @@ import { ref, onMounted } from "vue";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from '@tauri-apps/api/event';
 import { fetch } from "../common";
-import { parseMarkdown } from '../mdcommon';
+// import { parseMarkdown } from '../mdcommon';
 import Quill from 'quill';
 import "quill/dist/quill.snow.css";
 
@@ -104,16 +104,16 @@ const sendMessage = async () => {
   await invoke("v1_chat_completions", { "chatRequest": message, "baseUrl": config.base_url, "personalToken": config.personal_token });
 };
 
-const getEditorContent = () => {
+// const getEditorContent = () => {
   // Fetch the editor's content (HTML format)
   // editorContent.value = quill.value.root.innerHTML;
   // console.log('Editor Content:', editorContent.value);
 
-  const range = quillLeft.value.getSelection();
-  console.log(range)
+  // const range = quillLeft.value.getSelection();
+  // console.log(range)
   // const selectedText = quill.value.getText(range.index, range.length);
   // editorContent.value = selectedText;
-};
+// };
 
 const tools_db: any = [
   {
@@ -190,18 +190,18 @@ onMounted(() => {
     quillRight.value.root.innerHTML = quillLeft.value.root.innerHTML;
   });
 
-  quillLeft.value.on('selection-change', (range: any, oldRange: any, source: any) => {
-    if (range) {
-      console.log('New selection:', range);
-    } else {
-      console.log('Selection cleared');
-    }
-  });
+  // quillLeft.value.on('selection-change', (range: any, oldRange: any, source: any) => {
+  //   if (range) {
+  //     console.log('New selection:', range);
+  //   } else {
+  //     console.log('Selection cleared');
+  //   }
+  // });
 
 });
 
-const fetchVersionContent = () => {
-}
+// const fetchVersionContent = () => {
+// }
 
 </script>
 

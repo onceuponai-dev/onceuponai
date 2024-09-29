@@ -91,6 +91,9 @@ build-sidecar-candle-cpu-win: ##
 build-sidecars: build-sidecar-candle-cuda-linux build-sidecar-candle-cpu-linux build-sidecar-candle-cuda-win build-sidecar-candle-cpu-win
 	@echo "Sidecars build completed."
 
+build-dev: build-sidecars build-linux
+	@echo "Dev build completed."
+
 build-full: build-ui build-sidecars build-linux build-win  
 	@echo "Full build completed."
 
