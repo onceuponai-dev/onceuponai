@@ -4,6 +4,7 @@ use crate::actors::WorkerActor;
 use actix::prelude::*;
 use actix_broker::BrokerSubscribe;
 use actix_telepathy::prelude::*;
+use async_trait::async_trait;
 use once_cell::sync::OnceCell;
 use rand::seq::SliceRandom;
 use serde::Deserialize;
@@ -50,6 +51,7 @@ pub struct MainActorSpec {
     pub auth: Option<MainActorAuthConfig>,
 }
 
+#[async_trait]
 impl ActorActions for MainActorSpec {
     fn is_main(&self) -> bool {
         true
@@ -67,7 +69,7 @@ impl ActorActions for MainActorSpec {
         todo!()
     }
 
-    fn invoke(
+    async fn invoke(
         &self,
         _uuid: Uuid,
         _request: &ActorInvokeRequest,

@@ -13,10 +13,12 @@ actix-telepathy = { workspace = true }
 actix-broker = { workspace = true }
 actix-rt = { workspace = true }
 anyhow = { workspace = true }
+async-trait = { workspace = true }
 candle-core = { workspace = true }
 candle-nn = { workspace = true }
 candle-transformers = { workspace = true }
 clap = { workspace = true }
+futures-util = { workspace = true }
 log = { workspace = true }
 once_cell = { workspace = true }
 onceuponai-abstractions= { path = "../onceuponai-abstractions" }

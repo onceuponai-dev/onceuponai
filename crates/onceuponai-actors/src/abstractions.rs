@@ -1,6 +1,7 @@
 use actix::prelude::*;
 use actix_telepathy::prelude::*;
 use anyhow::Result;
+use async_trait::async_trait;
 use onceuponai_abstractions::EntityValue;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -64,11 +65,12 @@ pub struct ActorInvokeError {
     pub error: ActorError,
 }
 
-pub trait ActorKindActions {
+pub trait ActorKindActions: Clone + Send + Sync {
     fn actor(&self) -> Box<dyn ActorActions>;
     fn metadata(&self) -> ActorMetadata;
 }
 
+#[async_trait]
 pub trait ActorActions: Send + Sync {
     fn features(&self) -> Option<Vec<String>> {
         None
@@ -82,10 +84,11 @@ pub trait ActorActions: Send + Sync {
 
     fn init(&self) -> Result<()>;
     fn start(&self) -> Result<()>;
-    fn invoke(&self, uuid: Uuid, request: &ActorInvokeRequest) -> Result<ActorInvokeResponse>;
+    async fn invoke(&self, uuid: Uuid, request: &ActorInvokeRequest)
+        -> Result<ActorInvokeResponse>;
 
     #[allow(unused_variables)]
-    fn invoke_stream(
+    async fn invoke_stream(
         &self,
         uuid: Uuid,
         request: &ActorInvokeRequest,

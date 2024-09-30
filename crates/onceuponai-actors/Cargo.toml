@@ -13,6 +13,7 @@ actix = { workspace = true }
 actix-broker = { workspace = true }
 actix-telepathy = { workspace = true }
 anyhow = { workspace = true }
+async-trait = { workspace = true }
 env_logger = { workspace = true }
 log = { workspace = true }
 once_cell = { workspace = true }

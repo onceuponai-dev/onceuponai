@@ -1,5 +1,7 @@
 pub mod main_actor;
-use crate::abstractions::{ActorActions, ActorInvokeRequest, ActorMetadata, ActorObject};
+use crate::abstractions::{
+    ActorActions, ActorInvokeRequest, ActorKindActions, ActorMetadata, ActorObject,
+};
 use actix::prelude::*;
 use actix_telepathy::prelude::*;
 use anyhow::Result;
@@ -10,7 +12,8 @@ use onceuponai_core::notifications::{Notification, NotificationLevel};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::net::SocketAddr;
-use std::sync::mpsc;
+use std::sync::{mpsc, Arc, Mutex};
+use tokio::runtime::Builder;
 use uuid::Uuid;
 
 // https://github.com/yummyml/yummy/blob/master/yummy-rs/yummy-delta/src/apply.rs
@@ -69,28 +72,38 @@ impl ActorBuilder {
         })
     }
 
-    pub fn build_worker<T>(metadata: ActorMetadata, actor_factory: T) -> Result<WorkerActor>
+    pub fn build_worker<T>(metadata: ActorMetadata, actor_kind: T) -> Result<WorkerActor>
     where
-        T: Fn() -> Box<dyn ActorActions>,
+        T: ActorKindActions + Clone + Send + Sync + 'static,
     {
-        let actor = actor_factory();
+        let actor = actor_kind.clone().actor();
         let metadata = metadata.setup(WorkerActor::ACTOR_ID, actor.features());
         let remote_addr = metadata.remote_addr()?;
 
         let (sender, rx) = mpsc::channel::<ActorInternalRequest>();
 
+        let actor_kind_shared = Arc::new(Mutex::new(actor_kind.clone()));
         std::thread::spawn(move || {
+            let rt = Builder::new_multi_thread().enable_all().build().unwrap();
             while let Ok(request) = rx.recv() {
+                let actor_kind_shared = Arc::clone(&actor_kind_shared);
                 let is_stream = request.message.stream;
                 let source = request.message.source.clone();
-                if !is_stream {
-                    let response = actor.invoke(request.task_id, &request.message).unwrap();
-                    source.do_send(response)
-                } else {
-                    actor
-                        .invoke_stream(request.task_id, &request.message, source)
-                        .unwrap();
-                }
+                rt.spawn(async move {
+                    let actor = actor_kind_shared.lock().unwrap().actor();
+                    if !is_stream {
+                        let response = actor
+                            .invoke(request.task_id, &request.message)
+                            .await
+                            .unwrap();
+                        source.do_send(response)
+                    } else {
+                        actor
+                            .invoke_stream(request.task_id, &request.message, source)
+                            .await
+                            .unwrap();
+                    }
+                });
             }
         });
 
@@ -99,7 +112,7 @@ impl ActorBuilder {
             own_addr: metadata.own_addr()?,
             seed_addr: metadata.seed_addr()?,
             remote_addr,
-            actor: actor_factory(),
+            actor: actor_kind.actor(),
             sender,
             metadata,
         })
