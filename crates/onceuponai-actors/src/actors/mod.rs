@@ -13,7 +13,8 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::net::SocketAddr;
 use std::sync::{mpsc, Arc, Mutex};
-use tokio::runtime::Builder;
+// use tokio::runtime::Builder;
+use tokio::runtime::Runtime;
 use uuid::Uuid;
 
 // https://github.com/yummyml/yummy/blob/master/yummy-rs/yummy-delta/src/apply.rs
@@ -84,7 +85,8 @@ impl ActorBuilder {
 
         let actor_kind_shared = Arc::new(Mutex::new(actor_kind.clone()));
         std::thread::spawn(move || {
-            let rt = Builder::new_multi_thread().enable_all().build().unwrap();
+            // let rt = Builder::new_multi_thread().enable_all().build().unwrap();
+            let rt = Runtime::new().unwrap();
             while let Ok(request) = rx.recv() {
                 let actor_kind_shared = Arc::clone(&actor_kind_shared);
                 let is_stream = request.message.stream;

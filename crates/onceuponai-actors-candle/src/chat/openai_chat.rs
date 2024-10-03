@@ -8,19 +8,21 @@ use onceuponai_actors::abstractions::{
     ActorActions, ActorError, ActorInvokeError, ActorInvokeFinish, ActorInvokeRequest,
     ActorInvokeResponse, ActorInvokeResult,
 };
+use onceuponai_core::common::some_or_env;
 use reqwest::{Client, Response};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::collections::HashMap;
+use std::env;
 use uuid::Uuid;
 
 static HTTP_CLIENT: Lazy<Client> = Lazy::new(Client::new);
 
 #[derive(Deserialize, Debug, Clone)]
 pub struct OpenAIChatSpec {
-    pub base_url: String,
-    pub api_key: String,
     pub model: String,
+    pub base_url: Option<String>,
+    pub api_key: Option<String>,
     pub max_tokens: Option<u32>,
     pub seed: Option<u64>,
     pub temperature: Option<f64>,
@@ -112,28 +114,29 @@ impl ActorActions for OpenAIChatSpec {
             match chunk {
                 Ok(data) => {
                     let chunk_str = String::from_utf8_lossy(&data);
-                    for line in chunk_str.lines() {
-                        if let Ok(json) = serde_json::from_str::<Value>(line) {
-                            if let Some(choices) = json.get("choices") {
-                                if let Some(content) = choices[0]
-                                    .get("delta")
-                                    .and_then(|delta| delta.get("content"))
-                                    .and_then(|c| c.as_str())
-                                {
-                                    let result = ActorInvokeResult {
-                                        uuid,
-                                        task_id: request.task_id,
-                                        stream: request.stream,
-                                        metadata: HashMap::new(),
-                                        data: HashMap::from([(
-                                            String::from("content"),
-                                            vec![EntityValue::STRING(content.to_string())],
-                                        )]),
-                                    };
+                    println!("{}", chunk_str);
+                    let line = &chunk_str.replace("data: ", "");
+                    if let Ok(json) = serde_json::from_str::<Value>(line) {
+                        if let Some(choices) = json.get("choices") {
+                            if let Some(content) = choices[0]
+                                .get("delta")
+                                .and_then(|delta| delta.get("content"))
+                                .and_then(|c| c.as_str())
+                            {
+                                println!("CONTENT: {}", content);
+                                let result = ActorInvokeResult {
+                                    uuid,
+                                    task_id: request.task_id,
+                                    stream: request.stream,
+                                    metadata: HashMap::new(),
+                                    data: HashMap::from([(
+                                        String::from("content"),
+                                        vec![EntityValue::STRING(content.to_string())],
+                                    )]),
+                                };
 
-                                    let response = ActorInvokeResponse::Success(result);
-                                    source.do_send(response);
-                                }
+                                let response = ActorInvokeResponse::Success(result);
+                                source.do_send(response);
                             }
                         }
                     }
@@ -167,6 +170,22 @@ struct ChatCompletionRequest {
 struct ChatMessage {
     role: String,
     content: String,
+}
+
+impl ChatMessage {
+    fn system(content: &str) -> ChatMessage {
+        ChatMessage {
+            role: "system".to_string(),
+            content: content.to_string(),
+        }
+    }
+
+    fn user(content: &str) -> ChatMessage {
+        ChatMessage {
+            role: "user".to_string(),
+            content: content.to_string(),
+        }
+    }
 }
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -208,10 +227,18 @@ impl OpenAIChatModel {
             stream: Some(false),
         };
 
+        let api_key = some_or_env(self.spec.clone().api_key, "OPENAI_SECRET");
+
+        let base_url = self
+            .spec
+            .clone()
+            .api_key
+            .unwrap_or("https://api.openai.com".to_string());
+
         let res = self
             .client
-            .post(format!("{}/v1/chat/completions", self.spec.base_url))
-            .header("Authorization", format!("Bearer {}", self.spec.api_key))
+            .post(format!("{}/v1/chat/completions", base_url))
+            .bearer_auth(api_key)
             .json(&request_body)
             .send()
             .await?;
@@ -229,10 +256,18 @@ impl OpenAIChatModel {
             max_tokens: self.spec.max_tokens,
         };
 
+        let api_key = some_or_env(self.spec.clone().api_key, "OPENAI_SECRET");
+
+        let base_url = self
+            .spec
+            .clone()
+            .api_key
+            .unwrap_or("https://api.openai.com".to_string());
+
         let res = self
             .client
-            .post(format!("{}/v1/chat/completions", self.spec.base_url))
-            .header("Authorization", format!("Bearer {}", self.spec.api_key))
+            .post(format!("{}/v1/chat/completions", base_url))
+            .bearer_auth(api_key)
             .json(&request_body)
             .send()
             .await?;
@@ -251,4 +286,28 @@ impl OpenAIChatModel {
             client: &HTTP_CLIENT,
         })
     }
+}
+
+#[tokio::test]
+async fn test_bielik() -> Result<()> {
+    let secret = env::var("OPENAI_SECRET").unwrap();
+    let spec = OpenAIChatSpec {
+        base_url: Some("https://api.openai.com".to_string()),
+        api_key: Some(secret),
+        model: "gpt-4o-mini".to_string(),
+        max_tokens: None,
+        seed: None,
+        temperature: None,
+        top_p: None,
+    };
+
+    let mut model = OpenAIChatModel::load(spec)?;
+    let messages = vec![
+        ChatMessage::system("you are helpfull assistant"),
+        ChatMessage::user("Hello!"),
+    ];
+    let res = model.invoke(messages).await?;
+
+    println!("RESPONSE: {}", res);
+    Ok(())
 }

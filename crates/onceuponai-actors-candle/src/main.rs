@@ -2,6 +2,7 @@ use anyhow::Result;
 use candle_core::Device;
 use chat::gemma::GemmaSpec;
 use chat::mistral::MistralSpec;
+use chat::openai_chat::OpenAIChatSpec;
 use chat::quantized::QuantizedSpec;
 use clap::{arg, Command};
 use embeddings::e5::E5Spec;
@@ -19,6 +20,7 @@ pub enum ActorKind {
     Gemma(ActorObject<GemmaSpec>),
     Mistral(ActorObject<MistralSpec>),
     Quantized(ActorObject<QuantizedSpec>),
+    Openaichat(ActorObject<OpenAIChatSpec>),
 }
 
 impl ActorKindActions for ActorKind {
@@ -28,6 +30,7 @@ impl ActorKindActions for ActorKind {
             ActorKind::Gemma(object) => Box::new(object.spec()),
             ActorKind::Mistral(object) => Box::new(object.spec()),
             ActorKind::Quantized(object) => Box::new(object.spec()),
+            ActorKind::Openaichat(object) => Box::new(object.spec()),
         }
     }
 
@@ -37,6 +40,7 @@ impl ActorKindActions for ActorKind {
             ActorKind::Gemma(object) => object.metadata(),
             ActorKind::Mistral(object) => object.metadata(),
             ActorKind::Quantized(object) => object.metadata(),
+            ActorKind::Openaichat(object) => object.metadata(),
         }
     }
 }

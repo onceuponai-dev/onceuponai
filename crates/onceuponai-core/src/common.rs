@@ -235,6 +235,21 @@ where
     some.unwrap()
 }
 
+pub fn some_or_env<T>(some: Option<T>, key: &str) -> T
+where
+    T: std::str::FromStr,
+{
+    if let Some(parsed) = some {
+        return parsed;
+    } else if let Ok(value) = env::var(key) {
+        if let Ok(parsed) = value.parse::<T>() {
+            return parsed;
+        }
+    }
+
+    todo!();
+}
+
 pub fn env_or_some_or_fn<T, F>(key: &str, some: Option<T>, func: F) -> T
 where
     T: std::str::FromStr,

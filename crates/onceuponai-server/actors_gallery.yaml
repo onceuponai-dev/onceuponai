@@ -157,6 +157,37 @@ templates:
         value: 1000
         type: number
 
+  - id: openaichat
+    kind: openaichat
+    device: cpu
+    sidecar: onceuponai-actors-candle
+    metadata:
+      name: openaichat
+      description: ""
+      url: ""
+    spec:
+      - key: base_url
+        value: https://api.openai.com
+        type: string
+      - key: api_key
+        value: null
+        type: secret
+      - key: model
+        value: gpt-4o-mini
+        type: string
+      - key: seed
+        value: null
+        type: number
+      - key: max_tokens
+        value: null
+        type: number
+      - key: temperature
+        value: null
+        type: number
+      - key: top_p
+        value: null
+        type: number
+
 galery:
   # E5 MODELS
   - id: e5/multilingual-e5-small
@@ -824,4 +855,29 @@ galery:
         type: string
       - key: tokenizer_repo
         value: mistralai/Mistral-Nemo-Instruct-2407
+        type: string
+
+  # OPENAI MODELS
+  - id: openaichat/gpt-4o-mini
+    template: openaichat
+    device: cpu
+    metadata:
+      name: gpt-4o-mini
+      description: ""
+      url: ""
+    spec:
+      - key: model
+        value: gpt-4o-mini
+        type: string
+
+  - id: openaichat/gpt-4o
+    template: openaichat
+    device: cpu
+    metadata:
+      name: gpt-4o
+      description: ""
+      url: ""
+    spec:
+      - key: model
+        value: gpt-4o
         type: string
