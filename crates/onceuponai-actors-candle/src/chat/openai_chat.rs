@@ -114,29 +114,33 @@ impl ActorActions for OpenAIChatSpec {
             match chunk {
                 Ok(data) => {
                     let chunk_str = String::from_utf8_lossy(&data);
-                    println!("{}", chunk_str);
-                    let line = &chunk_str.replace("data: ", "");
-                    if let Ok(json) = serde_json::from_str::<Value>(line) {
-                        if let Some(choices) = json.get("choices") {
-                            if let Some(content) = choices[0]
-                                .get("delta")
-                                .and_then(|delta| delta.get("content"))
-                                .and_then(|c| c.as_str())
-                            {
-                                println!("CONTENT: {}", content);
-                                let result = ActorInvokeResult {
-                                    uuid,
-                                    task_id: request.task_id,
-                                    stream: request.stream,
-                                    metadata: HashMap::new(),
-                                    data: HashMap::from([(
-                                        String::from("content"),
-                                        vec![EntityValue::STRING(content.to_string())],
-                                    )]),
-                                };
+                    let lines = chunk_str.split("data: ");
+                    for line in lines {
+                        let trimmed = line.trim();
 
-                                let response = ActorInvokeResponse::Success(result);
-                                source.do_send(response);
+                        if !trimmed.is_empty() {
+                            if let Ok(json) = serde_json::from_str::<Value>(trimmed) {
+                                if let Some(choices) = json.get("choices") {
+                                    if let Some(content) = choices[0]
+                                        .get("delta")
+                                        .and_then(|delta| delta.get("content"))
+                                        .and_then(|c| c.as_str())
+                                    {
+                                        let result = ActorInvokeResult {
+                                            uuid,
+                                            task_id: request.task_id,
+                                            stream: request.stream,
+                                            metadata: HashMap::new(),
+                                            data: HashMap::from([(
+                                                String::from("content"),
+                                                vec![EntityValue::STRING(content.to_string())],
+                                            )]),
+                                        };
+
+                                        let response = ActorInvokeResponse::Success(result);
+                                        source.do_send(response);
+                                    }
+                                }
                             }
                         }
                     }
