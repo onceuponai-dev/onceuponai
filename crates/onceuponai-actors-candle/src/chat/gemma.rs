@@ -127,16 +127,22 @@ impl ActorActions for GemmaSpec {
             return Ok(());
         }
 
-        let input: Vec<String> = input
+        let input = input
             .expect("MESSAGE")
             .iter()
             .map(|x| match x {
-                EntityValue::MESSAGE { role: _, content } => content.clone(),
+                EntityValue::MESSAGE { role, content } => {
+                    let turn_type = match role.as_str() {
+                        "user" => "user",
+                        "model" => "model",
+                        _ => "unknown",
+                    };
+                    format!("<start_of_turn>{}\n{}\n<end_of_turn>", turn_type, content)
+                }
                 _ => todo!(),
             })
-            .collect();
-
-        let input = input[0].clone();
+            .collect::<Vec<_>>()
+            .join("\n");
 
         let mut model = GemmaModel::lazy(self.clone())?.lock().map_anyhow_err()?;
         let sample_len: usize = model.sample_len;

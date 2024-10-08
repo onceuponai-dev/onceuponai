@@ -48,6 +48,7 @@ listen('v1-chat-completions', event => {
       showProgress.value = false;
     } else {
       let lastMessage = messages.value[messages.value.length - 1];
+      console.log(lastMessage);
       lastMessage.content += content;
     }
   }
@@ -63,6 +64,7 @@ const sendMessage = async () => {
   showProgress.value = true;
 
   const config: any = await invoke("config");
+  console.log(JSON.stringify(messages.value));
 
   const message = {
     "stream": isStream.value,

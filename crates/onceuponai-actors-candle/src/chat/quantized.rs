@@ -39,7 +39,15 @@ pub struct QuantizedSpec {
     pub gqa: Option<usize>,
     pub force_dmmv: Option<bool>,
     pub eos_token: Option<String>,
+    pub prompt_format: Option<PromptFormat>,
     pub hf_token: Option<String>,
+}
+
+#[derive(Deserialize, Debug, Clone)]
+pub enum PromptFormat {
+    Mistral,
+    Zephyr,
+    OpenChat,
 }
 
 #[async_trait]
@@ -134,16 +142,32 @@ impl ActorActions for QuantizedSpec {
             return Ok(());
         }
 
-        let input: Vec<String> = input
+        let input = input
             .expect("MESSAGE")
             .iter()
             .map(|x| match x {
-                EntityValue::MESSAGE { role: _, content } => content.clone(),
+                EntityValue::MESSAGE { role, content } => match &self.prompt_format {
+                    Some(PromptFormat::Mistral) => match role.as_str() {
+                        "user" => format!("<s>[INST] {} [/INST]", content),
+                        "model" => format!("\"{}\"</s>", content),
+                        _ => content.clone(),
+                    },
+                    Some(PromptFormat::Zephyr) => match role.as_str() {
+                        "user" => format!("<|user|>\n{}\n</s>", content),
+                        "model" => format!("<|assistant|>model\n{}\n</s>", content),
+                        _ => content.clone(),
+                    },
+                    Some(PromptFormat::OpenChat) => match role.as_str() {
+                        "user" => format!("GPT4 Correct User: {}<|end_of_turn|>", content),
+                        "model" => format!("GPT4 Correct Assistant: {}<|end_of_turn|>", content),
+                        _ => content.clone(),
+                    },
+                    None => content.clone(),
+                },
                 _ => todo!(),
             })
-            .collect();
-
-        let input = input[0].clone();
+            .collect::<Vec<_>>()
+            .join(" ");
 
         let mut model = QuantizedModel::lazy(self.clone())?
             .lock()

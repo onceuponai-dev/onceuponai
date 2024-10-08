@@ -110,6 +110,9 @@ templates:
       - key: eos_token
         value: </s>
         type: string
+      - key: prompt_format
+        value: Mistral
+        type: string
       - key: hf_token
         value: null
         type: secret

@@ -13,7 +13,6 @@ use reqwest::{Client, Response};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::collections::HashMap;
-use std::env;
 use uuid::Uuid;
 
 static HTTP_CLIENT: Lazy<Client> = Lazy::new(Client::new);
@@ -294,6 +293,7 @@ impl OpenAIChatModel {
 
 #[tokio::test]
 async fn test_bielik() -> Result<()> {
+    use std::env;
     let secret = env::var("OPENAI_SECRET").unwrap();
     let spec = OpenAIChatSpec {
         base_url: Some("https://api.openai.com".to_string()),
