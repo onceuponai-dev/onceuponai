@@ -83,15 +83,17 @@ impl ActorBuilder {
 
         let (sender, rx) = mpsc::channel::<ActorInternalRequest>();
 
-        let actor_kind_shared = Arc::new(Mutex::new(actor_kind.clone()));
+        let actor_kind_shared = Arc::new(actor_kind.clone());
+
         std::thread::spawn(move || {
+            // let rt = Builder::new_multi_thread().enable_all().build().unwrap();
             let rt = Runtime::new().unwrap();
             while let Ok(request) = rx.recv() {
                 let actor_kind_shared = Arc::clone(&actor_kind_shared);
                 let is_stream = request.message.stream;
                 let source = request.message.source.clone();
                 rt.spawn(async move {
-                    let actor = actor_kind_shared.lock().unwrap().actor();
+                    let actor = actor_kind_shared.actor();
                     if !is_stream {
                         actor
                             .invoke(request.task_id, &request.message, source)

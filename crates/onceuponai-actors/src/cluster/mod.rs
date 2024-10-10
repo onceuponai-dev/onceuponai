@@ -6,7 +6,7 @@ use crate::{
     },
 };
 use actix::prelude::*;
-use actix_telepathy::Cluster;
+use actix_telepathy::{Cluster, RemoteActor};
 use anyhow::{anyhow, Result};
 use onceuponai_core::{
     common::{decode_and_deserialize, ResultExt, SerializationType},
