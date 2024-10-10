@@ -12,14 +12,10 @@ use onceuponai_core::notifications::{Notification, NotificationLevel};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::net::SocketAddr;
-use std::sync::{mpsc, Arc, Mutex};
+use std::sync::{mpsc, Arc};
 // use tokio::runtime::Builder;
 use tokio::runtime::Runtime;
 use uuid::Uuid;
-
-// https://github.com/yummyml/yummy/blob/master/yummy-rs/yummy-delta/src/apply.rs
-// https://github.com/yummyml/yummy/blob/master/yummy-rs/yummy-core/src/config.rs
-// https://github.com/yummyml/yummy/blob/master/yummy-rs/yummy-delta/tests/config/01_bronze_tables.yaml
 
 #[derive(RemoteMessage, Serialize, Deserialize, Debug, Clone)]
 #[with_source(source)]
