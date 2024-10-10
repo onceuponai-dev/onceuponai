@@ -220,8 +220,7 @@ impl Handler<ClusterLog> for MainActor {
             ClusterLog::NewMember(node) => {
                 info!("New model joined the cluster. Node: {node:?}");
                 if self.own_addr != node.socket_addr {
-                    let model_addr =
-                        node.get_remote_addr(String::from(String::from("WorkerActor")));
+                    let model_addr = node.get_remote_addr(String::from("WorkerActor"));
                     model_addr.do_send(ActorInfoRequest {
                         source: self.remote_addr.clone(),
                     });
