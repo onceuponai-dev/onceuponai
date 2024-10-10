@@ -6,8 +6,9 @@ use crate::{
     },
 };
 use actix::prelude::*;
-use actix_telepathy::Cluster;
+use actix_telepathy::{Cluster, RemoteActor};
 use anyhow::{anyhow, Result};
+use log::info;
 use onceuponai_core::{
     common::{decode_and_deserialize, ResultExt, SerializationType},
     config::read_config_str,
@@ -22,9 +23,12 @@ pub fn start_main_actor(main_actor: MainActor) -> Result<Option<(MainActorSpec, 
     Ok(Some((spec, addr)))
 }
 
-pub async fn start_worker_actor(
-    worker_actor: WorkerActor,
-) -> Result<Option<(MainActorSpec, Addr<MainActor>)>> {
+pub async fn start_worker_actor<T>(
+    worker_actor: WorkerActor<T>,
+) -> Result<Option<(MainActorSpec, Addr<MainActor>)>>
+where
+    T: ActorKindActions + Clone + Send + Sync + 'static,
+{
     // println!("{}", LOGO);
     env_logger::init();
     let _ = Cluster::new(worker_actor.own_addr, vec![worker_actor.seed_addr]);
@@ -69,6 +73,7 @@ pub async fn start_worker_cluster<T: ActorKindActions + DeserializeOwned + 'stat
         actor_kind.metadata()
     };
 
+    actor_kind.actor().start().await?;
     let worker_actor = ActorBuilder::build_worker(metadata, actor_kind)?;
     start_worker_actor(worker_actor).await?;
     Ok(())

@@ -1,4 +1,5 @@
 use crate::parse_device;
+use actix_telepathy::RemoteAddr;
 use anyhow::Result;
 use async_trait::async_trait;
 use candle_core::{DType, Device, Tensor};
@@ -43,7 +44,7 @@ impl ActorActions for E5Spec {
         E5Model::init(self.clone())
     }
 
-    fn start(&self) -> Result<()> {
+    async fn start(&self) -> Result<()> {
         E5Model::lazy(self.clone())?;
         info!("MODEL STARTED");
         Ok(())
@@ -53,17 +54,19 @@ impl ActorActions for E5Spec {
         &self,
         uuid: Uuid,
         request: &ActorInvokeRequest,
-    ) -> Result<ActorInvokeResponse> {
+        source: RemoteAddr,
+    ) -> Result<()> {
         let input = request.data.get("input");
 
         if input.is_none() {
-            return Ok(ActorInvokeResponse::Failure(ActorInvokeError {
+            source.do_send(ActorInvokeResponse::Failure(ActorInvokeError {
                 uuid,
                 task_id: request.task_id,
                 error: ActorError::BadRequest(
                     "REQUEST MUST CONTAINER INPUT COLUMN WITH Vec<String>".to_string(),
                 ),
             }));
+            return Ok(());
         }
 
         let input: Vec<String> = input
@@ -91,7 +94,8 @@ impl ActorActions for E5Spec {
             data: HashMap::from([(String::from("embeddings"), embeddings_data)]),
         };
 
-        Ok(ActorInvokeResponse::Success(result))
+        source.do_send(ActorInvokeResponse::Success(result));
+        Ok(())
     }
 }
 

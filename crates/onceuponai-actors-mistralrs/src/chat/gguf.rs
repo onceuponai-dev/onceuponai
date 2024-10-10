@@ -9,6 +9,7 @@ use mistralrs::{
     LoaderBuilder, MemoryGpuConfig, MistralRs, MistralRsBuilder, ModelSelected,
     PagedAttentionConfig, SchedulerConfig, TokenSource,
 };
+use once_cell::sync::Lazy;
 use once_cell::sync::OnceCell;
 use onceuponai_abstractions::EntityValue;
 use onceuponai_actors::abstractions::{
@@ -20,10 +21,13 @@ use serde::Deserialize;
 use std::collections::HashMap;
 use std::num::NonZeroUsize;
 use std::sync::{Arc, Mutex};
+use tokio::runtime::{Builder, Runtime};
 use tokio::sync::mpsc::{channel, Receiver, Sender};
 use uuid::Uuid;
 
 static QUANTIZED_INSTANCE: OnceCell<Arc<MistralrsModel>> = OnceCell::new();
+static RUNTIME: Lazy<Runtime> =
+    Lazy::new(|| Builder::new_multi_thread().enable_all().build().unwrap());
 
 #[derive(Deserialize, Debug, Clone)]
 pub struct MistralrsSpec {
@@ -75,8 +79,8 @@ impl ActorActions for MistralrsSpec {
         MistralrsModel::init(self.clone())
     }
 
-    fn start(&self) -> Result<()> {
-        MistralrsModel::lazy(self.clone())?;
+    async fn start(&self) -> Result<()> {
+        MistralrsModel::load(self.clone());
 
         println!("SPEC: {:?}", self);
 
@@ -87,51 +91,9 @@ impl ActorActions for MistralrsSpec {
         &self,
         uuid: Uuid,
         request: &ActorInvokeRequest,
-    ) -> Result<ActorInvokeResponse> {
-        let input = request.data.get("message");
-
-        if input.is_none() {
-            return Ok(ActorInvokeResponse::Failure(ActorInvokeError {
-            uuid,
-            task_id: request.task_id,
-            error: ActorError::BadRequest(
-                "REQUEST MUST CONTAINER MESSAGE COLUMN WITH Vec<MESSAGE { role: String, content: String }>".to_string(),
-            ),
-        }));
-        }
-
-        let input: Vec<String> = input
-            .expect("MESSAGE")
-            .iter()
-            .map(|x| match x {
-                EntityValue::MESSAGE { role: _, content } => content.clone(),
-                _ => todo!(),
-            })
-            .collect();
-
-        let mut model = MistralrsModel::lazy(self.clone())?
-            .lock()
-            .map_anyhow_err()?;
-
-        let results = input
-            .iter()
-            .map(|prompt| model.invoke(prompt))
-            .collect::<Result<Vec<String>, _>>()?;
-
-        let results = results
-            .iter()
-            .map(|r| EntityValue::STRING(r.clone()))
-            .collect::<Vec<EntityValue>>();
-
-        let result = ActorInvokeResult {
-            uuid,
-            task_id: request.task_id,
-            stream: request.stream,
-            metadata: HashMap::new(),
-            data: HashMap::from([(String::from("content"), results)]),
-        };
-
-        Ok(ActorInvokeResponse::Success(result))
+        source: RemoteAddr,
+    ) -> Result<()> {
+        Ok(())
     }
 
     async fn invoke_stream(
@@ -140,102 +102,6 @@ impl ActorActions for MistralrsSpec {
         request: &ActorInvokeRequest,
         source: RemoteAddr,
     ) -> Result<()> {
-        let input = request.data.get("message");
-        if input.is_none() {
-            source.do_send(ActorInvokeResponse::Failure(ActorInvokeError {
-            uuid,
-            task_id: request.task_id,
-            error: ActorError::BadRequest(
-                "REQUEST MUST CONTAINER MESSAGE COLUMN WITH Vec<MESSAGE { role: String, content: String }>".to_string(),
-            ),
-        }));
-
-            return Ok(());
-        }
-
-        let input = input
-            .expect("MESSAGE")
-            .iter()
-            .map(|x| match x {
-                EntityValue::MESSAGE { role, content } => match &self.prompt_format {
-                    Some(PromptFormat::Mistral) => match role.as_str() {
-                        "user" => format!("<s>[INST] {} [/INST]", content),
-                        "model" => format!("\"{}\"</s>", content),
-                        _ => content.clone(),
-                    },
-                    Some(PromptFormat::Zephyr) => match role.as_str() {
-                        "user" => format!("<|user|>\n{}\n</s>", content),
-                        "model" => format!("<|assistant|>model\n{}\n</s>", content),
-                        _ => content.clone(),
-                    },
-                    Some(PromptFormat::OpenChat) => match role.as_str() {
-                        "user" => format!("GPT4 Correct User: {}<|end_of_turn|>", content),
-                        "model" => format!("GPT4 Correct Assistant: {}<|end_of_turn|>", content),
-                        _ => content.clone(),
-                    },
-                    None => content.clone(),
-                },
-                _ => todo!(),
-            })
-            .collect::<Vec<_>>()
-            .join(" ");
-
-        let mut model = MistralrsModel::lazy(self.clone())?
-            .lock()
-            .map_anyhow_err()?;
-        let repeat_last_n = model.repeat_last_n;
-        let repeat_penalty = model.repeat_penalty;
-
-        let prep = model.prepare(&input)?;
-
-        let prompt_tokens_len = prep.0;
-        let mut all_tokens = prep.1;
-        let mut logits_processor = prep.2;
-
-        let sample_len = model.sample_len;
-        let eos_token = model.eos_token;
-
-        let mut previous_text = String::new();
-        for index in 0..sample_len {
-            if let Some(current_text) = model.loop_process(
-                prompt_tokens_len,
-                index,
-                repeat_penalty,
-                repeat_last_n,
-                &mut all_tokens,
-                &mut logits_processor,
-                eos_token,
-            )? {
-                let text = current_text.split_at(previous_text.len()).1.to_string();
-                previous_text = current_text;
-
-                let result = ActorInvokeResult {
-                    uuid,
-                    task_id: request.task_id,
-                    stream: request.stream,
-                    metadata: HashMap::new(),
-                    data: HashMap::from([(
-                        String::from("content"),
-                        vec![EntityValue::STRING(text)],
-                    )]),
-                };
-
-                let response = ActorInvokeResponse::Success(result);
-                source.do_send(response);
-            } else {
-                break;
-            }
-        }
-
-        let result = ActorInvokeFinish {
-            uuid,
-            task_id: request.task_id,
-            stream: request.stream,
-        };
-
-        let response = ActorInvokeResponse::Finish(result);
-        source.do_send(response);
-
         Ok(())
     }
 }
@@ -247,120 +113,9 @@ pub struct MistralrsModel {
 }
 
 impl MistralrsModel {
-    #[allow(clippy::too_many_arguments)]
-    pub fn invoke(&mut self, prompt: &str) -> Result<String> {
-        let (tx, mut rx) = channel(10_000);
-        let sender = self.mistralrs.get_sender().unwrap();
-
-        let repeat_penalty: f32 = self.repeat_penalty;
-        let repeat_last_n: usize = self.repeat_last_n;
-
-        let prep = self.prepare(prompt)?;
-        let prompt_tokens_len = prep.0;
-        let mut all_tokens = prep.1;
-        let mut logits_processor = prep.2;
-
-        let mut previous_text = String::new();
-        for index in 0..self.sample_len {
-            if let Some(current_text) = self.loop_process(
-                prompt_tokens_len,
-                index,
-                repeat_penalty,
-                repeat_last_n,
-                &mut all_tokens,
-                &mut logits_processor,
-                self.eos_token,
-            )? {
-                previous_text = current_text;
-            } else {
-                break;
-            }
-        }
-
-        Ok(previous_text)
-    }
-
-    pub fn prepare(&mut self, prompt: &str) -> Result<(usize, Vec<u32>, LogitsProcessor)> {
-        let prompt_tokens = self
-            .tokenizer
-            .encode(prompt, true)
-            .map_err(anyhow::Error::msg)?
-            .get_ids()
-            .to_vec();
-
-        let seed: u64 = self.spec.seed.unwrap_or(299792458);
-        let temperature = self.spec.temp.unwrap_or(0.8);
-
-        let mut all_tokens = vec![];
-        // let mut logits_processor = LogitsProcessor::new(seed, Some(temperature), top_p);
-        let mut logits_processor = {
-            let sampling = if temperature <= 0. {
-                Sampling::ArgMax
-            } else {
-                match (self.spec.top_k, self.spec.top_p) {
-                    (None, None) => Sampling::All { temperature },
-                    (Some(k), None) => Sampling::TopK { k, temperature },
-                    (None, Some(p)) => Sampling::TopP { p, temperature },
-                    (Some(k), Some(p)) => Sampling::TopKThenTopP { k, p, temperature },
-                }
-            };
-            LogitsProcessor::from_sampling(seed, sampling)
-        };
-
-        let input = Tensor::new(prompt_tokens.as_slice(), &self.device)?.unsqueeze(0)?;
-        let logits = self.model.forward(&input, 0)?;
-        let logits = logits.squeeze(0)?;
-        let next_token = logits_processor.sample(&logits)?;
-
-        all_tokens.push(next_token);
-        let prompt_tokens_len = prompt_tokens.len();
-
-        Ok((prompt_tokens_len, all_tokens, logits_processor))
-    }
-
-    #[allow(clippy::too_many_arguments)]
-    pub fn loop_process(
-        &mut self,
-        prompt_tokens_len: usize,
-        index: usize,
-        repeat_penalty: f32,
-        repeat_last_n: usize,
-        all_tokens: &mut Vec<u32>,
-        logits_processor: &mut LogitsProcessor,
-        eos_token: u32,
-    ) -> Result<Option<String>> {
-        let next_token = *all_tokens.last().expect("Wrong ALL_TOKENS");
-        let input = Tensor::new(&[next_token], &self.device)?.unsqueeze(0)?;
-        let logits = self.model.forward(&input, prompt_tokens_len + index)?;
-        let logits = logits.squeeze(0)?;
-        let logits = if repeat_penalty == 1. {
-            logits
-        } else {
-            let start_at = all_tokens.len().saturating_sub(repeat_last_n);
-            candle_transformers::utils::apply_repeat_penalty(
-                &logits,
-                repeat_penalty,
-                &all_tokens[start_at..],
-            )?
-        };
-        let next_token = logits_processor.sample(&logits)?;
-        all_tokens.push(next_token);
-
-        if next_token == eos_token {
-            return Ok(None);
-        };
-
-        let current_text = self
-            .tokenizer
-            .decode(all_tokens, true)
-            .map_err(anyhow::Error::msg)?;
-
-        Ok(Some(current_text))
-    }
-
     pub async fn lazy<'a>(spec: MistralrsSpec) -> Result<&'a Arc<MistralrsModel>> {
         if QUANTIZED_INSTANCE.get().is_none() {
-            let model = MistralrsModel::load(spec.clone()).await?;
+            let model = MistralrsModel::load(spec.clone())?;
 
             let _ = QUANTIZED_INSTANCE.set(Arc::new(model)).is_ok();
         };
@@ -395,7 +150,7 @@ impl MistralrsModel {
     }
 
     #[allow(unused)]
-    pub async fn load(spec: MistralrsSpec) -> Result<MistralrsModel> {
+    pub fn load(spec: MistralrsSpec) -> Result<MistralrsModel> {
         let spec_clone = spec.clone();
         initialize_logging();
 
@@ -593,9 +348,11 @@ impl MistralrsModel {
         )?;
         info!("Model loaded.");
 
+        let rt = tokio::runtime::Runtime::new().unwrap();
         let scheduler_config = if cache_config.is_some() {
+            let metadata = rt.block_on(pipeline.lock()).get_metadata();
             // Handle case where we may have device mapping
-            if let Some(ref cache_config) = pipeline.lock().await.get_metadata().cache_config {
+            if let Some(ref cache_config) = metadata.cache_config {
                 SchedulerConfig::PagedAttentionMeta {
                     max_num_seqs: max_seqs,
                     config: cache_config.clone(),

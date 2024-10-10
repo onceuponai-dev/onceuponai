@@ -11,6 +11,7 @@ license.workspace = true
 [dependencies]
 actix = { workspace = true }
 actix-broker = { workspace = true }
+actix-rt = { workspace = true }
 actix-telepathy = { workspace = true }
 anyhow = { workspace = true }
 async-trait = { workspace = true }

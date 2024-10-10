@@ -83,9 +83,13 @@ pub trait ActorActions: Send + Sync {
     fn kind(&self) -> String;
 
     fn init(&self) -> Result<()>;
-    fn start(&self) -> Result<()>;
-    async fn invoke(&self, uuid: Uuid, request: &ActorInvokeRequest)
-        -> Result<ActorInvokeResponse>;
+    async fn start(&self) -> Result<()>;
+    async fn invoke(
+        &self,
+        uuid: Uuid,
+        request: &ActorInvokeRequest,
+        source: RemoteAddr,
+    ) -> Result<()>;
 
     #[allow(unused_variables)]
     async fn invoke_stream(
@@ -153,10 +157,6 @@ where
 
     pub fn spec(&self) -> T {
         self.spec.clone()
-    }
-
-    pub fn start(&self) -> Result<()> {
-        self.spec.start()
     }
 }
 

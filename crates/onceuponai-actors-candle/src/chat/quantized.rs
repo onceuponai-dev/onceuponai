@@ -64,7 +64,7 @@ impl ActorActions for QuantizedSpec {
         QuantizedModel::init(self.clone())
     }
 
-    fn start(&self) -> Result<()> {
+    async fn start(&self) -> Result<()> {
         QuantizedModel::lazy(self.clone())?;
 
         println!("SPEC: {:?}", self);
@@ -76,17 +76,19 @@ impl ActorActions for QuantizedSpec {
         &self,
         uuid: Uuid,
         request: &ActorInvokeRequest,
-    ) -> Result<ActorInvokeResponse> {
+        source: RemoteAddr,
+    ) -> Result<()> {
         let input = request.data.get("message");
 
         if input.is_none() {
-            return Ok(ActorInvokeResponse::Failure(ActorInvokeError {
+            source.do_send(ActorInvokeResponse::Failure(ActorInvokeError {
             uuid,
             task_id: request.task_id,
             error: ActorError::BadRequest(
                 "REQUEST MUST CONTAINER MESSAGE COLUMN WITH Vec<MESSAGE { role: String, content: String }>".to_string(),
             ),
         }));
+            return Ok(());
         }
 
         let input: Vec<String> = input
@@ -120,7 +122,8 @@ impl ActorActions for QuantizedSpec {
             data: HashMap::from([(String::from("content"), results)]),
         };
 
-        Ok(ActorInvokeResponse::Success(result))
+        source.do_send(ActorInvokeResponse::Success(result));
+        Ok(())
     }
 
     async fn invoke_stream(
