@@ -1,33 +1,37 @@
-use crate::parse_device;
+use super::{
+    openai::{
+        ChatCompletionRequest, Grammar, Message, MessageContent, MessageInnerContent, StopTokens,
+    },
+    util,
+};
 use actix_telepathy::RemoteAddr;
-use anyhow::Result;
+use anyhow::{Context, Result};
 use async_trait::async_trait;
+use either::Either;
+use indexmap::IndexMap;
 use log::{info, warn};
 use mistralrs::{
     get_model_dtype, get_tgt_non_granular_index, initialize_logging, paged_attn_supported,
-    DefaultSchedulerMethod, Device, DeviceLayerMapMetadata, DeviceMapMetadata, IsqType, Loader,
-    LoaderBuilder, MemoryGpuConfig, MistralRs, MistralRsBuilder, ModelSelected,
-    PagedAttentionConfig, SchedulerConfig, TokenSource,
+    Constraint, DefaultSchedulerMethod, Device, DeviceLayerMapMetadata, DeviceMapMetadata,
+    DrySamplingParams, Loader, LoaderBuilder, MemoryGpuConfig, MistralRs, MistralRsBuilder,
+    ModelSelected, NormalRequest, PagedAttentionConfig, Request, RequestMessage, Response,
+    SamplingParams, SchedulerConfig, StopTokens as InternalStopTokens, TokenSource,
 };
-use once_cell::sync::Lazy;
 use once_cell::sync::OnceCell;
 use onceuponai_abstractions::EntityValue;
 use onceuponai_actors::abstractions::{
     ActorActions, ActorError, ActorInvokeError, ActorInvokeFinish, ActorInvokeRequest,
     ActorInvokeResponse, ActorInvokeResult,
 };
-use onceuponai_core::common::{hf_hub_get, hf_hub_get_path, OptionToResult, ResultExt};
+use onceuponai_core::common::{hf_hub_get, hf_hub_get_path};
 use serde::Deserialize;
-use std::collections::HashMap;
 use std::num::NonZeroUsize;
-use std::sync::{Arc, Mutex};
-use tokio::runtime::{Builder, Runtime};
-use tokio::sync::mpsc::{channel, Receiver, Sender};
+use std::sync::Arc;
+use std::{collections::HashMap, ops::Deref};
+use tokio::sync::mpsc::{channel, Sender};
 use uuid::Uuid;
 
-static QUANTIZED_INSTANCE: OnceCell<Arc<MistralrsModel>> = OnceCell::new();
-static RUNTIME: Lazy<Runtime> =
-    Lazy::new(|| Builder::new_multi_thread().enable_all().build().unwrap());
+static MISTRALRS_INSTANCE: OnceCell<Arc<MistralrsModel>> = OnceCell::new();
 
 #[derive(Deserialize, Debug, Clone)]
 pub struct MistralrsSpec {
@@ -80,7 +84,8 @@ impl ActorActions for MistralrsSpec {
     }
 
     async fn start(&self) -> Result<()> {
-        MistralrsModel::load(self.clone());
+        let spec = self.clone();
+        tokio::task::spawn_local(async move { MistralrsModel::lazy(spec).await.unwrap() }).await?;
 
         println!("SPEC: {:?}", self);
 
@@ -90,7 +95,7 @@ impl ActorActions for MistralrsSpec {
     async fn invoke(
         &self,
         uuid: Uuid,
-        request: &ActorInvokeRequest,
+        requesti: &ActorInvokeRequest,
         source: RemoteAddr,
     ) -> Result<()> {
         Ok(())
@@ -99,11 +104,328 @@ impl ActorActions for MistralrsSpec {
     async fn invoke_stream(
         &self,
         uuid: Uuid,
-        request: &ActorInvokeRequest,
+        requesti: &ActorInvokeRequest,
         source: RemoteAddr,
     ) -> Result<()> {
+        let state = MISTRALRS_INSTANCE.get().unwrap().clone();
+        let input = requesti.data.get("message");
+
+        if input.is_none() {
+            source.do_send(ActorInvokeResponse::Failure(ActorInvokeError {
+            uuid,
+            task_id: requesti.task_id,
+            error: ActorError::BadRequest(
+                "REQUEST MUST CONTAINER MESSAGE COLUMN WITH Vec<MESSAGE { role: String, content: String }>".to_string(),
+            ),
+        }));
+            return Ok(());
+        }
+
+        let messages: Vec<Message> = input
+            .expect("MESSAGE")
+            .iter()
+            .map(|x| match x {
+                EntityValue::MESSAGE { role, content } => Message {
+                    role: role.clone(),
+                    name: None,
+                    content: super::openai::MessageContent(Either::Left(content.to_string())),
+                },
+                _ => todo!(),
+            })
+            .collect();
+        let oairequest = ChatCompletionRequest {
+            messages: Either::Left(messages),
+            model: "".to_string(),
+            logit_bias: None,
+            logprobs: false,
+            top_logprobs: None,
+            max_tokens: None,
+            n_choices: 1,
+            presence_penalty: None,
+            frequency_penalty: None,
+            stop_seqs: None,
+            temperature: None,
+            top_p: None,
+            stream: Some(true),
+            tools: None,
+            tool_choice: None,
+            top_k: None,
+            grammar: None,
+            adapters: None,
+            min_p: None,
+            dry_multiplier: None,
+            dry_base: None,
+            dry_allowed_length: None,
+            dry_sequence_breakers: None,
+        };
+
+        let (tx, mut rx) = channel(10_000);
+        let (request, is_streaming) =
+            match parse_request(oairequest, state.mistralrs.clone(), tx).await {
+                Ok(x) => x,
+                Err(e) => {
+                    println!("ERROR {:?}", e);
+                    return Ok(());
+                    // let e = anyhow::Error::msg(e.to_string());
+                    // MistralRs::maybe_log_error(state, &*e);
+                    // return ChatCompletionResponder::InternalError(e.into());
+                }
+            };
+        let sender = state.mistralrs.get_sender().unwrap();
+
+        if let Err(e) = sender.send(request).await {
+            println!("ERROR {:?}", e);
+            return Ok(());
+            // let e = anyhow::Error::msg(e.to_string());
+            // MistralRs::maybe_log_error(state, &*e);
+            // return ChatCompletionResponder::InternalError(e.into());
+        }
+
+        loop {
+            if let Ok(resp) = rx.try_recv() {
+                match resp {
+                    Response::ModelError(msg, _) => {
+                        source.do_send(ActorInvokeResponse::Failure(ActorInvokeError {
+                            uuid,
+                            task_id: requesti.task_id,
+                            error: ActorError::FatalError(msg),
+                        }));
+                        break;
+                    }
+                    Response::ValidationError(e) => {
+                        source.do_send(ActorInvokeResponse::Failure(ActorInvokeError {
+                            uuid,
+                            task_id: requesti.task_id,
+                            error: ActorError::FatalError(format!("{}", e)),
+                        }));
+                        break;
+                    }
+                    Response::InternalError(e) => {
+                        source.do_send(ActorInvokeResponse::Failure(ActorInvokeError {
+                            uuid,
+                            task_id: requesti.task_id,
+                            error: ActorError::FatalError(format!("{}", e)),
+                        }));
+                        break;
+                    }
+                    Response::Chunk(response) => {
+                        if response.choices.iter().all(|x| x.finish_reason.is_some()) {
+                            let result = ActorInvokeFinish {
+                                uuid,
+                                task_id: requesti.task_id,
+                                stream: requesti.stream,
+                            };
+                            let response = ActorInvokeResponse::Finish(result);
+                            source.do_send(response);
+                            break;
+                        }
+
+                        let content = response.choices[0].clone().delta.content;
+                        let response = ActorInvokeResponse::Success(ActorInvokeResult {
+                            uuid,
+                            task_id: requesti.task_id,
+                            stream: requesti.stream,
+                            metadata: HashMap::new(),
+                            data: HashMap::from([(
+                                String::from("content"),
+                                vec![EntityValue::STRING(content)],
+                            )]),
+                        });
+                        source.do_send(response);
+                    }
+                    Response::Done(_) => unreachable!(),
+                    Response::CompletionDone(_) => unreachable!(),
+                    Response::CompletionModelError(_, _) => unreachable!(),
+                    Response::CompletionChunk(_) => unreachable!(),
+                    Response::ImageGeneration(_) => unreachable!(),
+                }
+            }
+        }
+
         Ok(())
     }
+}
+
+async fn parse_request(
+    oairequest: ChatCompletionRequest,
+    state: Arc<MistralRs>,
+    tx: Sender<Response>,
+) -> Result<(Request, bool)> {
+    let repr = serde_json::to_string(&oairequest).expect("Serialization of request failed.");
+    MistralRs::maybe_log_request(state.clone(), repr);
+
+    let stop_toks = match oairequest.stop_seqs {
+        Some(StopTokens::Multi(m)) => Some(InternalStopTokens::Seqs(m)),
+        Some(StopTokens::Single(s)) => Some(InternalStopTokens::Seqs(vec![s])),
+        None => None,
+    };
+    let messages = match oairequest.messages {
+        Either::Left(req_messages) => {
+            let mut messages = Vec::new();
+            let mut image_urls = Vec::new();
+            for message in req_messages {
+                match message.content.deref() {
+                    Either::Left(content) => {
+                        let mut message_map: IndexMap<
+                            String,
+                            Either<String, Vec<IndexMap<String, String>>>,
+                        > = IndexMap::new();
+                        message_map.insert("role".to_string(), Either::Left(message.role));
+                        message_map
+                            .insert("content".to_string(), Either::Left(content.to_string()));
+                        messages.push(message_map);
+                    }
+                    Either::Right(image_messages) => {
+                        if image_messages.len() != 2 {
+                            anyhow::bail!(
+                                "Expected 2 items for the content of a message with an image."
+                            );
+                        }
+                        if message.role != "user" {
+                            anyhow::bail!(
+                                "Role for an image message must be `user`, but it is {}",
+                                message.role
+                            );
+                        }
+
+                        let mut items = Vec::new();
+                        for image_message in image_messages {
+                            if image_message.len() != 2 {
+                                anyhow::bail!("Expected 2 items for the sub-content of a message with an image.");
+                            }
+                            if !image_message.contains_key("type") {
+                                anyhow::bail!("Expected `type` key in input message.");
+                            }
+                            if image_message["type"].is_right() {
+                                anyhow::bail!("Expected string value in `type`.");
+                            }
+                            items.push(image_message["type"].as_ref().unwrap_left().clone())
+                        }
+
+                        fn get_content_and_url(
+                            text_idx: usize,
+                            url_idx: usize,
+                            image_messages: &[HashMap<String, MessageInnerContent>],
+                        ) -> Result<(String, String)> {
+                            if image_messages[text_idx]["text"].is_right() {
+                                anyhow::bail!("Expected string value in `text`.");
+                            }
+                            let content = image_messages[text_idx]["text"]
+                                .as_ref()
+                                .unwrap_left()
+                                .clone();
+                            if image_messages[url_idx]["image_url"].is_left()
+                                || !image_messages[url_idx]["image_url"]
+                                    .as_ref()
+                                    .unwrap_right()
+                                    .contains_key("url")
+                            {
+                                anyhow::bail!("Expected content of format {{`type`: `text`, `text`: ...}} and {{`type`: `url`, `image_url`: {{`url`: ...}}}}")
+                            }
+                            let url = image_messages[url_idx]["image_url"].as_ref().unwrap_right()
+                                ["url"]
+                                .clone();
+                            Ok((content, url))
+                        }
+                        let mut message_map: IndexMap<
+                            String,
+                            Either<String, Vec<IndexMap<String, String>>>,
+                        > = IndexMap::new();
+                        message_map.insert("role".to_string(), Either::Left(message.role));
+                        let (content, url) = if items[0] == "text" {
+                            get_content_and_url(0, 1, image_messages)?
+                        } else {
+                            get_content_and_url(1, 0, image_messages)?
+                        };
+
+                        let mut content_map = Vec::new();
+                        let mut content_image_map = IndexMap::new();
+                        content_image_map.insert("type".to_string(), "image".to_string());
+                        content_map.push(content_image_map);
+                        let mut content_text_map = IndexMap::new();
+                        content_text_map.insert("type".to_string(), "text".to_string());
+                        content_text_map.insert("text".to_string(), content);
+                        content_map.push(content_text_map);
+
+                        message_map.insert("content".to_string(), Either::Right(content_map));
+                        messages.push(message_map);
+                        image_urls.push(url);
+                    }
+                }
+            }
+            if !image_urls.is_empty() {
+                let mut images = Vec::new();
+                for url_unparsed in image_urls {
+                    let image = util::parse_image_url(&url_unparsed)
+                        .await
+                        .with_context(|| {
+                            format!("Failed to parse image resource: {}", url_unparsed)
+                        })?;
+
+                    images.push(image);
+                }
+                RequestMessage::VisionChat { messages, images }
+            } else {
+                RequestMessage::Chat(messages)
+            }
+        }
+        Either::Right(prompt) => {
+            let mut messages = Vec::new();
+            let mut message_map: IndexMap<String, Either<String, Vec<IndexMap<String, String>>>> =
+                IndexMap::new();
+            message_map.insert("role".to_string(), Either::Left("user".to_string()));
+            message_map.insert("content".to_string(), Either::Left(prompt));
+            messages.push(message_map);
+            RequestMessage::Chat(messages)
+        }
+    };
+
+    let dry_params = if let Some(dry_multiplier) = oairequest.dry_multiplier {
+        Some(DrySamplingParams::new_with_defaults(
+            dry_multiplier,
+            oairequest.dry_sequence_breakers,
+            oairequest.dry_base,
+            oairequest.dry_allowed_length,
+        )?)
+    } else {
+        None
+    };
+
+    let is_streaming = oairequest.stream.unwrap_or(false);
+    Ok((
+        Request::Normal(NormalRequest {
+            id: state.next_request_id(),
+            messages,
+            sampling_params: SamplingParams {
+                temperature: oairequest.temperature,
+                top_k: oairequest.top_k,
+                top_p: oairequest.top_p,
+                min_p: oairequest.min_p,
+                top_n_logprobs: oairequest.top_logprobs.unwrap_or(1),
+                frequency_penalty: oairequest.frequency_penalty,
+                presence_penalty: oairequest.presence_penalty,
+                max_len: oairequest.max_tokens,
+                stop_toks,
+                logits_bias: oairequest.logit_bias,
+                n_choices: oairequest.n_choices,
+                dry_params,
+            },
+            response: tx,
+            return_logprobs: oairequest.logprobs,
+            is_streaming,
+            suffix: None,
+            constraint: match oairequest.grammar {
+                Some(Grammar::Yacc(yacc)) => Constraint::Yacc(yacc),
+                Some(Grammar::Regex(regex)) => Constraint::Regex(regex),
+                None => Constraint::None,
+            },
+            adapters: oairequest.adapters,
+            tool_choice: oairequest.tool_choice,
+            tools: oairequest.tools,
+            logits_processors: None,
+        }),
+        is_streaming,
+    ))
 }
 
 pub struct MistralrsModel {
@@ -114,13 +436,13 @@ pub struct MistralrsModel {
 
 impl MistralrsModel {
     pub async fn lazy<'a>(spec: MistralrsSpec) -> Result<&'a Arc<MistralrsModel>> {
-        if QUANTIZED_INSTANCE.get().is_none() {
-            let model = MistralrsModel::load(spec.clone())?;
+        if MISTRALRS_INSTANCE.get().is_none() {
+            let model = MistralrsModel::load(spec.clone()).await?;
 
-            let _ = QUANTIZED_INSTANCE.set(Arc::new(model)).is_ok();
+            let _ = MISTRALRS_INSTANCE.set(Arc::new(model)).is_ok();
         };
 
-        Ok(QUANTIZED_INSTANCE.get().expect("QUANTIZED_INSTANCE"))
+        Ok(MISTRALRS_INSTANCE.get().expect("QUANTIZED_INSTANCE"))
     }
 
     pub fn init(spec: MistralrsSpec) -> Result<()> {
@@ -150,7 +472,7 @@ impl MistralrsModel {
     }
 
     #[allow(unused)]
-    pub fn load(spec: MistralrsSpec) -> Result<MistralrsModel> {
+    pub async fn load(spec: MistralrsSpec) -> Result<MistralrsModel> {
         let spec_clone = spec.clone();
         initialize_logging();
 
@@ -348,9 +670,8 @@ impl MistralrsModel {
         )?;
         info!("Model loaded.");
 
-        let rt = tokio::runtime::Runtime::new().unwrap();
         let scheduler_config = if cache_config.is_some() {
-            let metadata = rt.block_on(pipeline.lock()).get_metadata();
+            let metadata = pipeline.lock().await.get_metadata();
             // Handle case where we may have device mapping
             if let Some(ref cache_config) = metadata.cache_config {
                 SchedulerConfig::PagedAttentionMeta {
