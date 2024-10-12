@@ -172,7 +172,6 @@ impl ActorActions for MistralrsSpec {
                 }
             };
         let sender = state.mistralrs.get_sender().unwrap();
-
         if let Err(e) = sender.send(request).await {
             println!("ERROR {:?}", e);
             return Ok(());
@@ -231,7 +230,9 @@ impl ActorActions for MistralrsSpec {
                                 vec![EntityValue::STRING(content)],
                             )]),
                         });
+
                         source.do_send(response);
+                        actix_rt::task::yield_now().await;
                     }
                     Response::Done(_) => unreachable!(),
                     Response::CompletionDone(_) => unreachable!(),

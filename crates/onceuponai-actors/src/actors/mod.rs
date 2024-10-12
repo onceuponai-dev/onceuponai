@@ -77,42 +77,13 @@ impl ActorBuilder {
         let metadata = metadata.setup(WorkerActor::ACTOR_ID, actor.features());
         let remote_addr = metadata.remote_addr()?;
 
-        let (sender, rx) = mpsc::channel::<ActorInternalRequest>();
-
-        let actor_kind_shared = Arc::new(actor_kind.clone());
-
-        std::thread::spawn(move || {
-            // let rt = Builder::new_multi_thread().enable_all().build().unwrap();
-            let rt = Runtime::new().unwrap();
-            while let Ok(request) = rx.recv() {
-                let actor_kind_shared = Arc::clone(&actor_kind_shared);
-                let is_stream = request.message.stream;
-                let source = request.message.source.clone();
-                rt.spawn(async move {
-                    let actor = actor_kind_shared.actor();
-                    if !is_stream {
-                        actor
-                            .invoke(request.task_id, &request.message, source)
-                            .await
-                            .unwrap();
-                    } else {
-                        actor
-                            .invoke_stream(request.task_id, &request.message, source)
-                            .await
-                            .unwrap();
-                    }
-                });
-            }
-        });
-
         Ok(WorkerActor {
             uuid: Uuid::new_v4(),
             own_addr: metadata.own_addr()?,
             seed_addr: metadata.seed_addr()?,
             remote_addr,
-            actor: actor_kind.actor(),
+            actor: Arc::new(actor_kind.actor()),
             metadata,
-            sender,
         })
     }
 }
@@ -122,11 +93,10 @@ impl ActorBuilder {
 pub struct WorkerActor {
     pub uuid: Uuid,
     pub metadata: ActorMetadata,
-    pub actor: Box<dyn ActorActions>,
+    pub actor: Arc<Box<dyn ActorActions>>,
     pub own_addr: SocketAddr,
     pub seed_addr: SocketAddr,
     pub remote_addr: RemoteAddr,
-    pub sender: mpsc::Sender<ActorInternalRequest>,
 }
 
 impl WorkerActor {
@@ -179,11 +149,18 @@ impl Handler<ActorInvokeRequest> for WorkerActor {
 
     fn handle(&mut self, msg: ActorInvokeRequest, _ctx: &mut Self::Context) -> Self::Result {
         info!("MODEL INVOKE REQUEST: {:?}", msg);
-        self.sender
-            .send(ActorInternalRequest {
-                task_id: self.uuid,
-                message: msg.clone(),
-            })
-            .unwrap();
+        let is_stream = msg.stream;
+        let source = msg.source.clone();
+        let actor = Arc::clone(&self.actor);
+        let task_id = msg.task_id;
+        let req = msg.clone();
+
+        actix_rt::spawn(async move {
+            if !is_stream {
+                actor.invoke(task_id, &req, source).await.unwrap();
+            } else {
+                actor.invoke_stream(task_id, &msg, source).await.unwrap();
+            }
+        });
     }
 }
