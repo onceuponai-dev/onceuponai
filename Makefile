@@ -68,6 +68,10 @@ rebuild-nsis: ## Test musl
 	mv ./target/x86_64-pc-windows-gnu/release/nsis/x64/temp_file ./target/x86_64-pc-windows-gnu/release/nsis/x64/installer.nsi && \
 	makensis ./target/x86_64-pc-windows-gnu/release/nsis/x64/installer.nsi
 
+build-mrs: ## 
+	cd ./crates/onceuponai-actors-mistralrs && \
+	cargo build --release --features cuda
+
 build-sidecar-mistralrs-cuda-linux: ## 
 	cd ./crates/onceuponai-actors-mistralrs && \
 	cargo build --release --features cuda && \

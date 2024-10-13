@@ -62,6 +62,172 @@ pub struct MistralrsSpec {
     pub topology: Option<String>,
 }
 
+impl MistralrsSpec {
+    async fn invoke_base(
+        &self,
+        uuid: Uuid,
+        invoke_request: &ActorInvokeRequest,
+        source: RemoteAddr,
+    ) -> Result<()> {
+        let state = MISTRALRS_INSTANCE.get().unwrap().clone();
+        let input = invoke_request.data.get("message");
+
+        if input.is_none() {
+            source.do_send(ActorInvokeResponse::Failure(ActorInvokeError {
+            uuid,
+            task_id: invoke_request.task_id,
+            error: ActorError::BadRequest(
+                "REQUEST MUST CONTAINER MESSAGE COLUMN WITH Vec<MESSAGE { role: String, content: String }>".to_string(),
+            ),
+        }));
+            return Ok(());
+        }
+
+        let messages: Vec<Message> = input
+            .expect("MESSAGE")
+            .iter()
+            .map(|x| match x {
+                EntityValue::MESSAGE { role, content } => Message {
+                    role: role.clone(),
+                    name: None,
+                    content: super::openai::MessageContent(Either::Left(content.to_string())),
+                },
+                _ => todo!(),
+            })
+            .collect();
+        let oairequest = ChatCompletionRequest {
+            messages: Either::Left(messages),
+            model: "".to_string(),
+            logit_bias: None,
+            logprobs: false,
+            top_logprobs: None,
+            max_tokens: None,
+            n_choices: 1,
+            presence_penalty: None,
+            frequency_penalty: None,
+            stop_seqs: None,
+            temperature: None,
+            top_p: None,
+            stream: Some(invoke_request.stream),
+            tools: None,
+            tool_choice: None,
+            top_k: None,
+            grammar: None,
+            adapters: None,
+            min_p: None,
+            dry_multiplier: None,
+            dry_base: None,
+            dry_allowed_length: None,
+            dry_sequence_breakers: None,
+        };
+
+        let (tx, mut rx) = channel(10_000);
+        let (request, _is_streaming) =
+            match parse_request(oairequest, state.mistralrs.clone(), tx).await {
+                Ok(x) => x,
+                Err(e) => {
+                    println!("ERROR {:?}", e);
+                    source.do_send(ActorInvokeResponse::Failure(ActorInvokeError {
+                        uuid,
+                        task_id: invoke_request.task_id,
+                        error: ActorError::FatalError(format!("{}", e)),
+                    }));
+                    return Ok(());
+                }
+            };
+        let sender = state.mistralrs.get_sender().unwrap();
+        if let Err(e) = sender.send(request).await {
+            println!("ERROR {:?}", e);
+            source.do_send(ActorInvokeResponse::Failure(ActorInvokeError {
+                uuid,
+                task_id: invoke_request.task_id,
+                error: ActorError::FatalError(format!("{}", e)),
+            }));
+            return Ok(());
+        }
+
+        loop {
+            if let Ok(resp) = rx.try_recv() {
+                match resp {
+                    Response::ModelError(msg, _) => {
+                        source.do_send(ActorInvokeResponse::Failure(ActorInvokeError {
+                            uuid,
+                            task_id: invoke_request.task_id,
+                            error: ActorError::FatalError(msg),
+                        }));
+                        break;
+                    }
+                    Response::ValidationError(e) => {
+                        source.do_send(ActorInvokeResponse::Failure(ActorInvokeError {
+                            uuid,
+                            task_id: invoke_request.task_id,
+                            error: ActorError::FatalError(format!("{}", e)),
+                        }));
+                        break;
+                    }
+                    Response::InternalError(e) => {
+                        source.do_send(ActorInvokeResponse::Failure(ActorInvokeError {
+                            uuid,
+                            task_id: invoke_request.task_id,
+                            error: ActorError::FatalError(format!("{}", e)),
+                        }));
+                        break;
+                    }
+                    Response::Chunk(response) => {
+                        if response.choices.iter().all(|x| x.finish_reason.is_some()) {
+                            let result = ActorInvokeFinish {
+                                uuid,
+                                task_id: invoke_request.task_id,
+                                stream: invoke_request.stream,
+                            };
+                            let response = ActorInvokeResponse::Finish(result);
+                            source.do_send(response);
+                            break;
+                        }
+
+                        let content = response.choices[0].clone().delta.content;
+                        let response = ActorInvokeResponse::Success(ActorInvokeResult {
+                            uuid,
+                            task_id: invoke_request.task_id,
+                            stream: invoke_request.stream,
+                            metadata: HashMap::new(),
+                            data: HashMap::from([(
+                                String::from("content"),
+                                vec![EntityValue::STRING(content)],
+                            )]),
+                        });
+
+                        source.do_send(response);
+                        actix_rt::task::yield_now().await;
+                    }
+                    Response::Done(response) => {
+                        let content = response.choices[0].clone().message.content.unwrap();
+                        let response = ActorInvokeResponse::Success(ActorInvokeResult {
+                            uuid,
+                            task_id: invoke_request.task_id,
+                            stream: invoke_request.stream,
+                            metadata: HashMap::new(),
+                            data: HashMap::from([(
+                                String::from("content"),
+                                vec![EntityValue::STRING(content)],
+                            )]),
+                        });
+
+                        source.do_send(response);
+                        actix_rt::task::yield_now().await;
+                    }
+                    Response::CompletionDone(_) => unreachable!(),
+                    Response::CompletionModelError(_, _) => unreachable!(),
+                    Response::CompletionChunk(_) => unreachable!(),
+                    Response::ImageGeneration(_) => unreachable!(),
+                }
+            }
+        }
+
+        Ok(())
+    }
+}
+
 #[derive(Deserialize, Debug, Clone)]
 pub enum PromptFormat {
     Mistral,
@@ -95,154 +261,20 @@ impl ActorActions for MistralrsSpec {
     async fn invoke(
         &self,
         uuid: Uuid,
-        requesti: &ActorInvokeRequest,
+        invoke_request: &ActorInvokeRequest,
         source: RemoteAddr,
     ) -> Result<()> {
+        self.invoke_base(uuid, invoke_request, source).await?;
         Ok(())
     }
 
     async fn invoke_stream(
         &self,
         uuid: Uuid,
-        requesti: &ActorInvokeRequest,
+        invoke_request: &ActorInvokeRequest,
         source: RemoteAddr,
     ) -> Result<()> {
-        let state = MISTRALRS_INSTANCE.get().unwrap().clone();
-        let input = requesti.data.get("message");
-
-        if input.is_none() {
-            source.do_send(ActorInvokeResponse::Failure(ActorInvokeError {
-            uuid,
-            task_id: requesti.task_id,
-            error: ActorError::BadRequest(
-                "REQUEST MUST CONTAINER MESSAGE COLUMN WITH Vec<MESSAGE { role: String, content: String }>".to_string(),
-            ),
-        }));
-            return Ok(());
-        }
-
-        let messages: Vec<Message> = input
-            .expect("MESSAGE")
-            .iter()
-            .map(|x| match x {
-                EntityValue::MESSAGE { role, content } => Message {
-                    role: role.clone(),
-                    name: None,
-                    content: super::openai::MessageContent(Either::Left(content.to_string())),
-                },
-                _ => todo!(),
-            })
-            .collect();
-        let oairequest = ChatCompletionRequest {
-            messages: Either::Left(messages),
-            model: "".to_string(),
-            logit_bias: None,
-            logprobs: false,
-            top_logprobs: None,
-            max_tokens: None,
-            n_choices: 1,
-            presence_penalty: None,
-            frequency_penalty: None,
-            stop_seqs: None,
-            temperature: None,
-            top_p: None,
-            stream: Some(true),
-            tools: None,
-            tool_choice: None,
-            top_k: None,
-            grammar: None,
-            adapters: None,
-            min_p: None,
-            dry_multiplier: None,
-            dry_base: None,
-            dry_allowed_length: None,
-            dry_sequence_breakers: None,
-        };
-
-        let (tx, mut rx) = channel(10_000);
-        let (request, is_streaming) =
-            match parse_request(oairequest, state.mistralrs.clone(), tx).await {
-                Ok(x) => x,
-                Err(e) => {
-                    println!("ERROR {:?}", e);
-                    return Ok(());
-                    // let e = anyhow::Error::msg(e.to_string());
-                    // MistralRs::maybe_log_error(state, &*e);
-                    // return ChatCompletionResponder::InternalError(e.into());
-                }
-            };
-        let sender = state.mistralrs.get_sender().unwrap();
-        if let Err(e) = sender.send(request).await {
-            println!("ERROR {:?}", e);
-            return Ok(());
-            // let e = anyhow::Error::msg(e.to_string());
-            // MistralRs::maybe_log_error(state, &*e);
-            // return ChatCompletionResponder::InternalError(e.into());
-        }
-
-        loop {
-            if let Ok(resp) = rx.try_recv() {
-                match resp {
-                    Response::ModelError(msg, _) => {
-                        source.do_send(ActorInvokeResponse::Failure(ActorInvokeError {
-                            uuid,
-                            task_id: requesti.task_id,
-                            error: ActorError::FatalError(msg),
-                        }));
-                        break;
-                    }
-                    Response::ValidationError(e) => {
-                        source.do_send(ActorInvokeResponse::Failure(ActorInvokeError {
-                            uuid,
-                            task_id: requesti.task_id,
-                            error: ActorError::FatalError(format!("{}", e)),
-                        }));
-                        break;
-                    }
-                    Response::InternalError(e) => {
-                        source.do_send(ActorInvokeResponse::Failure(ActorInvokeError {
-                            uuid,
-                            task_id: requesti.task_id,
-                            error: ActorError::FatalError(format!("{}", e)),
-                        }));
-                        break;
-                    }
-                    Response::Chunk(response) => {
-                        if response.choices.iter().all(|x| x.finish_reason.is_some()) {
-                            let result = ActorInvokeFinish {
-                                uuid,
-                                task_id: requesti.task_id,
-                                stream: requesti.stream,
-                            };
-                            let response = ActorInvokeResponse::Finish(result);
-                            source.do_send(response);
-                            break;
-                        }
-
-                        let content = response.choices[0].clone().delta.content;
-                        let response = ActorInvokeResponse::Success(ActorInvokeResult {
-                            uuid,
-                            task_id: requesti.task_id,
-                            stream: requesti.stream,
-                            metadata: HashMap::new(),
-                            data: HashMap::from([(
-                                String::from("content"),
-                                vec![EntityValue::STRING(content)],
-                            )]),
-                        });
-
-                        source.do_send(response);
-                        actix_rt::task::yield_now().await;
-                    }
-                    Response::Done(_) => unreachable!(),
-                    Response::CompletionDone(_) => unreachable!(),
-                    Response::CompletionModelError(_, _) => unreachable!(),
-                    Response::CompletionChunk(_) => unreachable!(),
-                    Response::ImageGeneration(_) => unreachable!(),
-                }
-            }
-        }
-
+        self.invoke_base(uuid, invoke_request, source).await?;
         Ok(())
     }
 }
