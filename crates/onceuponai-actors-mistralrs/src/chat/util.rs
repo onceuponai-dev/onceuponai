@@ -1,3 +1,6 @@
+// code from:
+// https://github.com/EricLBuehler/mistral.rs/blob/master/mistralrs-server/src/util.rs
+
 use image::DynamicImage;
 use tokio::{
     fs::{self, File},

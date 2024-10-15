@@ -7,6 +7,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::net::SocketAddr;
 use uuid::Uuid;
+pub mod openai;
 
 #[derive(RemoteMessage, Serialize, Deserialize, Debug, Clone)]
 #[with_source(source)]

@@ -1,5 +1,7 @@
+// code from:
+// https://github.com/EricLBuehler/mistral.rs/blob/master/mistralrs-server/src/openai.rs
+
 use either::Either;
-use mistralrs::{ImageGenerationResponseFormat, Tool, ToolChoice};
 use serde::{Deserialize, Serialize};
 use std::{collections::HashMap, ops::Deref};
 
@@ -75,6 +77,39 @@ pub enum Grammar {
     Yacc(String),
 }
 
+#[derive(Clone, Debug, serde::Deserialize, serde::Serialize)]
+pub struct Tool {
+    #[serde(rename = "type")]
+    pub tp: ToolType,
+    pub function: Function,
+}
+
+#[derive(Clone, Debug, serde::Deserialize, serde::Serialize)]
+pub struct Function {
+    pub description: Option<String>,
+    pub name: String,
+    pub parameters: Option<HashMap<String, serde_json::Value>>,
+}
+
+#[derive(Clone, Debug, serde::Deserialize, serde::Serialize)]
+pub enum ToolType {
+    #[serde(rename = "function")]
+    Function,
+}
+
+#[derive(Clone, Debug, serde::Deserialize, serde::Serialize)]
+pub enum ToolChoice {
+    #[serde(rename = "none")]
+    /// Disallow selection of tools.
+    None,
+    #[serde(rename = "auto")]
+    /// Allow automatic selection of any given tool, or none.
+    Auto,
+    #[serde(untagged)]
+    /// Force selection of a given tool.
+    Tool(Tool),
+}
+
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct ChatCompletionRequest {
     #[serde(with = "either::serde_untagged")]
@@ -148,6 +183,13 @@ pub struct CompletionRequest {
     pub dry_base: Option<f32>,
     pub dry_allowed_length: Option<usize>,
     pub dry_sequence_breakers: Option<Vec<String>>,
+}
+
+#[derive(Clone, Copy, Debug, Serialize, Deserialize, PartialEq)]
+/// Image generation response format
+pub enum ImageGenerationResponseFormat {
+    Url,
+    B64Json,
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
