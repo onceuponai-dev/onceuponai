@@ -1,5 +1,5 @@
 use anyhow::Result;
-use chat::gguf::MistralrsSpec;
+use chat::engine::MistralrsSpec;
 use chat::openai_chat::OpenAIChatSpec;
 use clap::{arg, Command};
 use mistralrs::Device;

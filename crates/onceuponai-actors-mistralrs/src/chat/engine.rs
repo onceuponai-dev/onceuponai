@@ -13,9 +13,10 @@ use log::{info, warn};
 use mistralrs::{
     get_model_dtype, get_tgt_non_granular_index, initialize_logging, paged_attn_supported,
     Constraint, DefaultSchedulerMethod, Device, DeviceLayerMapMetadata, DeviceMapMetadata,
-    DrySamplingParams, Loader, LoaderBuilder, MemoryGpuConfig, MistralRs, MistralRsBuilder,
-    ModelSelected, NormalRequest, PagedAttentionConfig, Request, RequestMessage, Response,
-    SamplingParams, SchedulerConfig, StopTokens as InternalStopTokens, TokenSource,
+    DrySamplingParams, IsqOrganization, IsqType, Loader, LoaderBuilder, MemoryGpuConfig, MistralRs,
+    MistralRsBuilder, ModelDType, ModelSelected, NormalRequest, PagedAttentionConfig, Request,
+    RequestMessage, Response, SamplingParams, SchedulerConfig, StopTokens as InternalStopTokens,
+    TokenSource,
 };
 use once_cell::sync::OnceCell;
 use onceuponai_abstractions::EntityValue;
@@ -23,11 +24,11 @@ use onceuponai_actors::abstractions::{
     ActorActions, ActorError, ActorInvokeError, ActorInvokeFinish, ActorInvokeRequest,
     ActorInvokeResponse, ActorInvokeResult,
 };
-use onceuponai_core::common::{hf_hub_get, hf_hub_get_path};
+use onceuponai_core::common::{env_or_some_or_fn, hf_hub_get, hf_hub_get_path};
 use serde::Deserialize;
-use std::num::NonZeroUsize;
 use std::sync::Arc;
 use std::{collections::HashMap, ops::Deref};
+use std::{num::NonZeroUsize, path::PathBuf};
 use tokio::sync::mpsc::{channel, Sender};
 use uuid::Uuid;
 
@@ -52,14 +53,33 @@ pub struct MistralrsSpec {
     pub prompt_batchsize: Option<usize>,
     pub hf_token: Option<String>,
     pub device: Option<String>,
+    /// Model Selected: plain, xlora, lora, gguf, xloragguf, loragguf, ggml, xloraggml, loraggml, visionplain, diffusionplain
     pub model_selected: Option<String>,
-    pub model_repo: Option<String>,
-    pub model_file: Option<String>,
+    /// Model ID to load from. This may be a HF hub repo or a local path.
+    pub model_id: Option<String>,
+    /// Model filename local path
+    pub tokenizer_json: Option<String>,
+    /// Model revision from HF
     pub model_revision: Option<String>,
-    pub model_architecture: Option<String>, //plain
-    pub model_dtype: Option<String>,        //plain
-    pub tokenizer_repo: Option<String>,
+    /// Model architecture: mistral, gemma, mixtral, llama, phi2, phi3, qwen2, gemma2, starcoder2, phi3.5moe
+    pub model_architecture: Option<String>,
+    /// Model dtype: auto, bf16, f16, f32
+    pub model_dtype: Option<String>,
+    pub quantized_model_id: Option<String>,
+    pub quantized_filename: Option<String>,
+    pub tok_model_id: Option<String>,
     pub topology: Option<String>,
+    pub organization: Option<String>,
+    pub write_uqff: Option<String>,
+    pub from_uqff: Option<String>,
+    /// Model ID to load LoRA from. This may be a HF hub repo or a local path.
+    pub adapters_model_id: Option<String>,
+    pub order: Option<String>,
+    pub xlora_model_id: Option<String>,
+    pub tgt_non_granular_index: Option<usize>,
+    pub gqa: Option<usize>,
+    pub vision_model_architecture: Option<String>,
+    pub diffusion_model_architecture: Option<String>,
 }
 
 impl MistralrsSpec {
@@ -479,28 +499,6 @@ impl MistralrsModel {
     }
 
     pub fn init(spec: MistralrsSpec) -> Result<()> {
-        let model_repo = &spec.model_repo.expect("model_repo");
-        let model_file = &spec.model_file.expect("model_file");
-
-        let _model_path = if model_file.starts_with("file://") {
-            std::path::PathBuf::from(model_file.replace("file://", ""))
-        } else {
-            hf_hub_get_path(
-                model_repo,
-                model_file,
-                spec.hf_token.clone(),
-                spec.model_revision,
-            )?
-        };
-
-        let tokenizer_repo = spec.tokenizer_repo.unwrap_or(model_repo.to_string());
-
-        let _tokenizer = if tokenizer_repo.starts_with("file://") {
-            std::fs::read(tokenizer_repo.replace("file://", ""))?
-        } else {
-            hf_hub_get(&tokenizer_repo, "tokenizer.json", spec.hf_token, None)?
-        };
-
         Ok(())
     }
 
@@ -514,37 +512,138 @@ impl MistralrsModel {
         #[cfg(feature = "flash-attn")]
         let use_flash_attn = true;
 
-        let model_repo = spec.model_repo.expect("model_repo");
-        let model_file = spec.model_file.expect("model_file");
+        let arch = if let Some(ma) = spec.model_architecture {
+            serde_json::from_str(&ma)?
+        } else {
+            None
+        };
 
-        //TODO: IMPLEMENT
+        let dtype = if let Some(mdt) = spec.model_dtype {
+            serde_json::from_str(&mdt)?
+        } else {
+            ModelDType::Auto
+        };
+
+        let organization = if let Some(o) = spec.organization {
+            Some(serde_json::from_str(&o)?)
+        } else {
+            Some(IsqOrganization::Default)
+        };
+
+        let write_uqff = spec.write_uqff.map(PathBuf::from);
+        let from_uqff = spec.from_uqff.map(PathBuf::from);
+        let topology = spec.topology;
+        let tokenizer_json = spec.tokenizer_json;
+
         let model = match spec.model_selected.unwrap().as_str() {
+            "plain" => ModelSelected::Plain {
+                model_id: spec.model_id.expect("model_id"),
+                tokenizer_json,
+                arch,
+                dtype,
+                topology,
+                organization,
+                write_uqff,
+                from_uqff,
+            },
+            "xlora" => ModelSelected::XLora {
+                model_id: spec.model_id,
+                tokenizer_json,
+                xlora_model_id: spec.xlora_model_id.expect("xlora_model_id"),
+                order: spec.order.expect("order"),
+                tgt_non_granular_index: spec.tgt_non_granular_index,
+                arch,
+                dtype,
+                topology,
+                write_uqff,
+                from_uqff,
+            },
+            "lora" => ModelSelected::Lora {
+                model_id: spec.model_id,
+                tokenizer_json,
+                adapters_model_id: spec.adapters_model_id.expect("adapters_model_id"),
+                order: spec.order.expect("order"),
+                arch,
+                dtype,
+                topology,
+                write_uqff,
+                from_uqff,
+            },
             "gguf" => ModelSelected::GGUF {
-                tok_model_id: None,
-                quantized_model_id: model_repo.clone(),
-                quantized_filename: model_file.clone(),
-                topology: None,
+                tok_model_id: spec.tok_model_id,
+                quantized_model_id: spec.quantized_model_id.expect("quantized_model_id"),
+                quantized_filename: spec.quantized_filename.expect("quantized_filename"),
+                topology,
+            },
+            "xloragguf" => ModelSelected::XLoraGGUF {
+                tok_model_id: spec.tok_model_id,
+                quantized_model_id: spec.quantized_model_id.expect("quantized_model_id"),
+                quantized_filename: spec.quantized_filename.expect("quantized_filename"),
+                xlora_model_id: spec.xlora_model_id.expect("xlora_model_id"),
+                order: spec.order.expect("order"),
+                tgt_non_granular_index: spec.tgt_non_granular_index,
+                topology,
+            },
+            "loragguf" => ModelSelected::LoraGGUF {
+                tok_model_id: spec.tok_model_id,
+                quantized_model_id: spec.quantized_model_id.expect("quantized_model_id"),
+                quantized_filename: spec.quantized_filename.expect("quantized_filename"),
+                adapters_model_id: spec.adapters_model_id.expect("adapters_model_id"),
+                order: spec.order.expect("order"),
+                topology,
+            },
+            "ggml" => ModelSelected::GGML {
+                tok_model_id: spec.tok_model_id.expect("tok_model_id"),
+                quantized_model_id: spec.quantized_model_id.expect("quantized_model_id"),
+                quantized_filename: spec.quantized_filename.expect("quantized_filename"),
+                topology,
+                tokenizer_json,
+                gqa: spec.gqa.expect("gqa"),
+            },
+            "xloraggml" => ModelSelected::XLoraGGML {
+                tok_model_id: spec.tok_model_id,
+                quantized_model_id: spec.quantized_model_id.expect("quantized_model_id"),
+                quantized_filename: spec.quantized_filename.expect("quantized_filename"),
+                topology,
+                tokenizer_json,
+                gqa: spec.gqa.expect("gqa"),
+                order: spec.order.expect("order"),
+                xlora_model_id: spec.xlora_model_id.expect("xlora_model_id"),
+                tgt_non_granular_index: spec.tgt_non_granular_index,
+            },
+            "loraggml" => ModelSelected::LoraGGML {
+                tok_model_id: spec.tok_model_id,
+                quantized_model_id: spec.quantized_model_id.expect("quantized_model_id"),
+                quantized_filename: spec.quantized_filename.expect("quantized_filename"),
+                topology,
+                tokenizer_json,
+                gqa: spec.gqa.expect("gqa"),
+                order: spec.order.expect("order"),
+                adapters_model_id: spec.adapters_model_id.expect("adapters_model_id"),
+            },
+            "visionplain" => ModelSelected::VisionPlain {
+                model_id: spec.model_id.expect("model_id"),
+                tokenizer_json,
+                arch: serde_json::from_str(
+                    &spec
+                        .vision_model_architecture
+                        .expect("model_vision_architecture"),
+                )?,
+                dtype,
+                topology,
+                write_uqff,
+                from_uqff,
+            },
+            "diffusionplain" => ModelSelected::DiffusionPlain {
+                model_id: spec.model_id.expect("model_id"),
+                arch: serde_json::from_str(
+                    &spec
+                        .diffusion_model_architecture
+                        .expect("model_vision_architecture"),
+                )?,
+                dtype,
             },
             _ => todo!(),
-        };
-
-        let model_path = if model_file.starts_with("file://") {
-            std::path::PathBuf::from(model_file.replace("file://", ""))
-        } else {
-            hf_hub_get_path(
-                &model_repo,
-                &model_file,
-                spec.hf_token.clone(),
-                spec.model_revision,
-            )?
-        };
-
-        let tokenizer_repo = spec.tokenizer_repo.unwrap_or(model_repo.to_string());
-
-        let tokenizer = if tokenizer_repo.starts_with("file://") {
-            std::fs::read(tokenizer_repo.replace("file://", ""))?
-        } else {
-            hf_hub_get(&tokenizer_repo, "tokenizer.json", spec.hf_token, None)?
         };
 
         let tgt_non_granular_index = get_tgt_non_granular_index(&model);
@@ -691,14 +790,44 @@ impl MistralrsModel {
             (_, _, _, _, _, _) => None,
         };
 
+        let token_source = if let Some(hf_token) = spec.hf_token {
+            TokenSource::Literal(hf_token)
+        } else if let Ok(value) = std::env::var("HF_TOKEN") {
+            TokenSource::EnvVar("HF_TOKEN".to_string())
+        } else {
+            TokenSource::CacheToken
+        };
+
+        let in_situ_quant = if let Some(isq) = spec.in_situ_quant {
+            match isq.as_str() {
+                "Q4_0" => Some(IsqType::Q4_0),
+                "Q4_1" => Some(IsqType::Q4_1),
+                "Q5_0" => Some(IsqType::Q5_0),
+                "Q5_1" => Some(IsqType::Q5_1),
+                "Q8_0" => Some(IsqType::Q8_0),
+                "Q8_1" => Some(IsqType::Q8_1),
+                "Q2K" => Some(IsqType::Q2K),
+                "Q3K" => Some(IsqType::Q3K),
+                "Q4K" => Some(IsqType::Q4K),
+                "Q5K" => Some(IsqType::Q5K),
+                "Q6K" => Some(IsqType::Q6K),
+                "Q8K" => Some(IsqType::Q8K),
+                "HQQ8" => Some(IsqType::HQQ8),
+                "HQQ4" => Some(IsqType::HQQ4),
+                _ => None,
+            }
+        } else {
+            None
+        };
+
         let pipeline = loader.load_model_from_hf(
             spec_clone.model_revision.clone(),
-            TokenSource::CacheToken,
+            token_source,
             &dtype,
             &device,
             false,
             mapper,
-            None, //spec.in_situ_quant,
+            in_situ_quant,
             cache_config,
         )?;
         info!("Model loaded.");

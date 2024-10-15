@@ -110,20 +110,6 @@ pub struct ChatCompletionRequest {
     pub dry_sequence_breakers: Option<Vec<String>>,
 }
 
-#[derive(Debug, Serialize)]
-pub struct ModelObject {
-    pub id: String,
-    pub object: &'static str,
-    pub created: u64,
-    pub owned_by: &'static str,
-}
-
-#[derive(Debug, Serialize)]
-pub struct ModelObjects {
-    pub object: &'static str,
-    pub data: Vec<ModelObject>,
-}
-
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct CompletionRequest {
     #[serde(default = "default_model")]
