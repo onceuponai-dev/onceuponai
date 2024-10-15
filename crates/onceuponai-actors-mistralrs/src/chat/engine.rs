@@ -490,7 +490,14 @@ pub struct MistralrsModel {
 impl MistralrsModel {
     pub async fn lazy<'a>(spec: MistralrsSpec) -> Result<&'a Arc<MistralrsModel>> {
         if MISTRALRS_INSTANCE.get().is_none() {
-            let model = MistralrsModel::load(spec.clone()).await?;
+            let model = match MistralrsModel::load(spec.clone()).await {
+                Ok(m) => m,
+                Err(e) => {
+                    info!("{:?}", spec);
+                    info!("{:?}", e);
+                    anyhow::bail!("{}", e)
+                }
+            };
 
             let _ = MISTRALRS_INSTANCE.set(Arc::new(model)).is_ok();
         };
@@ -498,7 +505,7 @@ impl MistralrsModel {
         Ok(MISTRALRS_INSTANCE.get().expect("QUANTIZED_INSTANCE"))
     }
 
-    pub fn init(spec: MistralrsSpec) -> Result<()> {
+    pub fn init(_spec: MistralrsSpec) -> Result<()> {
         Ok(())
     }
 
@@ -513,21 +520,23 @@ impl MistralrsModel {
         let use_flash_attn = true;
 
         let arch = if let Some(ma) = spec.model_architecture {
-            serde_json::from_str(&ma)?
+            serde_json::from_str(&format!("\"{}\"", ma))?
         } else {
             None
         };
 
+        info!("DUPA !!!!");
+
         let dtype = if let Some(mdt) = spec.model_dtype {
-            serde_json::from_str(&mdt)?
+            serde_json::from_str(&format!("\"{}\"", mdt))?
         } else {
             ModelDType::Auto
         };
 
         let organization = if let Some(o) = spec.organization {
-            Some(serde_json::from_str(&o)?)
+            Some(serde_json::from_str(&format!("\"{}\"", o))?)
         } else {
-            Some(IsqOrganization::Default)
+            None
         };
 
         let write_uqff = spec.write_uqff.map(PathBuf::from);
@@ -624,11 +633,12 @@ impl MistralrsModel {
             "visionplain" => ModelSelected::VisionPlain {
                 model_id: spec.model_id.expect("model_id"),
                 tokenizer_json,
-                arch: serde_json::from_str(
+                arch: serde_json::from_str(&format!(
+                    "\"{}\"",
                     &spec
                         .vision_model_architecture
-                        .expect("model_vision_architecture"),
-                )?,
+                        .expect("model_vision_architecture")
+                ))?,
                 dtype,
                 topology,
                 write_uqff,
@@ -636,11 +646,12 @@ impl MistralrsModel {
             },
             "diffusionplain" => ModelSelected::DiffusionPlain {
                 model_id: spec.model_id.expect("model_id"),
-                arch: serde_json::from_str(
+                arch: serde_json::from_str(&format!(
+                    "\"{}\"",
                     &spec
                         .diffusion_model_architecture
-                        .expect("model_vision_architecture"),
-                )?,
+                        .expect("model_vision_architecture")
+                ))?,
                 dtype,
             },
             _ => todo!(),
