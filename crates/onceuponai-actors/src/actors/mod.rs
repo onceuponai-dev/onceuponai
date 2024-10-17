@@ -1,6 +1,6 @@
 pub mod main_actor;
 use crate::abstractions::{
-    ActorActions, ActorInvokeRequest, ActorKindActions, ActorMetadata, ActorObject,
+    ActorActions, ActorInvokeData, ActorInvokeRequest, ActorKindActions, ActorMetadata, ActorObject,
 };
 use actix::prelude::*;
 use actix_telepathy::prelude::*;
@@ -51,7 +51,7 @@ pub struct ActorStartInvokeRequest {
     pub name: String,
     pub stream: bool,
     pub config: HashMap<String, EntityValue>,
-    pub data: HashMap<String, Vec<EntityValue>>,
+    pub data: ActorInvokeData,
 }
 
 pub struct ActorBuilder {}

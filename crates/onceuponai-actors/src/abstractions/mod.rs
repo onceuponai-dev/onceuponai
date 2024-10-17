@@ -3,6 +3,7 @@ use actix_telepathy::prelude::*;
 use anyhow::Result;
 use async_trait::async_trait;
 use onceuponai_abstractions::EntityValue;
+use openai::{ChatCompletionRequest, CompletionRequest, ImageGenerationRequest};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::net::SocketAddr;
@@ -16,7 +17,15 @@ pub struct ActorInvokeRequest {
     pub source: RemoteAddr,
     pub stream: bool,
     pub config: HashMap<String, EntityValue>,
-    pub data: HashMap<String, Vec<EntityValue>>,
+    pub data: ActorInvokeData,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize)]
+pub enum ActorInvokeData {
+    Entity(HashMap<String, Vec<EntityValue>>),
+    ChatCompletion(ChatCompletionRequest),
+    Completion(CompletionRequest),
+    ImageGeneration(ImageGenerationRequest),
 }
 
 #[derive(RemoteMessage, Serialize, Deserialize, Debug, Clone)]

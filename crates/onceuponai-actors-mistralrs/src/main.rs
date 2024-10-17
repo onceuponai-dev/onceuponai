@@ -1,6 +1,6 @@
 use anyhow::Result;
 use chat::engine::MistralrsSpec;
-use chat::openai_chat::OpenAIChatSpec;
+// use chat::openai_chat::OpenAIChatSpec;
 use clap::{arg, Command};
 use mistralrs::Device;
 use onceuponai_actors::abstractions::{ActorActions, ActorKindActions, ActorMetadata, ActorObject};
@@ -13,21 +13,21 @@ pub mod chat;
 #[serde(tag = "kind", rename_all = "camelCase")]
 pub enum ActorKind {
     Mistralrs(ActorObject<MistralrsSpec>),
-    Openaichat(ActorObject<OpenAIChatSpec>),
+    // Openaichat(ActorObject<OpenAIChatSpec>),
 }
 
 impl ActorKindActions for ActorKind {
     fn actor(&self) -> Box<dyn ActorActions> {
         match self {
             ActorKind::Mistralrs(object) => Box::new(object.spec()),
-            ActorKind::Openaichat(object) => Box::new(object.spec()),
+            // ActorKind::Openaichat(object) => Box::new(object.spec()),
         }
     }
 
     fn metadata(&self) -> ActorMetadata {
         match self {
             ActorKind::Mistralrs(object) => object.metadata(),
-            ActorKind::Openaichat(object) => object.metadata(),
+            // ActorKind::Openaichat(object) => object.metadata(),
         }
     }
 }

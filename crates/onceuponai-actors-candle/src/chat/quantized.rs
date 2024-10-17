@@ -6,16 +6,19 @@ use candle_core::quantized::{ggml_file, gguf_file};
 use candle_core::{Device, Tensor};
 use candle_transformers::generation::{LogitsProcessor, Sampling};
 use candle_transformers::models::quantized_llama as model;
+use either::Either;
 use model::ModelWeights;
 use once_cell::sync::OnceCell;
 use onceuponai_abstractions::EntityValue;
+use onceuponai_actors::abstractions::openai::ChatCompletionRequest;
 use onceuponai_actors::abstractions::{
-    ActorActions, ActorError, ActorInvokeError, ActorInvokeFinish, ActorInvokeRequest,
-    ActorInvokeResponse, ActorInvokeResult,
+    ActorActions, ActorError, ActorInvokeData, ActorInvokeError, ActorInvokeFinish,
+    ActorInvokeRequest, ActorInvokeResponse, ActorInvokeResult,
 };
 use onceuponai_core::common::{hf_hub_get, hf_hub_get_path, OptionToResult, ResultExt};
 use serde::Deserialize;
 use std::collections::HashMap;
+use std::ops::Deref;
 use std::sync::{Arc, Mutex};
 use tokenizers::Tokenizer;
 use uuid::Uuid;
@@ -78,48 +81,33 @@ impl ActorActions for QuantizedSpec {
         request: &ActorInvokeRequest,
         source: RemoteAddr,
     ) -> Result<()> {
-        let input = request.data.get("message");
-
-        if input.is_none() {
-            source.do_send(ActorInvokeResponse::Failure(ActorInvokeError {
+        let mut model = QuantizedModel::lazy(self.clone())?
+            .lock()
+            .map_anyhow_err()?;
+        let input: String = match request.data.clone() {
+            ActorInvokeData::ChatCompletion(chat_completion_request) => {
+                model.map_request(chat_completion_request)?
+            }
+            _ => {
+                source.do_send(ActorInvokeResponse::Failure(ActorInvokeError {
             uuid,
             task_id: request.task_id,
             error: ActorError::BadRequest(
                 "REQUEST MUST CONTAINER MESSAGE COLUMN WITH Vec<MESSAGE { role: String, content: String }>".to_string(),
             ),
         }));
-            return Ok(());
-        }
 
-        let input: Vec<String> = input
-            .expect("MESSAGE")
-            .iter()
-            .map(|x| match x {
-                EntityValue::MESSAGE { role: _, content } => content.clone(),
-                _ => todo!(),
-            })
-            .collect();
+                return Ok(());
+            }
+        };
 
-        let mut model = QuantizedModel::lazy(self.clone())?
-            .lock()
-            .map_anyhow_err()?;
-
-        let results = input
-            .iter()
-            .map(|prompt| model.invoke(prompt))
-            .collect::<Result<Vec<String>, _>>()?;
-
-        let results = results
-            .iter()
-            .map(|r| EntityValue::STRING(r.clone()))
-            .collect::<Vec<EntityValue>>();
-
+        let text = model.invoke(&input)?;
         let result = ActorInvokeResult {
             uuid,
             task_id: request.task_id,
             stream: request.stream,
             metadata: HashMap::new(),
-            data: HashMap::from([(String::from("content"), results)]),
+            data: HashMap::from([(String::from("content"), vec![EntityValue::STRING(text)])]),
         };
 
         source.do_send(ActorInvokeResponse::Success(result));
@@ -132,9 +120,15 @@ impl ActorActions for QuantizedSpec {
         request: &ActorInvokeRequest,
         source: RemoteAddr,
     ) -> Result<()> {
-        let input = request.data.get("message");
-        if input.is_none() {
-            source.do_send(ActorInvokeResponse::Failure(ActorInvokeError {
+        let mut model = QuantizedModel::lazy(self.clone())?
+            .lock()
+            .map_anyhow_err()?;
+        let input: String = match request.data.clone() {
+            ActorInvokeData::ChatCompletion(chat_completion_request) => {
+                model.map_request(chat_completion_request)?
+            }
+            _ => {
+                source.do_send(ActorInvokeResponse::Failure(ActorInvokeError {
             uuid,
             task_id: request.task_id,
             error: ActorError::BadRequest(
@@ -142,39 +136,10 @@ impl ActorActions for QuantizedSpec {
             ),
         }));
 
-            return Ok(());
-        }
+                return Ok(());
+            }
+        };
 
-        let input = input
-            .expect("MESSAGE")
-            .iter()
-            .map(|x| match x {
-                EntityValue::MESSAGE { role, content } => match &self.prompt_format {
-                    Some(PromptFormat::Mistral) => match role.as_str() {
-                        "user" => format!("<s>[INST] {} [/INST]", content),
-                        "model" => format!("\"{}\"</s>", content),
-                        _ => content.clone(),
-                    },
-                    Some(PromptFormat::Zephyr) => match role.as_str() {
-                        "user" => format!("<|user|>\n{}\n</s>", content),
-                        "model" => format!("<|assistant|>model\n{}\n</s>", content),
-                        _ => content.clone(),
-                    },
-                    Some(PromptFormat::OpenChat) => match role.as_str() {
-                        "user" => format!("GPT4 Correct User: {}<|end_of_turn|>", content),
-                        "model" => format!("GPT4 Correct Assistant: {}<|end_of_turn|>", content),
-                        _ => content.clone(),
-                    },
-                    None => content.clone(),
-                },
-                _ => todo!(),
-            })
-            .collect::<Vec<_>>()
-            .join(" ");
-
-        let mut model = QuantizedModel::lazy(self.clone())?
-            .lock()
-            .map_anyhow_err()?;
         let repeat_last_n = model.repeat_last_n;
         let repeat_penalty = model.repeat_penalty;
 
@@ -248,6 +213,40 @@ pub struct QuantizedModel {
 }
 
 impl QuantizedModel {
+    pub fn map_request(&self, input: ChatCompletionRequest) -> Result<String> {
+        let input = match input.messages {
+            Either::Left(mut left) => left
+                .iter_mut()
+                .map(|x| match x.content.deref() {
+                    Either::Left(content) => match &self.spec.prompt_format {
+                        Some(PromptFormat::Mistral) => match x.role.as_str() {
+                            "user" => format!("<s>[INST] {} [/INST]", content),
+                            "model" => format!("\"{}\"</s>", content),
+                            _ => content.clone(),
+                        },
+                        Some(PromptFormat::Zephyr) => match x.role.as_str() {
+                            "user" => format!("<|user|>\n{}\n</s>", content),
+                            "model" => format!("<|assistant|>model\n{}\n</s>", content),
+                            _ => content.clone(),
+                        },
+                        Some(PromptFormat::OpenChat) => match x.role.as_str() {
+                            "user" => format!("GPT4 Correct User: {}<|end_of_turn|>", content),
+                            "model" => {
+                                format!("GPT4 Correct Assistant: {}<|end_of_turn|>", content)
+                            }
+                            _ => content.clone(),
+                        },
+                        None => content.clone(),
+                    },
+                    Either::Right(_) => unimplemented!(),
+                })
+                .collect::<Vec<_>>()
+                .join(" "),
+            Either::Right(_) => unimplemented!(),
+        };
+        Ok(input)
+    }
+
     #[allow(clippy::too_many_arguments)]
     pub fn invoke(&mut self, prompt: &str) -> Result<String> {
         let repeat_penalty: f32 = self.repeat_penalty;
