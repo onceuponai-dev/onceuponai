@@ -1,12 +1,14 @@
 use actix_telepathy::RemoteAddr;
 use anyhow::Result;
 use async_trait::async_trait;
+use either::Either;
 use futures_util::StreamExt;
 use once_cell::sync::Lazy;
 use onceuponai_abstractions::EntityValue;
 use onceuponai_actors::abstractions::{
-    ActorActions, ActorError, ActorInvokeError, ActorInvokeFinish, ActorInvokeRequest,
-    ActorInvokeResponse, ActorInvokeResult,
+    openai::{ChatCompletionRequest, Message},
+    ActorActions, ActorError, ActorInvokeData, ActorInvokeError, ActorInvokeFinish,
+    ActorInvokeRequest, ActorInvokeResponse, ActorInvokeResult,
 };
 use onceuponai_core::common::some_or_env;
 use reqwest::{Client, Response};
@@ -56,20 +58,23 @@ impl ActorActions for OpenAIChatSpec {
         request: &ActorInvokeRequest,
         source: RemoteAddr,
     ) -> Result<()> {
-        let input = request.data.get("message");
-
-        if input.is_none() {
-            source.do_send(ActorInvokeResponse::Failure(ActorInvokeError {
+        let mut model = OpenAIChatModel::load(self.clone())?;
+        let input: ChatCompletionRequest = match request.data.clone() {
+            ActorInvokeData::ChatCompletion(chat_completion_request) => {
+                model.map_request(chat_completion_request)?
+            }
+            _ => {
+                source.do_send(ActorInvokeResponse::Failure(ActorInvokeError {
             uuid,
             task_id: request.task_id,
             error: ActorError::BadRequest(
                 "REQUEST MUST CONTAINER MESSAGE COLUMN WITH Vec<MESSAGE { role: String, content: String }>".to_string(),
             ),
         }));
-            return Ok(());
-        }
 
-        let mut model = OpenAIChatModel::load(self.clone())?;
+                return Ok(());
+            }
+        };
 
         let messages = model.map_request(input)?;
         let result = model.invoke(messages).await?;
@@ -94,9 +99,13 @@ impl ActorActions for OpenAIChatSpec {
         request: &ActorInvokeRequest,
         source: RemoteAddr,
     ) -> Result<()> {
-        let input = request.data.get("message");
-        if input.is_none() {
-            source.do_send(ActorInvokeResponse::Failure(ActorInvokeError {
+        let mut model = OpenAIChatModel::load(self.clone())?;
+        let input: ChatCompletionRequest = match request.data.clone() {
+            ActorInvokeData::ChatCompletion(chat_completion_request) => {
+                model.map_request(chat_completion_request)?
+            }
+            _ => {
+                source.do_send(ActorInvokeResponse::Failure(ActorInvokeError {
             uuid,
             task_id: request.task_id,
             error: ActorError::BadRequest(
@@ -104,13 +113,11 @@ impl ActorActions for OpenAIChatSpec {
             ),
         }));
 
-            return Ok(());
-        }
+                return Ok(());
+            }
+        };
 
-        let mut model = OpenAIChatModel::load(self.clone())?;
-
-        let messages = model.map_request(input)?;
-        let res = model.prepare(messages).await?;
+        let res = model.prepare(input).await?;
         let mut stream = res.bytes_stream();
         while let Some(chunk) = stream.next().await {
             match chunk {
@@ -165,43 +172,13 @@ impl ActorActions for OpenAIChatSpec {
 }
 
 #[derive(Serialize, Deserialize, Debug)]
-struct ChatCompletionRequest {
-    model: String,
-    messages: Vec<ChatMessage>,
-    max_tokens: Option<u32>,
-    stream: Option<bool>,
-}
-
-#[derive(Serialize, Deserialize, Debug)]
-struct ChatMessage {
-    role: String,
-    content: String,
-}
-
-impl ChatMessage {
-    fn system(content: &str) -> ChatMessage {
-        ChatMessage {
-            role: "system".to_string(),
-            content: content.to_string(),
-        }
-    }
-
-    fn user(content: &str) -> ChatMessage {
-        ChatMessage {
-            role: "user".to_string(),
-            content: content.to_string(),
-        }
-    }
-}
-
-#[derive(Serialize, Deserialize, Debug)]
 struct ChatCompletionResponse {
     choices: Vec<Choice>,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
 struct Choice {
-    message: ChatMessage,
+    message: Message,
 }
 
 struct OpenAIChatModel {
@@ -210,28 +187,14 @@ struct OpenAIChatModel {
 }
 
 impl OpenAIChatModel {
-    pub fn map_request(&self, input: Option<&Vec<EntityValue>>) -> Result<Vec<ChatMessage>> {
-        let messages: Vec<ChatMessage> = input
-            .expect("MESSAGE")
-            .iter()
-            .map(|x| match x {
-                EntityValue::MESSAGE { role, content } => ChatMessage {
-                    role: role.clone(),
-                    content: content.clone(),
-                },
-                _ => todo!(),
-            })
-            .collect();
-        Ok(messages)
+    pub fn map_request(&self, input: ChatCompletionRequest) -> Result<ChatCompletionRequest> {
+        Ok(input)
     }
 
-    pub async fn invoke(&mut self, messages: Vec<ChatMessage>) -> Result<String> {
-        let request_body = ChatCompletionRequest {
-            model: self.spec.model.to_string(),
-            messages,
-            max_tokens: self.spec.max_tokens,
-            stream: Some(false),
-        };
+    pub async fn invoke(&mut self, request: ChatCompletionRequest) -> Result<String> {
+        let mut request_body = request;
+        request_body.model = self.spec.model.to_string();
+        // request_body.max_tokens = self.spec.max_tokens;
 
         let api_key = some_or_env(self.spec.clone().api_key, "OPENAI_SECRET");
 
@@ -250,17 +213,16 @@ impl OpenAIChatModel {
             .await?;
 
         let response_body: ChatCompletionResponse = res.json().await?;
-        let output = &response_body.choices[0].message.content;
-        Ok(output.to_string())
+        let output = response_body.choices[0].message.content.clone().0;
+        match output {
+            Either::Left(content) => return Ok(content),
+            Either::Right(_) => unreachable!(),
+        }
     }
 
-    pub async fn prepare(&mut self, messages: Vec<ChatMessage>) -> Result<Response> {
-        let request_body = ChatCompletionRequest {
-            model: self.spec.model.to_string(),
-            messages,
-            stream: Some(true),
-            max_tokens: self.spec.max_tokens,
-        };
+    pub async fn prepare(&mut self, request: ChatCompletionRequest) -> Result<Response> {
+        let mut request_body = request;
+        request_body.model = self.spec.model.to_string();
 
         let api_key = some_or_env(self.spec.clone().api_key, "OPENAI_SECRET");
 
@@ -294,6 +256,7 @@ impl OpenAIChatModel {
     }
 }
 
+/*
 #[tokio::test]
 async fn test_bielik() -> Result<()> {
     use std::env;
@@ -318,3 +281,4 @@ async fn test_bielik() -> Result<()> {
     println!("RESPONSE: {}", res);
     Ok(())
 }
+*/

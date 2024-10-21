@@ -4,7 +4,6 @@ use super::parser::parse_chat_completion_request;
 use actix_telepathy::RemoteAddr;
 use anyhow::Result;
 use async_trait::async_trait;
-use either::Either;
 use log::{info, warn};
 use mistralrs::{
     get_model_dtype, get_tgt_non_granular_index, initialize_logging, paged_attn_supported,
@@ -14,10 +13,9 @@ use mistralrs::{
 };
 use once_cell::sync::OnceCell;
 use onceuponai_abstractions::EntityValue;
-use onceuponai_actors::abstractions::openai::{ChatCompletionRequest, Message};
 use onceuponai_actors::abstractions::{
-    ActorActions, ActorError, ActorInvokeError, ActorInvokeFinish, ActorInvokeRequest,
-    ActorInvokeResponse, ActorInvokeResult,
+    ActorActions, ActorError, ActorInvokeData, ActorInvokeError, ActorInvokeFinish,
+    ActorInvokeRequest, ActorInvokeResponse, ActorInvokeResult,
 };
 use serde::Deserialize;
 use std::collections::HashMap;
@@ -84,62 +82,24 @@ impl MistralrsSpec {
         source: RemoteAddr,
     ) -> Result<()> {
         let state = MISTRALRS_INSTANCE.get().unwrap().clone();
-        let input = invoke_request.data.get("message");
-
-        if input.is_none() {
-            source.do_send(ActorInvokeResponse::Failure(ActorInvokeError {
+        let input = match invoke_request.data.clone() {
+            ActorInvokeData::ChatCompletion(chat_completion_request) => chat_completion_request,
+            _ => {
+                source.do_send(ActorInvokeResponse::Failure(ActorInvokeError {
             uuid,
             task_id: invoke_request.task_id,
             error: ActorError::BadRequest(
                 "REQUEST MUST CONTAINER MESSAGE COLUMN WITH Vec<MESSAGE { role: String, content: String }>".to_string(),
             ),
         }));
-            return Ok(());
-        }
 
-        let messages: Vec<Message> = input
-            .expect("MESSAGE")
-            .iter()
-            .map(|x| match x {
-                EntityValue::MESSAGE { role, content } => Message {
-                    role: role.clone(),
-                    name: None,
-                    content: onceuponai_actors::abstractions::openai::MessageContent(Either::Left(
-                        content.to_string(),
-                    )),
-                },
-                _ => unreachable!(),
-            })
-            .collect();
-        let oairequest = ChatCompletionRequest {
-            messages: Either::Left(messages),
-            model: "".to_string(),
-            logit_bias: None,
-            logprobs: false,
-            top_logprobs: None,
-            max_tokens: None,
-            n_choices: 1,
-            presence_penalty: None,
-            frequency_penalty: None,
-            stop_seqs: None,
-            temperature: None,
-            top_p: None,
-            stream: Some(invoke_request.stream),
-            tools: None,
-            tool_choice: None,
-            top_k: None,
-            grammar: None,
-            adapters: None,
-            min_p: None,
-            dry_multiplier: None,
-            dry_base: None,
-            dry_allowed_length: None,
-            dry_sequence_breakers: None,
+                return Ok(());
+            }
         };
 
         let (tx, mut rx) = channel(10_000);
         let (request, _is_streaming) =
-            match parse_chat_completion_request(oairequest, state.mistralrs.clone(), tx).await {
+            match parse_chat_completion_request(input, state.mistralrs.clone(), tx).await {
                 Ok(x) => x,
                 Err(e) => {
                     println!("ERROR {:?}", e);

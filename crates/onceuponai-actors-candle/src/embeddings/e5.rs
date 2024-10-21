@@ -9,8 +9,8 @@ use log::info;
 use once_cell::sync::OnceCell;
 use onceuponai_abstractions::EntityValue;
 use onceuponai_actors::abstractions::{
-    ActorActions, ActorError, ActorInvokeError, ActorInvokeRequest, ActorInvokeResponse,
-    ActorInvokeResult,
+    ActorActions, ActorError, ActorInvokeData, ActorInvokeError, ActorInvokeRequest,
+    ActorInvokeResponse, ActorInvokeResult,
 };
 use onceuponai_core::common::{hf_hub_get, OptionToResult, ResultExt};
 use serde::Deserialize;
@@ -56,21 +56,22 @@ impl ActorActions for E5Spec {
         request: &ActorInvokeRequest,
         source: RemoteAddr,
     ) -> Result<()> {
-        let input = request.data.get("input");
+        let input = match request.data.clone() {
+            ActorInvokeData::Entity(entity) => entity.get("input").unwrap().clone(),
+            _ => {
+                source.do_send(ActorInvokeResponse::Failure(ActorInvokeError {
+            uuid,
+            task_id: request.task_id,
+            error: ActorError::BadRequest(
+                "REQUEST MUST CONTAINER MESSAGE COLUMN WITH Vec<MESSAGE { role: String, content: String }>".to_string(),
+            ),
+        }));
 
-        if input.is_none() {
-            source.do_send(ActorInvokeResponse::Failure(ActorInvokeError {
-                uuid,
-                task_id: request.task_id,
-                error: ActorError::BadRequest(
-                    "REQUEST MUST CONTAINER INPUT COLUMN WITH Vec<String>".to_string(),
-                ),
-            }));
-            return Ok(());
-        }
+                return Ok(());
+            }
+        };
 
         let input: Vec<String> = input
-            .expect("INPUT")
             .iter()
             .map(|x| match x {
                 EntityValue::STRING(i) => i.clone(),

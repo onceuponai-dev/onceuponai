@@ -1,4 +1,5 @@
 use onceuponai_abstractions::EntityValue;
+use onceuponai_actors::abstractions::ActorInvokeData;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
@@ -44,6 +45,6 @@ pub struct PATClaims {
 #[derive(Deserialize, Serialize, Debug, Clone)]
 pub struct InvokeRequest {
     pub config: HashMap<String, EntityValue>,
-    pub data: HashMap<String, Vec<EntityValue>>,
+    pub data: ActorInvokeData,
     pub stream: Option<bool>,
 }
