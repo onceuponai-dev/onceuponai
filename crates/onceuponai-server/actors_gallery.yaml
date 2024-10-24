@@ -218,10 +218,96 @@ templates:
       - key: prefix_cache_n
         value: 16
         type: number
-
+      - key: num_device_layers
+        value: null
+        type: string
+      - key: in_situ_quant
+        value: null
+        type: string
+      - key: paged_attn_gpu_mem
+        value: null
+        type: number
+      - key: paged_attn_gpu_mem_usage
+        value: null
+        type: number
+      - key: paged_ctxt_len
+        value: null
+        type: number
+      - key: paged_attn_block_size
+        value: null
+        type: number
+      - key: no_paged_attn
+        value: null
+        type: bool
+      - key: throughput_log
+        value: null
+        type: bool
+      - key: prompt_batchsize
+        value: null
+        type: number
       - key: hf_token
         value: null
         type: secret
+      - key: model_selected
+        value: plain
+        type: string
+      - key: model_id
+        value: null
+        type: string
+      - key: tokenizer_json
+        value: null
+        type: string
+      - key: model_revision
+        value: null
+        type: string
+      - key: model_architecture
+        value: null
+        type: string
+      - key: model_dtype
+        value: null
+        type: string
+      - key: quantized_model_id
+        value: null
+        type: string
+      - key: quantized_filename
+        value: null
+        type: string
+      - key: tok_model_id
+        value: null
+        type: string
+      - key: topology
+        value: null
+        type: string
+      - key: organization
+        value: null
+        type: string
+      - key: write_uqff
+        value: null
+        type: string
+      - key: from_uqff
+        value: null
+        type: string
+      - key: adapters_model_id
+        value: null
+        type: string
+      - key: order
+        value: null
+        type: string
+      - key: xlora_model_id
+        value: null
+        type: string
+      - key: tgt_non_granular_index
+        value: null
+        type: number
+      - key: gqa
+        value: null
+        type: number
+      - key: vision_model_architecture
+        value: null
+        type: string
+      - key: diffusion_model_architecture
+        value: null
+        type: string
 
 
 
