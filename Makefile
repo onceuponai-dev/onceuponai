@@ -75,7 +75,22 @@ build-mrs: ##
 build-sidecar-mistralrs-cuda-linux: ## 
 	cd ./crates/onceuponai-actors-mistralrs && \
 	cargo build --release --features cuda && \
-	cp ../../target/release/onceuponai-actors-mistralrs ../onceuponai/src-tauri/binaries/sidecar/onceuponai-actors-candle-mistralrs-x86_64-unknown-linux-gnu
+	cp ../../target/release/onceuponai-actors-mistralrs ../onceuponai/src-tauri/binaries/sidecar/onceuponai-actors-mistralrs-cuda-x86_64-unknown-linux-gnu
+
+build-sidecar-mistralrs-cpu-linux: ## 
+	cd ./crates/onceuponai-actors-mistralrs && \
+	cargo build --release && \
+	cp ../../target/release/onceuponai-actors-mistralrs ../onceuponai/src-tauri/binaries/sidecar/onceuponai-actors-mistralrs-cpu-x86_64-unknown-linux-gnu
+
+build-sidecar-mistralrs-cuda-win: ## 
+	cd ./crates/onceuponai-actors-mistralrs && \
+	cargo build --release --target x86_64-pc-windows-gnu && \
+	cp ../../target/release/onceuponai-actors-mistralrs ../onceuponai/src-tauri/binaries/sidecar/onceuponai-actors-mistralrs-cuda-x86_64-pc-windows-gnu.exe
+
+build-sidecar-mistralrs-cpu-win: ## 
+	cd ./crates/onceuponai-actors-mistralrs && \
+	cargo build --release --target x86_64-pc-windows-gnu && \
+	cp ../../target/release/onceuponai-actors-mistralrs ../onceuponai/src-tauri/binaries/sidecar/onceuponai-actors-mistralrs-cpu-x86_64-pc-windows-gnu.exe
 
 
 build-sidecar-candle-cuda-linux: ## 

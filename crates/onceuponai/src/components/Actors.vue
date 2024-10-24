@@ -198,7 +198,7 @@ const buildActorJsonConfig = () => {
 const init = async () => {
   const specJsonBase64 = buildActorJsonConfig();
   initInProgress.value = true;
-  const act: any = await invoke("init_actor", { "device": spawnActorDevice.value, "specJsonBase64": specJsonBase64 });
+  const act: any = await invoke("init_actor", { "device": spawnActorDevice.value, "sidecar": spawnActorSidecar.value, "specJsonBase64": specJsonBase64 });
   console.log(act);
   initInProgress.value = false;
 };
@@ -206,7 +206,7 @@ const init = async () => {
 
 const spawn = async () => {
   const specJsonBase64 = buildActorJsonConfig();
-  const act: any = await invoke("spawn_actor", { "name": spawnActorName.value, "device": spawnActorDevice.value, "specJsonBase64": specJsonBase64 });
+  const act: any = await invoke("spawn_actor", { "name": spawnActorName.value, "sidecar": spawnActorSidecar.value, "device": spawnActorDevice.value, "specJsonBase64": specJsonBase64 });
   console.log(act);
 
   spawnDialog.value = false;

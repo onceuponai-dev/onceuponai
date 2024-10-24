@@ -191,6 +191,42 @@ templates:
         value: null
         type: number
 
+  - id: mistralrs
+    sidecar: onceuponai-actors-mistralrs
+    kind: mistralrs
+    device: cuda
+    metadata:
+      name: mistralrs
+      description: ""
+      url: ""
+    spec:
+      - key: seed
+        value: 299792458
+        type: number
+      - key: truncate_sequence
+        value: false
+        type: bool
+      - key: max_seqs
+        value: 16
+        type: number
+      - key: no_kv_cache
+        value: false
+        type: bool
+      - key: chat_template
+        value: null
+        type: string
+      - key: prefix_cache_n
+        value: 16
+        type: number
+
+      - key: hf_token
+        value: null
+        type: secret
+
+
+
+
+
 galery:
   # E5 MODELS
   - id: e5/multilingual-e5-small
@@ -883,4 +919,25 @@ galery:
     spec:
       - key: model
         value: gpt-4o
+        type: string
+
+  - id: mistralrs/bielik-11b-gguf
+    template: mistralrs
+    device: cuda
+    metadata:
+      name: mistralrs-bielik-11b-gguf
+      description: ""
+      url: ""
+    spec:
+      - key: quantized_model_id
+        value: speakleash/Bielik-11B-v2.3-Instruct-GGUF
+        type: string
+      - key: quantized_filename
+        value: Bielik-11B-v2.3-Instruct.Q4_K_M.gguf
+        type: string
+      - key: model_selected
+        value: gguf
+        type: string
+      - key: tokenizer_repo
+        value: speakleash/Bielik-11B-v2.3-Instruct-GGUF
         type: string

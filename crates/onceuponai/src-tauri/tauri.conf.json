@@ -25,7 +25,9 @@
     "targets": "all",
     "externalBin": [
       "binaries/sidecar/onceuponai-actors-candle-cpu",
-      "binaries/sidecar/onceuponai-actors-candle-cuda"
+      "binaries/sidecar/onceuponai-actors-candle-cuda",
+      "binaries/sidecar/onceuponai-actors-mistralrs-cpu",
+      "binaries/sidecar/onceuponai-actors-mistralrs-cuda"
     ],
     "icon": [
       "icons/logo50.png",

@@ -43,12 +43,13 @@ pub fn kill_actor(sidecar_id: Uuid) -> Result<(), String> {
 #[tauri::command]
 pub async fn init_actor(
     app: tauri::AppHandle,
+    sidecar: String,
     device: String,
     spec_json_base64: String,
 ) -> Result<i32, String> {
     let status = app
         .shell()
-        .sidecar(format!("onceuponai-actors-candle-{}", device))
+        .sidecar(format!("{}-{}", sidecar, device))
         .map_str_err()?
         .args(["init", "-j", &spec_json_base64])
         .output()
@@ -65,6 +66,7 @@ pub async fn init_actor(
 pub async fn spawn_actor(
     app: tauri::AppHandle,
     name: String,
+    sidecar: String,
     device: String,
     spec_json_base64: String,
 ) -> Result<Value, String> {
@@ -85,7 +87,7 @@ pub async fn spawn_actor(
 
     let sidecar_command = app
         .shell()
-        .sidecar(format!("onceuponai-actors-candle-{}", device))
+        .sidecar(format!("{}-{}", sidecar, device))
         .map_str_err()?
         .args(["spawn", "-j", &spec_json_base64, "-m", &metadata]);
     let (mut rx, child) = sidecar_command.spawn().map_str_err()?;
