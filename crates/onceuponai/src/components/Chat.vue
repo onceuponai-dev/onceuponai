@@ -69,7 +69,7 @@ const sendMessage = async () => {
   const message = {
     "stream": isStream.value,
     "model": selectedActor.value,
-    "messages": [{ "content": text, "role": "user" }]
+    "messages": messages.value
   };
 
   await invoke("v1_chat_completions", { "chatRequest": message, "baseUrl": config.base_url, "personalToken": config.personal_token });

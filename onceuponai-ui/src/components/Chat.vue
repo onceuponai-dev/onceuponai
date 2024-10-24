@@ -67,7 +67,7 @@ export default defineComponent({
         body: JSON.stringify({
           stream: isStream.value,
           model: selectedActor.value,
-          messages: [{ "content": text, "role": "user" }]
+          messages: messages.value
         }),
         signal: signal
       })

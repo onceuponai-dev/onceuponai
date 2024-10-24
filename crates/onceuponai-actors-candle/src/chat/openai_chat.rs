@@ -37,7 +37,7 @@ impl ActorActions for OpenAIChatSpec {
     }
 
     fn kind(&self) -> String {
-        "openaiChat".to_string()
+        "openaichat".to_string()
     }
 
     fn init(&self) -> Result<()> {
@@ -148,6 +148,7 @@ impl ActorActions for OpenAIChatSpec {
 
                                         let response = ActorInvokeResponse::Success(result);
                                         source.do_send(response);
+                                        actix_rt::task::yield_now().await;
                                     }
                                 }
                             }
@@ -195,7 +196,6 @@ impl OpenAIChatModel {
         let mut request_body = request;
         request_body.model = self.spec.model.to_string();
         // request_body.max_tokens = self.spec.max_tokens;
-
         let api_key = some_or_env(self.spec.clone().api_key, "OPENAI_SECRET");
 
         let base_url = self
@@ -212,7 +212,8 @@ impl OpenAIChatModel {
             .send()
             .await?;
 
-        let response_body: ChatCompletionResponse = res.json().await?;
+        let text = res.text().await?;
+        let response_body: ChatCompletionResponse = serde_json::from_str(&text)?;
         let output = response_body.choices[0].message.content.clone().0;
         match output {
             Either::Left(content) => return Ok(content),

@@ -135,13 +135,21 @@ pub struct ChatCompletionRequest {
     pub tool_choice: Option<ToolChoice>,
 
     // mistral.rs additional
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub top_k: Option<usize>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub grammar: Option<Grammar>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub adapters: Option<Vec<String>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub min_p: Option<f64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub dry_multiplier: Option<f32>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub dry_base: Option<f32>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub dry_allowed_length: Option<usize>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub dry_sequence_breakers: Option<Vec<String>>,
 }
 
@@ -175,13 +183,21 @@ pub struct CompletionRequest {
     pub tool_choice: Option<ToolChoice>,
 
     // mistral.rs additional
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub top_k: Option<usize>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub grammar: Option<Grammar>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub adapters: Option<Vec<String>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub min_p: Option<f64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub dry_multiplier: Option<f32>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub dry_base: Option<f32>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub dry_allowed_length: Option<usize>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub dry_sequence_breakers: Option<Vec<String>>,
 }
 
