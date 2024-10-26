@@ -23,7 +23,10 @@ import {
     mdiCheck,
     mdiArrowRightDropCircleOutline,
     mdiRefresh,
-    mdiPower
+    mdiPower,
+    mdiWeb,
+    mdiOpenInNew,
+
 } from '@mdi/js'
 
 
@@ -72,7 +75,9 @@ const vuetify = createVuetify({
             check: mdiCheck,
             arrowRightDropCircleOutline: mdiArrowRightDropCircleOutline,
             refresh: mdiRefresh,
-            power: mdiPower
+            power: mdiPower,
+            web: mdiWeb,
+            openInNew: mdiOpenInNew
         },
         sets: {
             mdi,

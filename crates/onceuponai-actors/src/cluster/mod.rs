@@ -6,7 +6,7 @@ use crate::{
     },
 };
 use actix::prelude::*;
-use actix_telepathy::Cluster;
+use actix_telepathy::{Cluster, RemoteActor};
 use anyhow::{anyhow, Result};
 use onceuponai_core::{
     common::{decode_and_deserialize, ResultExt, SerializationType},
@@ -26,7 +26,7 @@ pub async fn start_worker_actor(
     worker_actor: WorkerActor,
 ) -> Result<Option<(MainActorSpec, Addr<MainActor>)>> {
     // println!("{}", LOGO);
-    env_logger::init();
+    // env_logger::init();
     let _ = Cluster::new(worker_actor.own_addr, vec![worker_actor.seed_addr]);
     worker_actor.start();
     tokio::signal::ctrl_c().await?;
@@ -46,7 +46,7 @@ pub async fn start_main_cluster(
     Ok(Some((res.0, res.1, metadata)))
 }
 
-pub async fn start_worker_cluster<T: ActorKindActions + DeserializeOwned>(
+pub async fn start_worker_cluster<T: ActorKindActions + DeserializeOwned + 'static>(
     file: Option<&String>,
     yaml: Option<&String>,
     json: Option<&String>,
@@ -69,7 +69,8 @@ pub async fn start_worker_cluster<T: ActorKindActions + DeserializeOwned>(
         actor_kind.metadata()
     };
 
-    let worker_actor = ActorBuilder::build_worker(metadata, || actor_kind.actor())?;
+    actor_kind.actor().start().await?;
+    let worker_actor = ActorBuilder::build_worker(metadata, actor_kind)?;
     start_worker_actor(worker_actor).await?;
     Ok(())
 }

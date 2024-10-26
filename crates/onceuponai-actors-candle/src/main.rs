@@ -1,8 +1,60 @@
-pub mod llm;
-use crate::llm::ActorKind;
 use anyhow::Result;
+use candle_core::Device;
+use chat::gemma::GemmaSpec;
+use chat::mistral::MistralSpec;
+use chat::openai_chat::OpenAIChatSpec;
+use chat::quantized::QuantizedSpec;
 use clap::{arg, Command};
+use embeddings::e5::E5Spec;
+use onceuponai_actors::abstractions::{ActorActions, ActorKindActions, ActorMetadata, ActorObject};
 use onceuponai_actors::cluster::{init_actor, start_worker_cluster};
+use serde::Deserialize;
+
+pub mod chat;
+pub mod embeddings;
+
+#[derive(Deserialize, Debug, Clone)]
+#[serde(tag = "kind", rename_all = "camelCase")]
+pub enum ActorKind {
+    E5(ActorObject<E5Spec>),
+    Gemma(ActorObject<GemmaSpec>),
+    Mistral(ActorObject<MistralSpec>),
+    Quantized(ActorObject<QuantizedSpec>),
+    Openaichat(ActorObject<OpenAIChatSpec>),
+}
+
+impl ActorKindActions for ActorKind {
+    fn actor(&self) -> Box<dyn ActorActions> {
+        match self {
+            ActorKind::E5(object) => Box::new(object.spec()),
+            ActorKind::Gemma(object) => Box::new(object.spec()),
+            ActorKind::Mistral(object) => Box::new(object.spec()),
+            ActorKind::Quantized(object) => Box::new(object.spec()),
+            ActorKind::Openaichat(object) => Box::new(object.spec()),
+        }
+    }
+
+    fn metadata(&self) -> ActorMetadata {
+        match self {
+            ActorKind::E5(object) => object.metadata(),
+            ActorKind::Gemma(object) => object.metadata(),
+            ActorKind::Mistral(object) => object.metadata(),
+            ActorKind::Quantized(object) => object.metadata(),
+            ActorKind::Openaichat(object) => object.metadata(),
+        }
+    }
+}
+
+fn parse_device(device_type: Option<String>) -> Result<Device> {
+    let device_type = device_type.unwrap_or("cpu".to_string());
+
+    let device = if device_type == "cpu" {
+        Device::Cpu
+    } else {
+        Device::new_cuda(0).unwrap()
+    };
+    Ok(device)
+}
 
 fn cli() -> Command {
     Command::new("onceuponai")

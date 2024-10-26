@@ -1,11 +1,14 @@
 use actix::prelude::*;
 use actix_telepathy::prelude::*;
 use anyhow::Result;
+use async_trait::async_trait;
 use onceuponai_abstractions::EntityValue;
+use openai::{ChatCompletionRequest, CompletionRequest, ImageGenerationRequest};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::net::SocketAddr;
 use uuid::Uuid;
+pub mod openai;
 
 #[derive(RemoteMessage, Serialize, Deserialize, Debug, Clone)]
 #[with_source(source)]
@@ -14,7 +17,15 @@ pub struct ActorInvokeRequest {
     pub source: RemoteAddr,
     pub stream: bool,
     pub config: HashMap<String, EntityValue>,
-    pub data: HashMap<String, Vec<EntityValue>>,
+    pub data: ActorInvokeData,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize)]
+pub enum ActorInvokeData {
+    Entity(HashMap<String, Vec<EntityValue>>),
+    ChatCompletion(ChatCompletionRequest),
+    Completion(CompletionRequest),
+    ImageGeneration(ImageGenerationRequest),
 }
 
 #[derive(RemoteMessage, Serialize, Deserialize, Debug, Clone)]
@@ -64,11 +75,12 @@ pub struct ActorInvokeError {
     pub error: ActorError,
 }
 
-pub trait ActorKindActions {
+pub trait ActorKindActions: Clone + Send + Sync {
     fn actor(&self) -> Box<dyn ActorActions>;
     fn metadata(&self) -> ActorMetadata;
 }
 
+#[async_trait]
 pub trait ActorActions: Send + Sync {
     fn features(&self) -> Option<Vec<String>> {
         None
@@ -81,11 +93,16 @@ pub trait ActorActions: Send + Sync {
     fn kind(&self) -> String;
 
     fn init(&self) -> Result<()>;
-    fn start(&self) -> Result<()>;
-    fn invoke(&self, uuid: Uuid, request: &ActorInvokeRequest) -> Result<ActorInvokeResponse>;
+    async fn start(&self) -> Result<()>;
+    async fn invoke(
+        &self,
+        uuid: Uuid,
+        request: &ActorInvokeRequest,
+        source: RemoteAddr,
+    ) -> Result<()>;
 
     #[allow(unused_variables)]
-    fn invoke_stream(
+    async fn invoke_stream(
         &self,
         uuid: Uuid,
         request: &ActorInvokeRequest,
@@ -150,10 +167,6 @@ where
 
     pub fn spec(&self) -> T {
         self.spec.clone()
-    }
-
-    pub fn start(&self) -> Result<()> {
-        self.spec.start()
     }
 }
 

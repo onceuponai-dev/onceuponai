@@ -4,6 +4,7 @@ use crate::actors::WorkerActor;
 use actix::prelude::*;
 use actix_broker::BrokerSubscribe;
 use actix_telepathy::prelude::*;
+use async_trait::async_trait;
 use once_cell::sync::OnceCell;
 use rand::seq::SliceRandom;
 use serde::Deserialize;
@@ -50,6 +51,7 @@ pub struct MainActorSpec {
     pub auth: Option<MainActorAuthConfig>,
 }
 
+#[async_trait]
 impl ActorActions for MainActorSpec {
     fn is_main(&self) -> bool {
         true
@@ -63,15 +65,16 @@ impl ActorActions for MainActorSpec {
         todo!()
     }
 
-    fn start(&self) -> anyhow::Result<()> {
+    async fn start(&self) -> anyhow::Result<()> {
         todo!()
     }
 
-    fn invoke(
+    async fn invoke(
         &self,
         _uuid: Uuid,
         _request: &ActorInvokeRequest,
-    ) -> anyhow::Result<ActorInvokeResponse> {
+        _source: RemoteAddr,
+    ) -> anyhow::Result<()> {
         unreachable!("invoke method is not expected to be called.");
     }
 }
@@ -217,7 +220,7 @@ impl Handler<ClusterLog> for MainActor {
             ClusterLog::NewMember(node) => {
                 info!("New model joined the cluster. Node: {node:?}");
                 if self.own_addr != node.socket_addr {
-                    let model_addr = node.get_remote_addr(WorkerActor::ACTOR_ID.to_string());
+                    let model_addr = node.get_remote_addr(String::from("WorkerActor"));
                     model_addr.do_send(ActorInfoRequest {
                         source: self.remote_addr.clone(),
                     });

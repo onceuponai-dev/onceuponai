@@ -1,5 +1,7 @@
 pub mod main_actor;
-use crate::abstractions::{ActorActions, ActorInvokeRequest, ActorMetadata, ActorObject};
+use crate::abstractions::{
+    ActorActions, ActorInvokeData, ActorInvokeRequest, ActorKindActions, ActorMetadata, ActorObject,
+};
 use actix::prelude::*;
 use actix_telepathy::prelude::*;
 use anyhow::Result;
@@ -10,12 +12,10 @@ use onceuponai_core::notifications::{Notification, NotificationLevel};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::net::SocketAddr;
-use std::sync::mpsc;
+use std::sync::{mpsc, Arc};
+// use tokio::runtime::Builder;
+use tokio::runtime::Runtime;
 use uuid::Uuid;
-
-// https://github.com/yummyml/yummy/blob/master/yummy-rs/yummy-delta/src/apply.rs
-// https://github.com/yummyml/yummy/blob/master/yummy-rs/yummy-core/src/config.rs
-// https://github.com/yummyml/yummy/blob/master/yummy-rs/yummy-delta/tests/config/01_bronze_tables.yaml
 
 #[derive(RemoteMessage, Serialize, Deserialize, Debug, Clone)]
 #[with_source(source)]
@@ -51,7 +51,7 @@ pub struct ActorStartInvokeRequest {
     pub name: String,
     pub stream: bool,
     pub config: HashMap<String, EntityValue>,
-    pub data: HashMap<String, Vec<EntityValue>>,
+    pub data: ActorInvokeData,
 }
 
 pub struct ActorBuilder {}
@@ -69,38 +69,20 @@ impl ActorBuilder {
         })
     }
 
-    pub fn build_worker<T>(metadata: ActorMetadata, actor_factory: T) -> Result<WorkerActor>
+    pub fn build_worker<T>(metadata: ActorMetadata, actor_kind: T) -> Result<WorkerActor>
     where
-        T: Fn() -> Box<dyn ActorActions>,
+        T: ActorKindActions + Clone + Send + Sync + 'static,
     {
-        let actor = actor_factory();
+        let actor = actor_kind.clone().actor();
         let metadata = metadata.setup(WorkerActor::ACTOR_ID, actor.features());
         let remote_addr = metadata.remote_addr()?;
-
-        let (sender, rx) = mpsc::channel::<ActorInternalRequest>();
-
-        std::thread::spawn(move || {
-            while let Ok(request) = rx.recv() {
-                let is_stream = request.message.stream;
-                let source = request.message.source.clone();
-                if !is_stream {
-                    let response = actor.invoke(request.task_id, &request.message).unwrap();
-                    source.do_send(response)
-                } else {
-                    actor
-                        .invoke_stream(request.task_id, &request.message, source)
-                        .unwrap();
-                }
-            }
-        });
 
         Ok(WorkerActor {
             uuid: Uuid::new_v4(),
             own_addr: metadata.own_addr()?,
             seed_addr: metadata.seed_addr()?,
             remote_addr,
-            actor: actor_factory(),
-            sender,
+            actor: Arc::new(actor_kind.actor()),
             metadata,
         })
     }
@@ -111,11 +93,10 @@ impl ActorBuilder {
 pub struct WorkerActor {
     pub uuid: Uuid,
     pub metadata: ActorMetadata,
-    pub actor: Box<dyn ActorActions>,
+    pub actor: Arc<Box<dyn ActorActions>>,
     pub own_addr: SocketAddr,
     pub seed_addr: SocketAddr,
     pub remote_addr: RemoteAddr,
-    pub sender: mpsc::Sender<ActorInternalRequest>,
 }
 
 impl WorkerActor {
@@ -134,7 +115,6 @@ impl Actor for WorkerActor {
     type Context = Context<Self>;
 
     fn started(&mut self, ctx: &mut Self::Context) {
-        self.actor.start().unwrap();
         self.register(ctx.address().recipient());
     }
 }
@@ -169,12 +149,18 @@ impl Handler<ActorInvokeRequest> for WorkerActor {
 
     fn handle(&mut self, msg: ActorInvokeRequest, _ctx: &mut Self::Context) -> Self::Result {
         info!("MODEL INVOKE REQUEST: {:?}", msg);
+        let is_stream = msg.stream;
+        let source = msg.source.clone();
+        let actor = Arc::clone(&self.actor);
+        let task_id = msg.task_id;
+        let req = msg.clone();
 
-        self.sender
-            .send(ActorInternalRequest {
-                task_id: self.uuid,
-                message: msg.clone(),
-            })
-            .unwrap();
+        actix_rt::spawn(async move {
+            if !is_stream {
+                actor.invoke(task_id, &req, source).await.unwrap();
+            } else {
+                actor.invoke_stream(task_id, &msg, source).await.unwrap();
+            }
+        });
     }
 }

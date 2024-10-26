@@ -5,6 +5,8 @@ use actix_web::web;
 use actix_web::Responder;
 use anyhow::Result;
 use onceuponai_abstractions::EntityValue;
+use onceuponai_actors::abstractions::openai::ChatCompletionRequest;
+use onceuponai_actors::abstractions::ActorInvokeData;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::error::Error;
@@ -24,7 +26,7 @@ pub struct EmbeddingsRequest {
 }
 
 pub async fn v1_chat_completions(
-    chat_completions_request: web::Json<ChatCompletionsRequest>,
+    chat_completions_request: web::Json<ChatCompletionRequest>,
     app_state: web::Data<AppState>,
 ) -> Result<impl Responder, Box<dyn Error>> {
     let model: Vec<&str> = chat_completions_request.model.split('/').collect();
@@ -33,11 +35,8 @@ pub async fn v1_chat_completions(
 
     let invoke_request = InvokeRequest {
         config: HashMap::new(),
-        data: HashMap::from([(
-            "message".to_string(),
-            chat_completions_request.messages.clone(),
-        )]),
         stream: chat_completions_request.stream,
+        data: ActorInvokeData::ChatCompletion(chat_completions_request.0),
     };
     base_invoke(
         kind,
@@ -59,7 +58,10 @@ pub async fn v1_embeddings(
 
     let invoke_request = InvokeRequest {
         config: HashMap::new(),
-        data: HashMap::from([("input".to_string(), embeddings_request.input.clone())]),
+        data: ActorInvokeData::Entity(HashMap::from([(
+            "input".to_string(),
+            embeddings_request.input.clone(),
+        )])),
         stream: Some(false),
     };
     base_invoke(

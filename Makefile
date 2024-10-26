@@ -68,6 +68,36 @@ rebuild-nsis: ## Test musl
 	mv ./target/x86_64-pc-windows-gnu/release/nsis/x64/temp_file ./target/x86_64-pc-windows-gnu/release/nsis/x64/installer.nsi && \
 	makensis ./target/x86_64-pc-windows-gnu/release/nsis/x64/installer.nsi
 
+build-mrs: ## 
+	cd ./crates/onceuponai-actors-mistralrs && \
+	cargo build --release --features cuda
+
+build-server: ## 
+	cd ./crates/onceuponai-server && \
+	cargo build --release
+
+
+build-sidecar-mistralrs-cuda-linux: ## 
+	cd ./crates/onceuponai-actors-mistralrs && \
+	cargo build --release --features cuda && \
+	cp ../../target/release/onceuponai-actors-mistralrs ../onceuponai/src-tauri/binaries/sidecar/onceuponai-actors-mistralrs-cuda-x86_64-unknown-linux-gnu
+
+build-sidecar-mistralrs-cpu-linux: ## 
+	cd ./crates/onceuponai-actors-mistralrs && \
+	cargo build --release && \
+	cp ../../target/release/onceuponai-actors-mistralrs ../onceuponai/src-tauri/binaries/sidecar/onceuponai-actors-mistralrs-cpu-x86_64-unknown-linux-gnu
+
+build-sidecar-mistralrs-cuda-win: ## 
+	cd ./crates/onceuponai-actors-mistralrs && \
+	cargo build --release --target x86_64-pc-windows-gnu && \
+	cp ../../target/release/onceuponai-actors-mistralrs ../onceuponai/src-tauri/binaries/sidecar/onceuponai-actors-mistralrs-cuda-x86_64-pc-windows-gnu.exe
+
+build-sidecar-mistralrs-cpu-win: ## 
+	cd ./crates/onceuponai-actors-mistralrs && \
+	cargo build --release --target x86_64-pc-windows-gnu && \
+	cp ../../target/release/onceuponai-actors-mistralrs ../onceuponai/src-tauri/binaries/sidecar/onceuponai-actors-mistralrs-cpu-x86_64-pc-windows-gnu.exe
+
+
 build-sidecar-candle-cuda-linux: ## 
 	cd ./crates/onceuponai-actors-candle && \
 	cargo build --release --features cuda && \
@@ -88,9 +118,20 @@ build-sidecar-candle-cpu-win: ##
 	cargo build --release --target x86_64-pc-windows-gnu && \
 	cp ../../target/x86_64-pc-windows-gnu/release/onceuponai-actors-candle.exe ../onceuponai/src-tauri/binaries/sidecar/onceuponai-actors-candle-cpu-x86_64-pc-windows-gnu.exe
 
-build-full: build-ui build-sidecar-candle-cuda-linux build-sidecar-candle-cpu-linux build-sidecar-candle-cuda-win build-sidecar-candle-cpu-win build-linux build-win  
-	@echo "Full build completed."
+build-candle-sidecars: build-sidecar-candle-cuda-linux build-sidecar-candle-cpu-linux build-sidecar-candle-cuda-win build-sidecar-candle-cpu-win
+	@echo "Sidecars build completed."
 
+build-mistralrs-sidecars: build-sidecar-mistralrs-cuda-linux build-sidecar-mistralrs-cpu-linux build-sidecar-mistralrs-cuda-win build-sidecar-mistralrs-cpu-win
+	@echo "Sidecars build completed."
+
+build-sidecars: build-candle-sidecars build-mistralrs-sidecars
+	@echo "Sidecars build completed."
+
+build-dev: build-sidecars build-linux
+	@echo "Dev build completed."
+
+build-full: build-ui build-sidecars build-linux build-win  
+	@echo "Full build completed."
 
 build-musl: ## Test musl
 	cd ./crates/onceuponai && \

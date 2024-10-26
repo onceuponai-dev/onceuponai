@@ -25,8 +25,11 @@ templates:
       description: ""
       url: ""
     spec:
-      - key: base_repo_id
+      - key: model_repo
         value: google/gemma-2b-it
+        type: string
+      - key: model_revision
+        value: null
         type: string
       - key: tokenizer_repo
         value: google/gemma-2b-it
@@ -107,11 +110,204 @@ templates:
       - key: eos_token
         value: </s>
         type: string
+      - key: prompt_format
+        value: Mistral
+        type: string
       - key: hf_token
         value: null
         type: secret
 
+  - id: mistral
+    kind: mistral
+    device: cpu
+    sidecar: onceuponai-actors-candle
+    metadata:
+      name: mistral
+      description: ""
+      url: ""
+    spec:
+      - key: model_repo
+        value: mistralai/Mistral-7B-v0.1
+        type: string
+      - key: model_revision
+        value: null
+        type: string
+      - key: tokenizer_repo
+        value: mistralai/Mistral-7B-v0.1
+        type: string
+      - key: seed
+        value: 299792458
+        type: number
+      - key: repeat_last_n
+        value: 64
+        type: number
+      - key: repeat_penalty
+        value: 1.1
+        type: number
+      - key: temp
+        value: 0.8
+        type: number
+      - key: top_p
+        value: null
+        type: number
+      - key: top_k
+        value: null
+        type: number
+      - key: hf_token
+        value: null
+        type: secret
+      - key: sample_len
+        value: 1000
+        type: number
 
+  - id: openaichat
+    kind: openaichat
+    device: cpu
+    sidecar: onceuponai-actors-candle
+    metadata:
+      name: openaichat
+      description: ""
+      url: ""
+    spec:
+      - key: base_url
+        value: https://api.openai.com
+        type: string
+      - key: api_key
+        value: null
+        type: secret
+      - key: model
+        value: gpt-4o-mini
+        type: string
+      - key: seed
+        value: null
+        type: number
+      - key: max_tokens
+        value: null
+        type: number
+      - key: temperature
+        value: null
+        type: number
+      - key: top_p
+        value: null
+        type: number
+
+  - id: mistralrs
+    sidecar: onceuponai-actors-mistralrs
+    kind: mistralrs
+    device: cuda
+    metadata:
+      name: mistralrs
+      description: ""
+      url: ""
+    spec:
+      - key: seed
+        value: 299792458
+        type: number
+      - key: truncate_sequence
+        value: false
+        type: bool
+      - key: max_seqs
+        value: 16
+        type: number
+      - key: no_kv_cache
+        value: false
+        type: bool
+      - key: chat_template
+        value: null
+        type: string
+      - key: prefix_cache_n
+        value: 16
+        type: number
+      - key: num_device_layers
+        value: null
+        type: string
+      - key: in_situ_quant
+        value: null
+        type: string
+      - key: paged_attn_gpu_mem
+        value: null
+        type: number
+      - key: paged_attn_gpu_mem_usage
+        value: null
+        type: number
+      - key: paged_ctxt_len
+        value: null
+        type: number
+      - key: paged_attn_block_size
+        value: null
+        type: number
+      - key: no_paged_attn
+        value: null
+        type: bool
+      - key: throughput_log
+        value: null
+        type: bool
+      - key: prompt_batchsize
+        value: null
+        type: number
+      - key: hf_token
+        value: null
+        type: secret
+      - key: model_selected
+        value: plain
+        type: string
+      - key: model_id
+        value: null
+        type: string
+      - key: tokenizer_json
+        value: null
+        type: string
+      - key: model_revision
+        value: null
+        type: string
+      - key: model_architecture
+        value: null
+        type: string
+      - key: model_dtype
+        value: null
+        type: string
+      - key: quantized_model_id
+        value: null
+        type: string
+      - key: quantized_filename
+        value: null
+        type: string
+      - key: tok_model_id
+        value: null
+        type: string
+      - key: topology
+        value: null
+        type: string
+      - key: organization
+        value: null
+        type: string
+      - key: write_uqff
+        value: null
+        type: string
+      - key: from_uqff
+        value: null
+        type: string
+      - key: adapters_model_id
+        value: null
+        type: string
+      - key: order
+        value: null
+        type: string
+      - key: xlora_model_id
+        value: null
+        type: string
+      - key: tgt_non_granular_index
+        value: null
+        type: number
+      - key: gqa
+        value: null
+        type: number
+      - key: vision_model_architecture
+        value: null
+        type: string
+      - key: diffusion_model_architecture
+        value: null
+        type: string
 
 galery:
   # E5 MODELS
@@ -174,7 +370,7 @@ galery:
       description: ""
       url: ""
     spec:
-      - key: base_repo_id
+      - key: model_repo
         value: google/gemma-2b-it
         type: string
       - key: tokenizer_repo
@@ -676,3 +872,187 @@ galery:
         type: number
 
 
+  # MISTRAL MODELS
+  - id: mistral/mistral-7B-v0.1
+    template: mistral
+    device: cpu
+    metadata:
+      name: mistral-7B-v0.1
+      description: ""
+      url: ""
+    spec:
+      - key: model_repo
+        value: mistralai/Mistral-7B-v0.1
+        type: string
+      - key: tokenizer_repo
+        value: mistralai/Mistral-7B-v0.1
+        type: string
+
+  - id: mistral/mistral-7B-v0.2
+    template: mistral
+    device: cpu
+    metadata:
+      name: mistral-7B-v0.2
+      description: ""
+      url: ""
+    spec:
+      - key: model_repo
+        value: mistralai/Mistral-7B-v0.2
+        type: string
+      - key: tokenizer_repo
+        value: mistralai/Mistral-7B-v0.2
+        type: string
+
+  - id: mistral/mistral-7B-Instruct-v0.1
+    template: mistral
+    device: cpu
+    metadata:
+      name: mistral-7B-Instruct-v0.1
+      description: ""
+      url: ""
+    spec:
+      - key: model_repo
+        value: mistralai/Mistral-7B-Instruct-v0.1
+        type: string
+      - key: tokenizer_repo
+        value: mistralai/Mistral-7B-Instruct-v0.1
+        type: string
+
+  - id: mistral/mistral-7B-Instruct-v0.2
+    template: mistral
+    device: cpu
+    metadata:
+      name: mistral-7B-Instruct-v0.2
+      description: ""
+      url: ""
+    spec:
+      - key: model_repo
+        value: mistralai/Mistral-7B-Instruct-v0.2
+        type: string
+      - key: tokenizer_repo
+        value: mistralai/Mistral-7B-Instruct-v0.2
+        type: string
+
+  - id: mistral/mathstral-7B-v0.1
+    template: mistral
+    device: cpu
+    metadata:
+      name: mathstral-7B-v0.1
+      description: ""
+      url: ""
+    spec:
+      - key: model_repo
+        value: mistralai/mathstral-7B-v0.1
+        type: string
+      - key: tokenizer_repo
+        value: mistralai/mathstral-7B-v0.1
+        type: string
+
+  - id: mistral/mistral-nemo-base-2407
+    template: mistral
+    device: cpu
+    metadata:
+      name: mistral-nemo-base-2407
+      description: ""
+      url: ""
+    spec:
+      - key: model_repo
+        value: mistralai/Mistral-Nemo-Base-2407
+        type: string
+      - key: tokenizer_repo
+        value: mistralai/Mistral-Nemo-Base-2407
+        type: string
+
+  - id: mistral/mistral-nemo-instruct-2407
+    template: mistral
+    device: cpu
+    metadata:
+      name: mistral-nemo-instruct-2407
+      description: ""
+      url: ""
+    spec:
+      - key: model_repo
+        value: mistralai/Mistral-Nemo-Instruct-2407
+        type: string
+      - key: tokenizer_repo
+        value: mistralai/Mistral-Nemo-Instruct-2407
+        type: string
+
+  # OPENAI MODELS
+  - id: openaichat/gpt-4o-mini
+    template: openaichat
+    device: cpu
+    metadata:
+      name: gpt-4o-mini
+      description: ""
+      url: ""
+    spec:
+      - key: model
+        value: gpt-4o-mini
+        type: string
+
+  - id: openaichat/gpt-4o
+    template: openaichat
+    device: cpu
+    metadata:
+      name: gpt-4o
+      description: ""
+      url: ""
+    spec:
+      - key: model
+        value: gpt-4o
+        type: string
+
+  - id: mistralrs/bielik-11b-gguf
+    template: mistralrs
+    device: cuda
+    metadata:
+      name: mistralrs-bielik-11b-gguf
+      description: ""
+      url: ""
+    spec:
+      - key: quantized_model_id
+        value: speakleash/Bielik-11B-v2.3-Instruct-GGUF
+        type: string
+      - key: quantized_filename
+        value: Bielik-11B-v2.3-Instruct.Q4_K_M.gguf
+        type: string
+      - key: model_selected
+        value: gguf
+        type: string
+      - key: tokenizer_repo
+        value: speakleash/Bielik-11B-v2.3-Instruct-GGUF
+        type: string
+
+  - id: mistralrs/bielik-11b-gptq
+    template: mistralrs
+    device: cuda
+    metadata:
+      name: mistralrs-bielik-11b-gptq
+      description: ""
+      url: ""
+    spec:
+      - key: model_id
+        value: speakleash/Bielik-11B-v2.3-Instruct-GPTQ
+        type: string
+      - key: model_selected
+        value: plain
+        type: string
+
+  - id: mistralrs/bielik-11b-isq
+    template: mistralrs
+    device: cuda
+    metadata:
+      name: mistralrs-bielik-11b-gptq
+      description: ""
+      url: ""
+    spec:
+      - key: model_id
+        value: speakleash/Bielik-11B-v2.3-Instruct
+        type: string
+      - key: model_selected
+        value: plain
+        type: string
+      - key: in_situ_quant
+        value: Q4K
+        type: string
