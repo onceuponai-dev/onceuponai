@@ -216,7 +216,7 @@ impl OpenAIChatModel {
         let response_body: ChatCompletionResponse = serde_json::from_str(&text)?;
         let output = response_body.choices[0].message.content.clone().0;
         match output {
-            Either::Left(content) => return Ok(content),
+            Either::Left(content) => Ok(content),
             Either::Right(_) => unreachable!(),
         }
     }

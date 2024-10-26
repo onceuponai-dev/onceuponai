@@ -1023,3 +1023,36 @@ galery:
       - key: tokenizer_repo
         value: speakleash/Bielik-11B-v2.3-Instruct-GGUF
         type: string
+
+  - id: mistralrs/bielik-11b-gptq
+    template: mistralrs
+    device: cuda
+    metadata:
+      name: mistralrs-bielik-11b-gptq
+      description: ""
+      url: ""
+    spec:
+      - key: model_id
+        value: speakleash/Bielik-11B-v2.3-Instruct-GPTQ
+        type: string
+      - key: model_selected
+        value: plain
+        type: string
+
+  - id: mistralrs/bielik-11b-isq
+    template: mistralrs
+    device: cuda
+    metadata:
+      name: mistralrs-bielik-11b-gptq
+      description: ""
+      url: ""
+    spec:
+      - key: model_id
+        value: speakleash/Bielik-11B-v2.3-Instruct
+        type: string
+      - key: model_selected
+        value: plain
+        type: string
+      - key: in_situ_quant
+        value: Q4K
+        type: string
