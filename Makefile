@@ -113,7 +113,13 @@ build-sidecar-candle-cpu-win: ##
 	cargo build --release --target x86_64-pc-windows-gnu && \
 	cp ../../target/x86_64-pc-windows-gnu/release/onceuponai-actors-candle.exe ../onceuponai/src-tauri/binaries/sidecar/onceuponai-actors-candle-cpu-x86_64-pc-windows-gnu.exe
 
-build-sidecars: build-sidecar-candle-cuda-linux build-sidecar-candle-cpu-linux build-sidecar-candle-cuda-win build-sidecar-candle-cpu-win
+build-candle-sidecars: build-sidecar-candle-cuda-linux build-sidecar-candle-cpu-linux build-sidecar-candle-cuda-win build-sidecar-candle-cpu-win
+	@echo "Sidecars build completed."
+
+build-mistralrs-sidecars: build-sidecar-mistralrs-cuda-linux build-sidecar-mistralrs-cpu-linux build-sidecar-mistralrs-cuda-win build-sidecar-mistralrs-cpu-win
+	@echo "Sidecars build completed."
+
+build-sidecars: build-candle-sidecars build-mistralrs-sidecars
 	@echo "Sidecars build completed."
 
 build-dev: build-sidecars build-linux
