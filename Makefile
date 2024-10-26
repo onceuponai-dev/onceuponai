@@ -72,6 +72,11 @@ build-mrs: ##
 	cd ./crates/onceuponai-actors-mistralrs && \
 	cargo build --release --features cuda
 
+build-server: ## 
+	cd ./crates/onceuponai-server && \
+	cargo build --release
+
+
 build-sidecar-mistralrs-cuda-linux: ## 
 	cd ./crates/onceuponai-actors-mistralrs && \
 	cargo build --release --features cuda && \
