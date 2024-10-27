@@ -63,7 +63,7 @@ impl ActorActions for QuantizedSpec {
         "quantized".to_string()
     }
 
-    fn init(&self) -> Result<()> {
+    async fn init(&self) -> Result<()> {
         QuantizedModel::init(self.clone())
     }
 

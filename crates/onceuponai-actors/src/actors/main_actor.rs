@@ -61,7 +61,7 @@ impl ActorActions for MainActorSpec {
         "main".to_string()
     }
 
-    fn init(&self) -> anyhow::Result<()> {
+    async fn init(&self) -> anyhow::Result<()> {
         todo!()
     }
 

@@ -221,7 +221,7 @@ impl ActorActions for MistralrsSpec {
         "mistralrs".to_string()
     }
 
-    fn init(&self) -> Result<()> {
+    async fn init(&self) -> Result<()> {
         MistralrsModel::init(self.clone())
     }
 

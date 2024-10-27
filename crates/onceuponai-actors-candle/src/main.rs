@@ -8,6 +8,7 @@ use clap::{arg, Command};
 use embeddings::e5::E5Spec;
 use onceuponai_actors::abstractions::{ActorActions, ActorKindActions, ActorMetadata, ActorObject};
 use onceuponai_actors::cluster::{init_actor, start_worker_cluster};
+use onceuponai_actors::initialize::initialize;
 use serde::Deserialize;
 
 pub mod chat;
@@ -67,7 +68,11 @@ fn cli() -> Command {
                 .args(vec![arg!(--file <FILE> "file")
                     .required(false)
                     .short('f')
-                    .help("file")])
+                    .help("configuration file in yaml format")])
+                .args(vec![arg!(--toml <TOML> "toml")
+                    .required(false)
+                    .short('t')
+                    .help("configuration file in toml format")])
                 .args(vec![arg!(--yaml <YAML> "yaml")
                     .required(false)
                     .short('y')
@@ -99,10 +104,12 @@ pub(crate) async fn commands() -> Result<()> {
     match matches.subcommand() {
         Some(("spawn", sub_sub_matches)) => {
             let file = sub_sub_matches.get_one::<String>("file");
+            let toml = sub_sub_matches.get_one::<String>("toml");
             let json = sub_sub_matches.get_one::<String>("json");
             let yaml = sub_sub_matches.get_one::<String>("yaml");
             let metadata_yaml = sub_sub_matches.get_one::<String>("metadata");
-            start_worker_cluster::<ActorKind>(file, yaml, json, metadata_yaml).await?
+            initialize().await?;
+            start_worker_cluster::<ActorKind>(file, toml, yaml, json, metadata_yaml).await?
         }
         Some(("init", sub_sub_matches)) => {
             let json = sub_sub_matches.get_one::<String>("json");

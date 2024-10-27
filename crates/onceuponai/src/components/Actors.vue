@@ -336,7 +336,7 @@ const getInputLabel = (type: any) => {
 
 const parseSpecItem = (item: ActorSpecItem) => {
 
-  if(item.value == null) {
+  if (item.value == null) {
     return item.value;
   }
 
@@ -490,6 +490,7 @@ watch(spawnSelectedSearch, (newValue) => {
         <v-card-title>Actor Config</v-card-title>
         <v-card-text>
           <v-divider></v-divider>
+<!--      
           <v-stepper :items="['Initialize', 'Spawn']">
             <template v-slot:item.1>
               <v-card title="Initialize actor" flat>
@@ -498,7 +499,10 @@ watch(spawnSelectedSearch, (newValue) => {
                 </v-card-text>
               </v-card>
             </template>
-            <template v-slot:item.2>
+-->
+
+          <v-stepper :items="['Spawn']">
+            <template v-slot:item.1>
               <v-card title="Spawn actor" flat>
                 <v-card-text>
                   <v-textarea label="config.yaml" rows="12" v-model="remoteSpawnConfig"></v-textarea>

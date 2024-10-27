@@ -48,6 +48,7 @@ pub async fn start_main_cluster(
 
 pub async fn start_worker_cluster<T: ActorKindActions + DeserializeOwned + 'static>(
     file: Option<&String>,
+    toml: Option<&String>,
     yaml: Option<&String>,
     json: Option<&String>,
     metadata_yaml: Option<&String>,
@@ -55,6 +56,9 @@ pub async fn start_worker_cluster<T: ActorKindActions + DeserializeOwned + 'stat
     let actor_kind: T = if let Some(f) = file {
         let configuration_str = read_config_str(f, Some(true)).await.map_anyhow_err()?;
         serde_yaml::from_str(&configuration_str)?
+    } else if let Some(t) = toml {
+        let configuration_str = read_config_str(t, Some(true)).await.map_anyhow_err()?;
+        toml::from_str(&configuration_str)?
     } else if let Some(y) = yaml {
         decode_and_deserialize(y, SerializationType::YAML)?
     } else if let Some(j) = json {
@@ -79,7 +83,7 @@ pub async fn init_actor<T: ActorKindActions + DeserializeOwned>(
     json: Option<&String>,
 ) -> Result<()> {
     let actor_kind: T = decode_and_deserialize(json.expect("json"), SerializationType::JSON)?;
-    actor_kind.actor().init()
+    actor_kind.actor().init().await
 }
 
 const LOGO: &str = r#"
