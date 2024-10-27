@@ -132,8 +132,8 @@ async fn main() -> std::io::Result<()> {
             };
 
             external_process.read_output();
-            tokio::signal::ctrl_c().await?;
-            println!("Ctrl-C received, shutting down");
+            // tokio::signal::ctrl_c().await?;
+            // println!("Ctrl-C received, shutting down");
         }
         None => {
             if args.headless {

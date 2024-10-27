@@ -602,6 +602,7 @@ impl MistralrsModel {
             None
         };
 
+        info!("Loading model from Hugging Face :) . This may take some time.");
         let pipeline = loader.load_model_from_hf(
             spec_clone.model_revision.clone(),
             token_source,
