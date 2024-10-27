@@ -191,6 +191,11 @@ fn set_library_path() {
     );
 }
 
+pub fn library_path_str() -> String {
+    let cache_path = get_cache_dir();
+    format!("{}", cache_path.display())
+}
+
 fn copy_and_link_lib(lib: &str, version: &str, os: &str, arch: &str) -> Result<()> {
     let cache_path = get_cache_dir();
     let lib_file = if lib == CUDART_LIB { "libcudart" } else { lib };
