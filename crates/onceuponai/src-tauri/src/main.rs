@@ -131,9 +131,7 @@ async fn main() -> std::io::Result<()> {
                 unimplemented!();
             };
 
-            thread::spawn(move || {
-                external_process.read_output();
-            });
+            external_process.read_output();
             tokio::signal::ctrl_c().await?;
             println!("Ctrl-C received, shutting down");
         }
