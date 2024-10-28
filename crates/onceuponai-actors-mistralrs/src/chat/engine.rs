@@ -458,7 +458,9 @@ impl MistralrsModel {
         let device = Device::cuda_if_available(0)?;
 
         if let Some(seed) = spec.seed {
-            device.set_seed(seed)?;
+            if !device.is_cpu() {
+                device.set_seed(seed)?;
+            }
         }
 
         info!(
