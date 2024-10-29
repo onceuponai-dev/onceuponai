@@ -91,7 +91,7 @@ const spawnActorNewPairType = ref("string");
 const spawnSearchResults: any = ref([]);
 const spawnSelectedSearch = ref('');
 const spawnInProgress = ref(false);
-const initInProgress = ref(false);
+//const initInProgress = ref(false);
 
 
 // functions
@@ -195,6 +195,7 @@ const buildActorJsonConfig = () => {
   return specJsonBase64;
 }
 
+/*
 const init = async () => {
   const specJsonBase64 = buildActorJsonConfig();
   initInProgress.value = true;
@@ -202,6 +203,7 @@ const init = async () => {
   console.log(act);
   initInProgress.value = false;
 };
+*/
 
 
 const spawn = async () => {
