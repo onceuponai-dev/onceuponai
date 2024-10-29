@@ -15,6 +15,7 @@ actix-rt = { workspace = true }
 actix-telepathy = { workspace = true }
 anyhow = { workspace = true }
 async-trait = { workspace = true }
+dirs = { workspace = true }
 either = { workspace = true }
 env_logger = { workspace = true }
 log = { workspace = true }
@@ -22,8 +23,12 @@ once_cell = { workspace = true }
 onceuponai-abstractions= { path = "../onceuponai-abstractions" }
 onceuponai-core= { path = "../onceuponai-core" }
 rand = { workspace = true }
+reqwest = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
 serde_yaml = { workspace = true }
+toml = { workspace = true }
+tar = { workspace = true }
 tokio = { workspace = true }
 uuid = { workspace = true }
+xz2 = { workspace = true }

@@ -9,13 +9,13 @@ const subtitle = ref("");
 const driverObj = driver({
   showProgress: true,
   steps: [
-    { popover: { title: 'Happy Coding', description: 'And that is all, go ahead and start adding tours to your applications.' } },
-    { element: '#actors', popover: { title: 'Animated Tour Example', description: 'Here is the code example showing animated tour. Let\'s walk you through it.', side: "bottom", align: 'start' } },
-    { element: '#chat', popover: { title: 'Import the Library', description: 'It works the same in vanilla JavaScript as well as frameworks.', side: "bottom", align: 'start' } },
-    // { element: '#editor', popover: { title: 'Importing CSS', description: 'Import the CSS which gives you the default styling for popover and overlay.', side: "bottom", align: 'start' } },
-    { element: '#personal-tokens', popover: { title: 'Importing CSS', description: 'Import the CSS which gives you the default styling for popover and overlay.', side: "bottom", align: 'start' } },
-    { element: '#editorLeft', popover: { title: 'Importing CSS', description: 'Import the CSS which gives you the default styling for popover and overlay.', side: "bottom", align: 'start' } },
-    { popover: { title: 'Happy Coding', description: 'And that is all, go ahead and start adding tours to your applications.' } }
+    { popover: { title: "Welcome!", description: "Discover all the essential navigation options to make the most of our app!" } },
+    { element: "#actors", popover: { title: "Actors", description: "Search, select, and spawn actors like LLM models to assist with tasks.", side: "bottom", align: 'start' } },
+    { element: "#chat", popover: { title: "Chat", description: "Engage directly with your spawned LLMs for interactive conversations and support.", side: "bottom", align: 'start' } },
+    // { element: "#editor", popover: { title: "Editor", description: "Use LLMs to tackle text tasks such as summarization and more."", side: "bottom", align: 'start' } },
+    { element: "#personal-tokens", popover: { title: "Personal Tokens", description: "Generate tokens for easy access to API.", side: "bottom", align: 'start' } },
+    // { element: "#editorLeft", popover: { title: "Editor", description: "Import the CSS which gives you the default styling for popover and overlay.", side: "bottom", align: 'start' } },
+    { popover: { title: "Happy Prompting!", description: "You're all set to explore and create. Enjoy the journey!" } }
   ]
 });
 

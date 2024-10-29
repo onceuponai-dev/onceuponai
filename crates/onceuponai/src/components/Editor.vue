@@ -3,7 +3,7 @@ import { ref, onMounted } from "vue";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from '@tauri-apps/api/event';
 import { fetch } from "../common";
-// import { parseMarkdown } from '../mdcommon';
+import { parseMarkdown } from '../mdcommon';
 import Quill from 'quill';
 import "quill/dist/quill.snow.css";
 
@@ -20,6 +20,7 @@ const actors: any = ref([]);
 const selectedActor: any = ref(null);
 const isStream: any = ref(true);
 const dialog: any = ref(null);
+const dialogChat: any = ref(null);
 
 const editorContentLeft: any = ref(null);
 const quillLeft: any = ref(null);
@@ -74,7 +75,8 @@ listen('v1-chat-completions', event => {
       lastMessage.content += content;
     }
 
-    quillRight.value.root.innerHTML = messages.value[messages.value.length - 1].content;
+    quillRight.value.root.innerHTML = parseMarkdown(messages.value[messages.value.length - 1].content);
+    showChatInput.value = true;
   }
 
 });
@@ -283,7 +285,7 @@ Realizacja procesu wdrażania nowoczesnych technologii informatycznych w przedsi
         </v-col>
         <v-col cols="7">
           <v-text-field clearable v-model="inputMessage" @keyup.enter="sendMessage" label="Message" variant="underlined"
-            :disabled="actors == 0" append-inner-icon="$openInNew" @click:append-inner="dialog = true"
+            :disabled="actors == 0" append-inner-icon="$openInNew" @click:append-inner="dialogChat = true"
             required></v-text-field>
         </v-col>
         <v-col cols="1">
@@ -308,6 +310,21 @@ Realizacja procesu wdrażania nowoczesnych technologii informatycznych w przedsi
         </v-card-actions>
       </v-card>
     </v-dialog>
+
+    <v-dialog v-model="dialogChat" width="90%">
+      <v-card>
+        <v-card-text>
+          <v-textarea v-model="inputMessage" label="Prompt" rows="15"></v-textarea>
+        </v-card-text>
+
+        <v-card-actions>
+          <v-spacer></v-spacer>
+          <v-btn color="green darken-1" variant="elevated" @click="sendMessage">Send</v-btn>
+          <v-btn color="gray darken-1" variant="text" @click="dialogChat = false">Close</v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
+
 
 
   </v-container>

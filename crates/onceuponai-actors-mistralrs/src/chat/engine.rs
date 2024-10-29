@@ -221,7 +221,7 @@ impl ActorActions for MistralrsSpec {
         "mistralrs".to_string()
     }
 
-    fn init(&self) -> Result<()> {
+    async fn init(&self) -> Result<()> {
         MistralrsModel::init(self.clone())
     }
 
@@ -458,7 +458,9 @@ impl MistralrsModel {
         let device = Device::cuda_if_available(0)?;
 
         if let Some(seed) = spec.seed {
-            device.set_seed(seed)?;
+            if !device.is_cpu() {
+                device.set_seed(seed)?;
+            }
         }
 
         info!(
@@ -602,6 +604,7 @@ impl MistralrsModel {
             None
         };
 
+        info!("Loading model from Hugging Face :) . This may take some time.");
         let pipeline = loader.load_model_from_hf(
             spec_clone.model_revision.clone(),
             token_source,

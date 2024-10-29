@@ -52,7 +52,7 @@ impl ActorActions for MistralSpec {
         "mistral".to_string()
     }
 
-    fn init(&self) -> Result<()> {
+    async fn init(&self) -> Result<()> {
         MistralModel::init(self.clone())
     }
 

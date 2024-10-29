@@ -40,7 +40,7 @@ impl ActorActions for OpenAIChatSpec {
         "openaichat".to_string()
     }
 
-    fn init(&self) -> Result<()> {
+    async fn init(&self) -> Result<()> {
         OpenAIChatModel::init(self.clone())
     }
 

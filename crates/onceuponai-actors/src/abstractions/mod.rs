@@ -92,7 +92,7 @@ pub trait ActorActions: Send + Sync {
 
     fn kind(&self) -> String;
 
-    fn init(&self) -> Result<()>;
+    async fn init(&self) -> Result<()>;
     async fn start(&self) -> Result<()>;
     async fn invoke(
         &self,

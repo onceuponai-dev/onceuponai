@@ -91,7 +91,7 @@ const spawnActorNewPairType = ref("string");
 const spawnSearchResults: any = ref([]);
 const spawnSelectedSearch = ref('');
 const spawnInProgress = ref(false);
-const initInProgress = ref(false);
+//const initInProgress = ref(false);
 
 
 // functions
@@ -195,6 +195,7 @@ const buildActorJsonConfig = () => {
   return specJsonBase64;
 }
 
+/*
 const init = async () => {
   const specJsonBase64 = buildActorJsonConfig();
   initInProgress.value = true;
@@ -202,6 +203,7 @@ const init = async () => {
   console.log(act);
   initInProgress.value = false;
 };
+*/
 
 
 const spawn = async () => {
@@ -336,7 +338,7 @@ const getInputLabel = (type: any) => {
 
 const parseSpecItem = (item: ActorSpecItem) => {
 
-  if(item.value == null) {
+  if (item.value == null) {
     return item.value;
   }
 
@@ -485,32 +487,17 @@ watch(spawnSelectedSearch, (newValue) => {
       </v-card>
     </v-dialog>
 
-    <v-dialog v-model="remoteSpawnDialog" max-width="800px">
+    <v-dialog v-model="remoteSpawnDialog" max-width="600px">
       <v-card>
         <v-card-title>Actor Config</v-card-title>
         <v-card-text>
           <v-divider></v-divider>
-          <v-stepper :items="['Initialize', 'Spawn']">
-            <template v-slot:item.1>
-              <v-card title="Initialize actor" flat>
-                <v-card-text>
-                  <span><i>{{ initCommand }}</i></span>
-                </v-card-text>
-              </v-card>
-            </template>
-            <template v-slot:item.2>
-              <v-card title="Spawn actor" flat>
-                <v-card-text>
-                  <v-textarea label="config.yaml" rows="12" v-model="remoteSpawnConfig"></v-textarea>
-                  <span><i>{{ remoteSpawnCommand }}</i></span>
-                </v-card-text>
-              </v-card>
-            </template>
-          </v-stepper>
+          <v-textarea label="config.yaml" rows="12" v-model="remoteSpawnConfig"></v-textarea>
+          <span><i>{{ remoteSpawnCommand }}</i></span>
         </v-card-text>
         <v-card-actions>
           <v-spacer></v-spacer>
-          <v-btn color="primary" @click="remoteSpawnDialog = false">Close</v-btn>
+          <v-btn color="primary" @click="remoteSpawnDialog = false"><b>Close</b></v-btn>
         </v-card-actions>
       </v-card>
     </v-dialog>
@@ -558,8 +545,8 @@ watch(spawnSelectedSearch, (newValue) => {
         </v-card-text>
         <v-card-actions>
           <v-spacer></v-spacer>
-          <v-progress-circular color="orange" v-if="initInProgress" indeterminate></v-progress-circular>
-          <v-btn color="orange darken-1" @click="init"><b>Download</b></v-btn>
+          <!-- <v-progress-circular color="orange" v-if="initInProgress" indeterminate></v-progress-circular> -->
+          <!-- <v-btn color="orange darken-1" @click="init"><b>Download</b></v-btn> -->
           <v-btn color="green darken-1" @click="spawn"><b>Spawn</b></v-btn>
           <v-btn color="blue darken-1" @click="openRemoteSpawnDialog"><b>Config</b></v-btn>
           <v-btn color="grey darken-1" @click="spawnDialog = false"><b>Cancel</b></v-btn>

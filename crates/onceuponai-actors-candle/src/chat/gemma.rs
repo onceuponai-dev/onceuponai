@@ -52,7 +52,7 @@ impl ActorActions for GemmaSpec {
         "gemma".to_string()
     }
 
-    fn init(&self) -> Result<()> {
+    async fn init(&self) -> Result<()> {
         GemmaModel::init(self.clone())
     }
 
