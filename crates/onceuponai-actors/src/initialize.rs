@@ -10,10 +10,11 @@ use std::os::unix::fs::symlink;
 use std::os::windows::fs::symlink_file as symlink;
 use std::path::{Path, PathBuf};
 use std::process::Command;
-use std::str;
+use std::str::{self, FromStr};
 use tar::Archive;
 use xz2::read::XzDecoder;
 
+pub const LD_LIBRARY_PATH_ENV: &str = "LD_LIBRARY_PATH";
 const DEVELOPER_NVIDIA_URL: &str = "https://developer.download.nvidia.com/compute/cuda/redist";
 const CUBLAS_LIB: &str = "libcublas";
 const CUBLAS_VERSION: &str = "12.3.4.1";
@@ -193,7 +194,12 @@ fn set_library_path() {
 
 pub fn library_path_str() -> String {
     let cache_path = get_cache_dir();
-    format!("{}", cache_path.display())
+    let wsl_lib = PathBuf::from_str("/usr/lib/wsl/lib/").unwrap();
+    if wsl_lib.exists() {
+        format!("{}:{}", cache_path.display(), wsl_lib.display())
+    } else {
+        format!("{}", cache_path.display())
+    }
 }
 
 fn copy_and_link_lib(lib: &str, version: &str, os: &str, arch: &str) -> Result<()> {

@@ -7,7 +7,7 @@ use anyhow::Result;
 use clap::{Parser, Subcommand, ValueEnum};
 use commands::{actors_gallery, config, init_actor, kill_actor, spawn_actor, v1_chat_completions};
 use once_cell::sync::OnceCell;
-use onceuponai_actors::initialize::library_path_str;
+use onceuponai_actors::initialize::{library_path_str, LD_LIBRARY_PATH_ENV};
 use onceuponai_core::common::ResultExt;
 use serde::{Deserialize, Serialize};
 use server::{TauriAppConfig, TauriAppState};
@@ -203,7 +203,7 @@ impl ChildProcess {
         let ld_library_path = library_path_str();
         let child = Command::new(cmd)
             .args(args)
-            .env("LD_LIBRARY_PATH", ld_library_path)
+            .env(LD_LIBRARY_PATH_ENV, ld_library_path)
             .stdout(Stdio::piped()) // Capture standard output
             .stderr(Stdio::piped()) // Capture standard error
             .spawn()
