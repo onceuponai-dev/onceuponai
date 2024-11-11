@@ -11,6 +11,7 @@ use onceuponai_actors::abstractions::openai::{
     ChatCompletionRequest, CompletionRequest, Function, Grammar, ImageGenerationRequest,
     ImageGenerationResponseFormat, MessageInnerContent, StopTokens, Tool, ToolChoice, ToolType,
 };
+use serde_json::Value;
 use std::sync::Arc;
 use std::{collections::HashMap, ops::Deref};
 use tokio::sync::mpsc::Sender;
@@ -142,7 +143,7 @@ pub(crate) async fn parse_chat_completion_request(
                     Either::Left(content) => {
                         let mut message_map: IndexMap<
                             String,
-                            Either<String, Vec<IndexMap<String, String>>>,
+                            Either<String, Vec<IndexMap<String, Value>>>,
                         > = IndexMap::new();
                         message_map.insert("role".to_string(), Either::Left(message.role));
                         message_map
@@ -203,7 +204,7 @@ pub(crate) async fn parse_chat_completion_request(
                         }
                         let mut message_map: IndexMap<
                             String,
-                            Either<String, Vec<IndexMap<String, String>>>,
+                            Either<String, Vec<IndexMap<String, Value>>>,
                         > = IndexMap::new();
                         message_map.insert("role".to_string(), Either::Left(message.role));
                         let (content, url) = if items[0] == "text" {
@@ -212,13 +213,15 @@ pub(crate) async fn parse_chat_completion_request(
                             get_content_and_url(1, 0, image_messages)?
                         };
 
-                        let mut content_map = Vec::new();
+                        let mut content_map: Vec<IndexMap<String, Value>> = Vec::new();
                         let mut content_image_map = IndexMap::new();
-                        content_image_map.insert("type".to_string(), "image".to_string());
+                        content_image_map
+                            .insert("type".to_string(), Value::String("image".to_string()));
                         content_map.push(content_image_map);
                         let mut content_text_map = IndexMap::new();
-                        content_text_map.insert("type".to_string(), "text".to_string());
-                        content_text_map.insert("text".to_string(), content);
+                        content_text_map
+                            .insert("type".to_string(), Value::String("text".to_string()));
+                        content_text_map.insert("text".to_string(), Value::String(content));
                         content_map.push(content_text_map);
 
                         message_map.insert("content".to_string(), Either::Right(content_map));
@@ -245,7 +248,7 @@ pub(crate) async fn parse_chat_completion_request(
         }
         Either::Right(prompt) => {
             let mut messages = Vec::new();
-            let mut message_map: IndexMap<String, Either<String, Vec<IndexMap<String, String>>>> =
+            let mut message_map: IndexMap<String, Either<String, Vec<IndexMap<String, Value>>>> =
                 IndexMap::new();
             message_map.insert("role".to_string(), Either::Left("user".to_string()));
             message_map.insert("content".to_string(), Either::Left(prompt));

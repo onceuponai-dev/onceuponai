@@ -71,8 +71,8 @@ pub struct MistralrsSpec {
     pub tgt_non_granular_index: Option<usize>,
     pub gqa: Option<usize>,
     pub vision_model_architecture: Option<String>,
-    pub diffusion_model_architecture: Option<String>,
     pub max_edge: Option<u32>,
+    pub diffusion_model_architecture: Option<String>,
 }
 
 impl MistralrsSpec {

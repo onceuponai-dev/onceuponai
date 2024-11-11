@@ -65,8 +65,7 @@ k8s-openapi = { version = "0.22.0", features = ["latest"] }
 #lancedb = { version = "0.5.2", default-features = false, features=["polars"] }
 lancedb = { version = "0.5.2", default-features = false }
 log = "0.4.14"
-mistralrs = { git = "https://github.com/EricLBuehler/mistral.rs.git", rev="10dc4378ab0f1f6998186aeebc959e13f212256b" }
-#mistralrs = { git = "https://github.com/EricLBuehler/mistral.rs.git", rev="efce09ab7fa509e902d804560377046f20ae3b9a" }
+mistralrs = { git = "https://github.com/EricLBuehler/mistral.rs.git", rev="ddc63f1e0433356789cd875c3e39df16df0d0a43" }
 #mistralrs = { git = "https://github.com/EricLBuehler/mistral.rs.git", rev="09d2e2596d9b0aa728749cf5614e40dd1a112b3b" }
 #mistralrs = { git = "https://github.com/EricLBuehler/mistral.rs.git", rev="32e894510696e9aa3c11db79268ee031a3ecefa6" }
 #mistralrs = { git = "https://github.com/EricLBuehler/mistral.rs.git", rev="9dfbab1a1f3f260f130680f6c4f02f8656ea28ed" }
