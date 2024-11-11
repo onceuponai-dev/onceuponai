@@ -69,7 +69,7 @@ rebuild-nsis: ## Test musl
 	makensis ./target/x86_64-pc-windows-gnu/release/nsis/x64/installer.nsi
 
 build-mrs: ##
-	export CUDA_COMPUTE_CAP=75 && \
+	export CUDA_COMPUTE_CAP=89 && \
 	cd ./crates/onceuponai-actors-mistralrs && \
 	cargo build --release --features "cuda cudnn"
 
@@ -79,7 +79,7 @@ build-server: ##
 
 
 build-sidecar-mistralrs-cuda-linux: ## 
-	export CUDA_COMPUTE_CAP=75 && \
+	export CUDA_COMPUTE_CAP=89 && \
 	cd ./crates/onceuponai-actors-mistralrs && \
 	cargo build --release --features "cuda cudnn" && \
 	cp ../../target/release/onceuponai-actors-mistralrs ../onceuponai/src-tauri/binaries/sidecar/onceuponai-actors-mistralrs-cuda-x86_64-unknown-linux-gnu
@@ -101,7 +101,7 @@ build-sidecar-mistralrs-cpu-win: ##
 
 
 build-sidecar-candle-cuda-linux: ## 
-	export CUDA_COMPUTE_CAP=75 && \
+	export CUDA_COMPUTE_CAP=89 && \
 	cd ./crates/onceuponai-actors-candle && \
 	cargo build --release --features "cuda" && \
 	cp ../../target/release/onceuponai-actors-candle ../onceuponai/src-tauri/binaries/sidecar/onceuponai-actors-candle-cuda-x86_64-unknown-linux-gnu
