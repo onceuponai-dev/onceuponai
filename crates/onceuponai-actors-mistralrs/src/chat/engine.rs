@@ -71,6 +71,7 @@ pub struct MistralrsSpec {
     pub tgt_non_granular_index: Option<usize>,
     pub gqa: Option<usize>,
     pub vision_model_architecture: Option<String>,
+    pub max_edge: Option<u32>,
     pub diffusion_model_architecture: Option<String>,
 }
 
@@ -414,6 +415,7 @@ impl MistralrsModel {
                 topology,
                 write_uqff,
                 from_uqff,
+                max_edge: spec.max_edge,
             },
             "diffusionplain" => ModelSelected::DiffusionPlain {
                 model_id: spec.model_id.expect("model_id"),
