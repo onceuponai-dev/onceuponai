@@ -10,14 +10,18 @@ interface Message {
   role: 'user' | 'assistant' | 'system';
 }
 
-const inputMessage = ref('');
+const inputMessage = ref<string>('');
 const messages = ref<Message[]>([]);
 const chatArea = ref<HTMLElement | null>(null);
-const showProgress = ref(false);
+const showProgress = ref<boolean>(false);
 const actors: any = ref([]);
 const selectedActor: any = ref(null);
-const isStream: any = ref(true);
-const dialog: any = ref(null);
+const isStream = ref<boolean>(true);
+const dialog: any = ref<boolean | null>(null);
+const temperature = ref<number>(1.0);
+const seed = ref<number | null>(299792458);
+const topP = ref<number>(1.0);
+const system = ref<string>('');
 
 fetch(`/api/actors`)
   .then(async (response: any) => {
@@ -59,6 +63,10 @@ const sendMessage = async () => {
   if (inputMessage.value.trim() === '') return;
 
   var text = inputMessage.value;
+  if (messages.value.length == 0 && system.value != '') {
+    messages.value.push({content: system.value, role: 'system'})
+  }
+
   messages.value.push({ content: text, role: 'user' });
   inputMessage.value = '';
   showProgress.value = true;
@@ -69,7 +77,10 @@ const sendMessage = async () => {
   const message = {
     "stream": isStream.value,
     "model": selectedActor.value,
-    "messages": messages.value
+    "messages": messages.value,
+    "seed": seed.value,
+    "top_p": topP.value,
+    "temperature": temperature.value
   };
 
   await invoke("v1_chat_completions", { "chatRequest": message, "baseUrl": config.base_url, "personalToken": config.personal_token });
@@ -104,6 +115,10 @@ onMounted(() => {
         </v-col>
       </v-row>
     </div>
+
+
+
+
     <v-bottom-navigation color="primary" horizontal height="75">
       <v-row>
         <v-col cols="2" class="actors-select">
@@ -145,6 +160,32 @@ onMounted(() => {
       </v-card>
     </v-dialog>
   </v-container>
+
+  <v-navigation-drawer expand-on-hover rail permanent location="left">
+    <v-divider></v-divider>
+    <br />
+    <v-list density="compact" nav>
+      <v-list-item id="temperature" key="temperature" prepend-icon="$thermometer" title="Temperature">
+        <v-slider v-model="temperature" :max="1" :min="0" :step="0.1" width="80%" thumb-size="10"
+          thumb-label></v-slider>
+      </v-list-item>
+      <v-list-item id="top_p" key="top_p" prepend-icon="$topP" title="Top_p">
+        <v-slider v-model="topP" :max="1" :min="0" :step="0.1" width="80%" thumb-size="10" thumb-label></v-slider>
+      </v-list-item>
+      <v-list-item id="seed" key="seed" prepend-icon="$seed" title="Seed">
+        <v-text-field v-model="seed" type="number" outlined />
+      </v-list-item>
+      <v-list-item id="system" key="system" prepend-icon="$robot" title="System">
+        <v-textarea v-model="system" rows="3"></v-textarea>
+      </v-list-item>
+      <v-list-item prepend-icon="$cog" title="More" link></v-list-item>
+
+
+
+    </v-list>
+
+  </v-navigation-drawer>
+
 
 
 </template>
