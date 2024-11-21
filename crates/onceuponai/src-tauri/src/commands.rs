@@ -3,7 +3,10 @@ use crate::{
     SpawnedActor, SPAWNED_ACTORS,
 };
 use futures::StreamExt;
-use onceuponai_actors::abstractions::ActorMetadata;
+use onceuponai_actors::{
+    abstractions::ActorMetadata,
+    initialize::{library_path_str, LD_LIBRARY_PATH_ENV},
+};
 use onceuponai_core::{
     common::{serialize_and_encode, ResultExt, SerializationType},
     notifications::{Notification, NotificationLevel},
@@ -85,10 +88,12 @@ pub async fn spawn_actor(
     };
     let metadata = serialize_and_encode(metadata, SerializationType::YAML).map_str_err()?;
 
+    let ld_library_path = library_path_str();
     let sidecar_command = app
         .shell()
         .sidecar(format!("{}-{}", sidecar, device))
         .map_str_err()?
+        .env(LD_LIBRARY_PATH_ENV, ld_library_path)
         .args(["spawn", "-j", &spec_json_base64, "-m", &metadata]);
     let (mut rx, child) = sidecar_command.spawn().map_str_err()?;
 

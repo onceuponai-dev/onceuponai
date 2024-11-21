@@ -13,13 +13,15 @@ provider "azurerm" {
   features {}
 }
 
+/*
 resource "azurerm_resource_group" "rg" {
   name     = var.resource_group_name
   location = var.location
 }
+*/
 
 # LANCEDB
-
+/*
 resource "azurerm_storage_account" "lancedb" {
   name                     = var.lancedb_storage.account_name
   resource_group_name      = azurerm_resource_group.rg.name
@@ -37,6 +39,7 @@ resource "azurerm_storage_container" "lancedb" {
   storage_account_name  = azurerm_storage_account.lancedb.name
   container_access_type = "private"
 }
+*/
 
 # BOT SERVICE
 /*

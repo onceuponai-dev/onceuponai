@@ -38,7 +38,12 @@ import {
     mdiPencil,
     mdiRun,
     mdiChevronRight,
-    mdiChevronLeft
+    mdiChevronLeft,
+    mdiThermometer,
+    mdiSeed,
+    mdiVectorPointSelect,
+    mdiRobotHappyOutline,
+    mdiCog
 } from '@mdi/js'
 
 const vuetify = createVuetify({
@@ -87,7 +92,12 @@ const vuetify = createVuetify({
             pencil: mdiPencil,
             run: mdiRun,
             chevronLeft: mdiChevronLeft,
-            chevronRight: mdiChevronRight
+            chevronRight: mdiChevronRight,
+            thermometer: mdiThermometer,
+            seed: mdiSeed,
+            topP: mdiVectorPointSelect,
+            robot: mdiRobotHappyOutline,
+            cog: mdiCog
         },
         sets: {
             mdi,
