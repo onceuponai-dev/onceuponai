@@ -53,20 +53,21 @@ With support for both CPU and CUDA-accelerated GPU environments, you can deploy 
 
 ### Linux
 
+Check your GPU card compute capability: https://developer.nvidia.com/cuda-gpus
+Choose `AppImage` compiled for your card compute capability.
 ```bash
-sudo apt update
-sudo apt install wget xz-utils -y
+sudo apt install libfuse2
+wget https://github.com/onceuponai-dev/onceuponai/releases/download/v0.0.3-alpha.1/onceuponai-cuda-75-0.0.3.AppImage
 
-wget https://raw.githubusercontent.com/onceuponai-dev/onceuponai/tauri/scripts/install.sh
-sudo bash ./install.sh
+chmod +x onceuponai-cuda-75-0.0.3.AppImage
+./onceuponai-cuda-75-0.0.3.AppImage
 ```
 
 ### Windows
 
-For windows you can use WSL2 and run `install.sh` script as for `Linux`. 
+For windows you can use WSL2 and run AppImage as on Linux.
 If you have GPU card use [https://docs.nvidia.com/cuda/wsl-user-guide/index.html](https://docs.nvidia.com/cuda/wsl-user-guide/index.html)
 to have CUDA support.
-To see GUI will need to run X-server eg. Xming, VcXsrv, Cygwin/X, MobaXterm, WezTerm
 
 ### Mac 
 
